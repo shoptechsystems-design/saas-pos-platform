@@ -881,8 +881,8 @@ function ProductCatalogView() {
                   <Input value={name} onChange={e => setName(e.target.value)} placeholder="Organic Espresso Beans" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 font-medium">SKU <span className="text-red-500">*</span></label>
-                  <Input value={sku} onChange={e => setSku(e.target.value)} placeholder="SKU-ESP-01" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
+                  <label className="text-xs text-slate-500 font-medium">SKU <span className="text-slate-400 font-normal">(Optional — auto-generated if left blank)</span></label>
+                  <Input value={sku} onChange={e => setSku(e.target.value)} placeholder="e.g. SKU-101" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 font-medium">Category <span className="text-slate-400 font-normal">(Optional)</span></label>
@@ -940,7 +940,7 @@ function ProductCatalogView() {
                   <Input value={productImageUrl} onChange={e => setProductImageUrl(e.target.value)} placeholder="https://example.com/item.png" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11 text-xs" />
                 </div>
                 <Button
-                  onClick={() => createMutation.mutate({ name, sku, categoryId, costPrice: 0, sellingPrice: Number(price) || 0, stockQuantity: Number(stock) || 0, minStockLevel: 5, imageUrl: productImageUrl || null })}
+                  onClick={() => createMutation.mutate({ name, sku: sku || undefined, categoryId, costPrice: 0, sellingPrice: Number(price) || 0, stockQuantity: Number(stock) || 0, minStockLevel: 5, imageUrl: productImageUrl || null })}
                   className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4"
                 >
                   Save Product

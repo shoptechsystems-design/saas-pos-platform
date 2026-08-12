@@ -237,12 +237,22 @@ export const appRouter = router({
       .input(z.object({ query: z.string().trim().optional(), categoryId: z.number().int().positive().optional() }).optional())
       .query(({ ctx, input }) => getProductsForTenant(ctx.tenant.id, input?.query, input?.categoryId)),
     createProduct: inventoryProcedure
-      .input(z.object({ name: z.string().trim().min(1).max(180), sku: z.string().trim().min(1).max(80), barcode: z.string().trim().max(80).nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), costPrice: money, sellingPrice: money, discountPrice: money.nullable().optional(), taxRate: z.number().min(0).max(100).nullable().optional(), stockQuantity: z.number().int().min(0), minStockLevel: z.number().int().min(0), unit: z.string().trim().min(1).max(32).default("each"), imageUrl: z.string().url().nullable().optional() }))
+      .input(z.object({ name: z.string().trim().min(1).max(180), sku: z.string().trim().max(80).optional(), barcode: z.string().trim().max(80).nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), costPrice: money.optional(), sellingPrice: money, discountPrice: money.nullable().optional(), taxRate: z.number().min(0).max(100).nullable().optional(), stockQuantity: z.number().int().min(0), minStockLevel: z.number().int().min(0).optional(), unit: z.string().trim().min(1).max(32).default("each"), imageUrl: z.string().url().nullable().optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-        await db.insert(products).values({ ...input, tenantId: ctx.tenant.id, costPrice: input.costPrice.toFixed(2), sellingPrice: input.sellingPrice.toFixed(2), discountPrice: input.discountPrice?.toFixed(2), taxRate: input.taxRate?.toFixed(3) });
-        await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "created", entity: "product", metadata: { sku: input.sku } });
+        const finalSku = input.sku && input.sku.trim().length > 0 ? input.sku.trim() : `SKU-${Math.floor(1000 + Math.random() * 9000)}`;
+        await db.insert(products).values({
+          ...input,
+          sku: finalSku,
+          tenantId: ctx.tenant.id,
+          costPrice: (input.costPrice ?? 0).toFixed(2),
+          sellingPrice: input.sellingPrice.toFixed(2),
+          discountPrice: input.discountPrice?.toFixed(2),
+          taxRate: input.taxRate?.toFixed(3),
+          minStockLevel: input.minStockLevel ?? 5,
+        });
+        await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "created", entity: "product", metadata: { sku: finalSku } });
         return { success: true } as const;
       }),
     deleteProduct: inventoryProcedure
