@@ -118,7 +118,13 @@ export default function Home() {
       {/* Grouped premium sidebar */}
       <aside className={`omnipos-sidebar shrink-0 border-r border-slate-200 bg-white flex flex-col transition-[width] duration-300 max-[767px]:w-[84px] ${sidebarCollapsed ? "w-[84px]" : "w-[280px]"}`}>
         <div className={`flex h-[88px] items-center border-b border-slate-100 ${sidebarCollapsed ? "justify-center px-3" : "gap-3 px-5"}`}>
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0f172a] text-sm font-black tracking-tight text-white shadow-[0_8px_18px_rgba(15,23,42,0.16)]">OP</div>
+          {tenantSettings?.logoUrl ? (
+            <img src={tenantSettings.logoUrl} alt="Store logo" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl object-cover shadow-[0_8px_18px_rgba(15,23,42,0.16)] border border-slate-200" />
+          ) : (
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0f172a] text-sm font-black tracking-tight text-white shadow-[0_8px_18px_rgba(15,23,42,0.16)]">
+              {businessName ? businessName.charAt(0).toUpperCase() : "OP"}
+            </div>
+          )}
           {!sidebarCollapsed && <div className="min-w-0 max-[767px]:hidden"><p className="truncate text-[15px] font-black tracking-[-0.02em] text-[#0f172a]">{businessName}</p><div className="mt-1 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#0f766e]" /><span className="truncate text-[11px] font-bold text-[#0f766e]">{currentRole}</span></div></div>}
         </div>
 
@@ -1353,49 +1359,103 @@ function TeamRolesView() {
 
 function TenantSettingsView() {
   const { data: settings } = trpc.tenant.settings.useQuery();
+  const utils = trpc.useUtils();
   const [name, setName] = useState(settings?.name ?? "");
   const [businessType, setBusinessType] = useState(settings?.businessType ?? "Retail");
   const [currency, setCurrency] = useState(settings?.currency ?? "USD");
   const [taxRate, setTaxRate] = useState(settings?.taxRate?.toString() ?? "8.25");
+  const [logoUrl, setLogoUrl] = useState(settings?.logoUrl ?? "");
   const [receiptFooter, setReceiptFooter] = useState(settings?.receiptFooter ?? "");
 
+  useEffect(() => {
+    if (settings) {
+      setName(settings.name ?? "");
+      setBusinessType(settings.businessType ?? "Retail");
+      setCurrency(settings.currency ?? "USD");
+      setTaxRate(settings.taxRate?.toString() ?? "8.25");
+      setLogoUrl(settings.logoUrl ?? "");
+      setReceiptFooter(settings.receiptFooter ?? "");
+    }
+  }, [settings]);
+
   const updateMutation = trpc.tenant.updateSettings.useMutation({
-    onSuccess: () => toast.success("Business settings updated successfully!"),
+    onSuccess: async () => {
+      toast.success("Business settings and branding updated successfully!");
+      await utils.tenant.settings.invalidate();
+      await utils.tenant.context.invalidate();
+    },
     onError: err => toast.error(err.message)
   });
 
   return (
-    <Card className="bg-[#0d2630]/95 border-[#203b42] p-8 max-w-2xl rounded-2xl shadow-2xl">
-      <h3 className="text-xl font-bold text-[#f8f3e7] mb-2">Business Settings & Branding</h3>
-      <p className="text-xs text-[#9eb4ae] mb-6">Configure receipt footer messages, tax rates, currency, and store details.</p>
-      <div className="space-y-5">
+    <div className="space-y-6 w-full max-w-6xl">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <label className="text-xs text-[#9eb4ae] font-medium">Business Name</label>
-          <Input value={name} onChange={e => setName(e.target.value)} className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0f766e]">Workspace configuration</p>
+          <h3 className="mt-2 text-3xl font-black tracking-[-0.04em] text-[#0f172a]">Business Settings & Branding.</h3>
+          <p className="mt-1 text-sm text-slate-500">Customize store identity, logos, tax rules, receipt footers, and regional currency.</p>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs text-[#9eb4ae] font-medium">Business Type</label>
-            <Input value={businessType} onChange={e => setBusinessType(e.target.value)} className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
-          </div>
-          <div>
-            <label className="text-xs text-[#9eb4ae] font-medium">Currency</label>
-            <Input value={currency} onChange={e => setCurrency(e.target.value)} className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
-          </div>
-        </div>
-        <div>
-          <label className="text-xs text-[#9eb4ae] font-medium">Default Tax Rate (%)</label>
-          <Input type="number" value={taxRate} onChange={e => setTaxRate(e.target.value)} className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
-        </div>
-        <div>
-          <label className="text-xs text-[#9eb4ae] font-medium">Receipt Footer Message</label>
-          <Input value={receiptFooter} onChange={e => setReceiptFooter(e.target.value)} placeholder="Thank you for your visit!" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
-        </div>
-        <Button onClick={() => updateMutation.mutate({ name, businessType, currency, taxRate: Number(taxRate) || 0, receiptFooter })} className="bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
-          Save Settings
-        </Button>
+        <Badge className="w-fit rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm">Tenant Admin workspace</Badge>
       </div>
-    </Card>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="rounded-3xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] lg:col-span-2 space-y-6">
+          <h4 className="text-base font-black text-[#0f172a]">Core business profile</h4>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-slate-500">Business Name</label>
+              <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Aura Coffee & Gourmet" className="mt-1.5 h-12 rounded-2xl border-slate-200 bg-slate-50 text-slate-900 shadow-sm" />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-bold text-slate-500">Business Type / Industry</label>
+                <Input value={businessType} onChange={e => setBusinessType(e.target.value)} placeholder="e.g. Bookstore & Stationery" className="mt-1.5 h-12 rounded-2xl border-slate-200 bg-slate-50 text-slate-900 shadow-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500">Currency Code</label>
+                <Input value={currency} onChange={e => setCurrency(e.target.value)} placeholder="e.g. PKR or USD" className="mt-1.5 h-12 rounded-2xl border-slate-200 bg-slate-50 text-slate-900 shadow-sm" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-bold text-slate-500">Default Tax Rate (%)</label>
+                <Input type="number" value={taxRate} onChange={e => setTaxRate(e.target.value)} placeholder="18.00" className="mt-1.5 h-12 rounded-2xl border-slate-200 bg-slate-50 text-slate-900 shadow-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500">Receipt Footer Message</label>
+              <Input value={receiptFooter} onChange={e => setReceiptFooter(e.target.value)} placeholder="Thank you for shopping with us!" className="mt-1.5 h-12 rounded-2xl border-slate-200 bg-slate-50 text-slate-900 shadow-sm" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="rounded-3xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] space-y-6">
+          <h4 className="text-base font-black text-[#0f172a]">Store Logo & Branding</h4>
+          <p className="text-xs text-slate-500 leading-relaxed">Provide an image URL for your logo to display in the application header and printed receipts.</p>
+          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Store logo preview" className="h-20 w-20 rounded-2xl object-cover shadow-md mb-3 border border-slate-200 bg-white" />
+            ) : (
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0f172a] text-white font-black text-xl shadow-md mb-3">
+                {name ? name.charAt(0).toUpperCase() : "OP"}
+              </div>
+            )}
+            <p className="text-xs font-bold text-slate-700">Logo preview</p>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500">Logo Image URL</label>
+            <Input value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://example.com/logo.png" className="mt-1.5 h-11 rounded-xl border-slate-200 bg-slate-50 text-xs text-slate-900" />
+          </div>
+          <Button
+            onClick={() => updateMutation.mutate({ name, businessType, currency, taxRate: Number(taxRate) || 0, logoUrl: logoUrl || null, receiptFooter })}
+            disabled={updateMutation.isPending}
+            className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-2xl"
+          >
+            {updateMutation.isPending ? "Saving..." : "Save Settings & Branding"}
+          </Button>
+        </Card>
+      </div>
+    </div>
   );
 }
 
