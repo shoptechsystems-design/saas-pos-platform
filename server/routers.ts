@@ -1,8 +1,10 @@
 import { COOKIE_NAME } from "@shared/const";
+import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, gte, like, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { sdk } from "./_core/sdk";
 import {
   adminProcedure,
   cashierProcedure,
@@ -40,6 +42,10 @@ import {
   getTenantStats,
   getMembershipForUser,
   writeAuditLog,
+  createLocalOpenId,
+  getUserByEmail,
+  hashPassword,
+  verifyPassword,
 } from "./db";
 import { systemRouter } from "./_core/systemRouter";
 
@@ -57,7 +63,71 @@ function formatMoney(cents: number) {
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(opts => {
+      if (!opts.ctx.user) return null;
+      const { passwordHash, ...safe } = opts.ctx.user as any;
+      return safe;
+    }),
+    register: publicProcedure
+      .input(z.object({
+        name: z.string().trim().min(2).max(120),
+        businessName: z.string().trim().min(2).max(160),
+        email: z.string().trim().email().max(320),
+        password: z.string().min(8).max(128),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        const email = input.email.toLowerCase();
+        if (await getUserByEmail(email)) {
+          throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
+        }
+        const openId = createLocalOpenId();
+        const userResult = await db.insert(users).values({
+          openId,
+          name: input.name,
+          email,
+          loginMethod: "local",
+          passwordHash: hashPassword(input.password),
+          role: "user",
+        }).$returningId();
+        const userId = userResult[0]?.id;
+        if (!userId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not create account." });
+        const slug = `${input.businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${nanoid(6).toLowerCase()}`;
+        const tenantResult = await db.insert(tenants).values({
+          name: input.businessName,
+          slug,
+          businessType: "Retail",
+          currency: "PKR",
+          taxRate: "18.000",
+          receiptFooter: "Thank you for shopping with us.",
+          status: "active",
+          ownerUserId: userId,
+        }).$returningId();
+        const tenantId = tenantResult[0]?.id;
+        if (!tenantId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not create business workspace." });
+        await db.insert(tenantMemberships).values({ tenantId, userId, role: "tenant_admin", status: "active" });
+        const createdUser = await getUserByEmail(email);
+        const token = await sdk.createSessionToken(openId, { name: input.name });
+        ctx.res.cookie(COOKIE_NAME, token, getSessionCookieOptions(ctx.req));
+        const { passwordHash: _, ...safeUser } = (createdUser ?? {}) as any;
+        return { success: true, user: safeUser, tenantId } as const;
+      }),
+    login: publicProcedure
+      .input(z.object({ email: z.string().trim().email().max(320), password: z.string().min(1).max(128) }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        const user = await getUserByEmail(input.email.toLowerCase());
+        if (!user || !verifyPassword(input.password, user.passwordHash)) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Email or password is incorrect." });
+        }
+        await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
+        const token = await sdk.createSessionToken(user.openId, { name: user.name ?? input.email });
+        ctx.res.cookie(COOKIE_NAME, token, getSessionCookieOptions(ctx.req));
+        const { passwordHash: _, ...safeUser } = user as any;
+        return { success: true, user: safeUser } as const;
+      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });

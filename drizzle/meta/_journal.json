@@ -15,6 +15,13 @@
       "when": 1786519835791,
       "tag": "0001_magical_psylocke",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786522641171,
+      "tag": "0002_sad_moonstone",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,6 @@
 import { and, asc, desc, eq, gte, like, lte, or, sql } from "drizzle-orm";
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { nanoid } from "nanoid";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   auditLogs,
@@ -67,6 +69,32 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
+  return result[0];
+}
+
+export function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const derivedKey = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${derivedKey}`;
+}
+
+export function verifyPassword(password: string, storedHash: string | null) {
+  if (!storedHash) return false;
+  const [salt, key] = storedHash.split(":");
+  if (!salt || !key) return false;
+  const derivedKey = scryptSync(password, salt, 64);
+  const storedKey = Buffer.from(key, "hex");
+  return storedKey.length === derivedKey.length && timingSafeEqual(storedKey, derivedKey);
+}
+
+export function createLocalOpenId() {
+  return `local:${nanoid(24)}`;
 }
 
 export type ProductRow = typeof products.$inferSelect;

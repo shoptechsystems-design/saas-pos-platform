@@ -23,8 +23,8 @@ export async function seedDemoData() {
     name: "Aura Coffee & Gourmet Market",
     slug: "aura-coffee",
     businessType: "Café & Retail",
-    currency: "USD",
-    taxRate: "8.25",
+    currency: "PKR",
+    taxRate: "18.000",
     receiptFooter: "Thank you for visiting Aura Coffee & Gourmet! Visit us online at auracoffee.com",
     status: "active",
     ownerUserId: 1,
@@ -189,7 +189,7 @@ export async function seedDemoData() {
   for (let i = 1; i <= 50; i++) {
     const saleNumber = `SALE-2026-${1000 + i}`;
     const total = (Math.random() * 65 + 12).toFixed(2);
-    const subtotal = (Number(total) / 1.0825).toFixed(2);
+    const subtotal = (Number(total) / 1.18).toFixed(2);
     const tax = (Number(total) - Number(subtotal)).toFixed(2);
     await db.insert(sales).values({
       tenantId,

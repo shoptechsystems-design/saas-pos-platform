@@ -17,6 +17,8 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
+  /** Scrypt hash for direct email/password accounts; managed OAuth users may leave this null. */
+  passwordHash: varchar("passwordHash", { length: 255 }),
   /** The global admin value maps to the Super Admin product role. */
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

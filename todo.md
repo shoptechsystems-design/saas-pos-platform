@@ -17,4 +17,8 @@
 - [x] Redesign Team & Roles Management with granular module permissions (POS, products, inventory, reports, settings)
 - [x] Redesign Super Admin Panel with platform revenue, tenant management, and account activation/suspension
 - [x] Verify responsive layout across desktop, laptop, and tablet screens
+- [x] Upgrade visual color system to a sophisticated slate/emerald/amber palette with crisp contrast
+- [x] Implement dedicated direct Register & Login screens instead of forcing external portal login
+- [x] Switch currency formatting across all POS terminals, carts, invoices, and reports to PKR (₨)
+- [x] Optimize cashier terminal layout for responsive laptop and tablet viewports
 - [x] Save checkpoint and final delivery
