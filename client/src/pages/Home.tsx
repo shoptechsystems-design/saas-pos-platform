@@ -55,6 +55,9 @@ export default function Home() {
     return () => window.clearTimeout(timeoutId);
   }, [loading]);
 
+  const { data: tenantCtx } = trpc.tenant.context.useQuery(undefined, { enabled: !!user && user?.role !== "admin" });
+  const { data: tenantSettings } = trpc.tenant.settings.useQuery(undefined, { enabled: !!user && user?.role !== "admin" });
+
   if (loading && !authBootstrapTimedOut) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white text-[#0f172a]">
@@ -67,9 +70,6 @@ export default function Home() {
       </div>
     );
   }
-
-  const { data: tenantCtx } = trpc.tenant.context.useQuery(undefined, { enabled: !!user && user.role !== "admin" });
-  const { data: tenantSettings } = trpc.tenant.settings.useQuery(undefined, { enabled: !!user && user.role !== "admin" });
 
   if (!user) {
     return publicView === "home"
