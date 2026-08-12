@@ -64,78 +64,84 @@ export default function Home() {
       : <AuthScreen initialMode={authMode} onBack={() => setPublicView("home")} onAuthenticated={refresh} />;
   }
 
-  const navItems = [
-    { id: "pos", label: "POS Terminal", icon: ShoppingBag },
-    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-    { id: "products", label: "Products", icon: Package },
-    { id: "inventory", label: "Inventory & POs", icon: Truck },
-    { id: "customers", label: "Customers", icon: Users },
-    { id: "sales", label: "Sales History", icon: Receipt },
-    { id: "expenses", label: "Expenses", icon: DollarSign },
-    { id: "team", label: "Team & Roles", icon: ShieldCheck },
-    { id: "settings", label: "Business Settings", icon: Settings },
-    ...(user.role === "admin" ? [{ id: "superadmin", label: "Super Admin", icon: Store }] : []),
+  const { data: tenantCtx } = trpc.tenant.context.useQuery(undefined, { enabled: user.role !== "admin" });
+  const { data: tenantSettings } = trpc.tenant.settings.useQuery(undefined, { enabled: user.role !== "admin" });
+
+  const roleLabel = user.role === "admin"
+    ? "Super Admin"
+    : tenantCtx?.membership.role === "tenant_admin"
+    ? "Tenant Admin"
+    : tenantCtx?.membership.role === "inventory_manager"
+    ? "Inventory Manager"
+    : "Cashier";
+  const currentRole = roleLabel;
+
+  const businessName = user.role === "admin"
+    ? "Platform Administration"
+    : (tenantSettings?.name || "OmniPOS Workspace");
+
+  const navGroups = [
+    { label: "Overview", items: [{ id: "dashboard", label: "Dashboard", icon: BarChart3 }] },
+    { label: "Commerce", items: [
+      { id: "pos", label: "POS Terminal", icon: ShoppingBag },
+      { id: "products", label: "Products", icon: Package },
+      { id: "customers", label: "Customers", icon: Users },
+    ] },
+    { label: "Operations", items: [
+      { id: "inventory", label: "Inventory & POs", icon: Truck },
+      { id: "sales", label: "Sales History", icon: Receipt },
+      { id: "expenses", label: "Expenses", icon: DollarSign },
+    ] },
+    { label: "Workspace", items: [
+      { id: "team", label: "Team & Roles", icon: ShieldCheck },
+      { id: "settings", label: "Business Settings", icon: Settings },
+    ] },
+    ...(user.role === "admin" ? [{ label: "Administration", items: [{ id: "superadmin", label: "Super Admin", icon: Store }] }] : []),
   ];
 
   return (
     <div className="omnipos-app min-h-screen bg-[#f8fafc] text-[#0f172a] flex">
-      {/* Persistent Sidebar */}
-      <aside className={`border-r border-[#203b42] bg-[#0d2630]/95 flex flex-col transition-all duration-300 ${sidebarCollapsed ? "w-20" : "w-64"}`}>
-        <div className="h-20 flex items-center justify-between px-4 border-b border-[#203b42]">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="h-10 w-10 rounded-xl bg-emerald-500 flex items-center justify-center text-[#f8f3e7] font-bold shrink-0 shadow-lg shadow-emerald-500/25">
-              OP
-            </div>
-            {!sidebarCollapsed && (
-              <div className="truncate">
-                <h1 className="font-bold text-sm text-[#f8f3e7] tracking-tight">Aura Coffee</h1>
-                <p className="text-xs text-emerald-300">Tenant Admin</p>
-              </div>
-            )}
-          </div>
+      {/* Grouped premium sidebar */}
+      <aside className={`omnipos-sidebar shrink-0 border-r border-slate-200 bg-white flex flex-col transition-[width] duration-300 max-[767px]:w-[84px] ${sidebarCollapsed ? "w-[84px]" : "w-[280px]"}`}>
+        <div className={`flex h-[88px] items-center border-b border-slate-100 ${sidebarCollapsed ? "justify-center px-3" : "gap-3 px-5"}`}>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0f172a] text-sm font-black tracking-tight text-white shadow-[0_8px_18px_rgba(15,23,42,0.16)]">OP</div>
+          {!sidebarCollapsed && <div className="min-w-0 max-[767px]:hidden"><p className="truncate text-[15px] font-black tracking-[-0.02em] text-[#0f172a]">{businessName}</p><div className="mt-1 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#0f766e]" /><span className="truncate text-[11px] font-bold text-[#0f766e]">{currentRole}</span></div></div>}
         </div>
 
-        <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          {navItems.map(item => {
-            const Icon = item.icon;
-            const active = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
-                  active
-                    ? "bg-emerald-500 text-[#f8f3e7] shadow-lg shadow-emerald-500/25"
-                    : "text-[#9eb4ae] hover:text-[#f8f3e7] hover:bg-slate-800/60"
-                }`}
-              >
-                <Icon className={`h-5 w-5 shrink-0 ${active ? "text-[#f8f3e7]" : "text-[#9eb4ae]"}`} />
-                {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-              </button>
-            );
-          })}
+        <div className="flex-1 overflow-y-auto px-3 py-6">
+          {navGroups.map(group => (
+            <div key={group.label} className="mb-7 last:mb-0">
+              {!sidebarCollapsed && <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 max-[767px]:hidden">{group.label}</p>}
+              <div className="space-y-1.5">
+                {group.items.map(item => {
+                  const Icon = item.icon;
+                  const active = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      aria-label={item.label}
+                      className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-[13px] font-bold transition-all duration-200 max-[767px]:justify-center ${sidebarCollapsed ? "justify-center" : ""} ${active ? "bg-[#0f172a] text-white shadow-[0_10px_20px_rgba(15,23,42,0.14)]" : "text-slate-500 hover:bg-slate-50 hover:text-[#0f172a]"}`}
+                    >
+                      {active && <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-[#f9735b]" />}
+                      <Icon className={`h-[18px] w-[18px] shrink-0 transition-colors ${active ? "text-[#f9735b]" : "text-slate-400 group-hover:text-[#0f766e]"}`} />
+                      {!sidebarCollapsed && <span className="truncate max-[767px]:hidden">{item.label}</span>}
+                      {!sidebarCollapsed && item.id === "superadmin" && <span className={`ml-auto rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wider max-[767px]:hidden ${active ? "bg-white/10 text-white/80" : "bg-[#fff1ec] text-[#c2412d]"}`}>Admin</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
-        <div className="p-3 border-t border-[#203b42]">
-          <div className={`flex items-center gap-3 p-2 rounded-xl bg-[#07111F]/60 border border-[#203b42]/80 ${sidebarCollapsed ? "justify-center" : ""}`}>
-            <div className="h-9 w-9 rounded-lg bg-emerald-500/10 text-emerald-300 flex items-center justify-center font-bold text-xs shrink-0">
-              {user.name?.charAt(0).toUpperCase()}
-            </div>
-            {!sidebarCollapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-[#f8f3e7] truncate">{user.name}</p>
-                <p className="text-[10px] text-[#9eb4ae] truncate">{user.email}</p>
-              </div>
-            )}
+        <div className="border-t border-slate-100 p-3">
+          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className={`mb-2 flex h-9 w-full items-center gap-2 rounded-xl px-3 text-[11px] font-black text-slate-400 transition hover:bg-slate-50 hover:text-[#0f172a] ${sidebarCollapsed ? "justify-center px-0" : ""}`} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}><SlidersHorizontal className={`h-4 w-4 transition-transform ${sidebarCollapsed ? "rotate-180" : ""}`} />{!sidebarCollapsed && <span className="max-[767px]:hidden">Collapse</span>}</button>
+          <div className={`flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-2.5 ${sidebarCollapsed ? "justify-center" : ""}`}>
+            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0f766e] text-xs font-black text-white"><span>{user.name?.charAt(0).toUpperCase()}</span><span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-slate-50 bg-[#36b37e]" /></div>
+            {!sidebarCollapsed && <div className="min-w-0 flex-1 max-[767px]:hidden"><p className="truncate text-xs font-black text-[#0f172a]">{user.name}</p><p className="truncate text-[10px] font-medium text-slate-500">{user.email}</p></div>}
           </div>
-          <Button
-            variant="ghost"
-            onClick={logout}
-            className={`w-full mt-2 text-[#9eb4ae] hover:text-red-400 hover:bg-red-500/10 justify-start gap-2 h-9 ${sidebarCollapsed ? "justify-center px-0" : ""}`}
-          >
-            <LogOut className="h-4 w-4" />
-            {!sidebarCollapsed && <span className="text-xs">Sign Out</span>}
-          </Button>
+          <Button variant="ghost" onClick={logout} className={`mt-2 h-10 w-full justify-start gap-2 rounded-xl text-slate-500 hover:bg-[#fff1ec] hover:text-[#c2412d] ${sidebarCollapsed ? "justify-center px-0" : "px-3"}`}><LogOut className="h-4 w-4" />{!sidebarCollapsed && <span className="text-xs font-bold max-[767px]:hidden">Sign Out</span>}</Button>
         </div>
       </aside>
 
