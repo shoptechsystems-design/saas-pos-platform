@@ -316,11 +316,17 @@ export const appRouter = router({
   customers: router({
     list: tenantProcedure.input(z.object({ query: z.string().trim().optional() }).optional()).query(({ ctx, input }) => getCustomersForTenant(ctx.tenant.id, input?.query)),
     create: cashierProcedure
-      .input(z.object({ name: z.string().trim().min(2).max(160), email: z.string().email().nullable().optional(), phone: z.string().trim().max(40).nullable().optional(), groupId: z.number().int().positive().nullable().optional() }))
+      .input(z.object({ name: z.string().trim().min(2).max(160), email: z.string().trim().email().nullable().optional().or(z.literal("")), phone: z.string().trim().max(40).nullable().optional().or(z.literal("")), groupId: z.number().int().positive().nullable().optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-        await db.insert(customers).values({ tenantId: ctx.tenant.id, name: input.name, email: input.email || null, phone: input.phone || null, groupId: input.groupId || null });
+        await db.insert(customers).values({
+          tenantId: ctx.tenant.id,
+          name: input.name,
+          email: input.email && input.email.trim() !== "" ? input.email.trim() : null,
+          phone: input.phone && input.phone.trim() !== "" ? input.phone.trim() : null,
+          groupId: input.groupId || null,
+        });
         return { success: true } as const;
       }),
   }),
