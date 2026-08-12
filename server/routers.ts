@@ -48,6 +48,7 @@ import {
   hashPassword,
   verifyPassword,
 } from "./db";
+import { storagePut } from "./storage";
 import { systemRouter } from "./_core/systemRouter";
 
 const money = z.coerce.number().finite().nonnegative();
@@ -157,8 +158,25 @@ export const appRouter = router({
       taxRate: Number(ctx.tenant.taxRate),
       receiptFooter: ctx.tenant.receiptFooter,
     })),
+    uploadLogo: tenantAdminProcedure
+      .input(z.object({ filename: z.string(), base64Data: z.string(), contentType: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const matches = input.base64Data.match(/^data:(.+);base64,(.+)$/);
+        const rawBase64 = matches ? matches[2] : input.base64Data;
+        const buffer = Buffer.from(rawBase64, "base64");
+        if (buffer.length > 5 * 1024 * 1024) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Logo image must be under 5MB." });
+        }
+        const safeName = input.filename.replace(/[^a-zA-Z0-9.-]/g, "_");
+        const stored = await storagePut(`tenants/${ctx.tenant.id}/logo_${safeName}`, buffer, input.contentType);
+        const db = await getDb();
+        if (db) {
+          await db.update(tenants).set({ logoUrl: stored.url }).where(eq(tenants.id, ctx.tenant.id));
+        }
+        return { url: stored.url };
+      }),
     updateSettings: tenantAdminProcedure
-      .input(z.object({ name: tenantName, businessType: z.string().trim().min(2).max(80), currency: z.string().trim().min(3).max(8), taxRate: z.number().min(0).max(100), logoUrl: z.string().url().nullable().optional(), receiptFooter: z.string().max(500).nullable().optional() }))
+      .input(z.object({ name: tenantName, businessType: z.string().trim().min(2).max(80), currency: z.string().trim().min(3).max(8), taxRate: z.number().min(0).max(100), logoUrl: z.string().nullable().optional(), receiptFooter: z.string().max(500).nullable().optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
@@ -218,12 +236,30 @@ export const appRouter = router({
       .input(z.object({ query: z.string().trim().optional(), categoryId: z.number().int().positive().optional() }).optional())
       .query(({ ctx, input }) => getProductsForTenant(ctx.tenant.id, input?.query, input?.categoryId)),
     createProduct: inventoryProcedure
-      .input(z.object({ name: z.string().trim().min(2).max(180), sku: z.string().trim().min(1).max(80), barcode: z.string().trim().max(80).nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), costPrice: money, sellingPrice: money, discountPrice: money.nullable().optional(), taxRate: z.number().min(0).max(100).nullable().optional(), stockQuantity: z.number().int().min(0), minStockLevel: z.number().int().min(0), unit: z.string().trim().min(1).max(32).default("each"), imageUrl: z.string().url().nullable().optional() }))
+      .input(z.object({ name: z.string().trim().min(1).max(180), sku: z.string().trim().min(1).max(80), barcode: z.string().trim().max(80).nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), costPrice: money, sellingPrice: money, discountPrice: money.nullable().optional(), taxRate: z.number().min(0).max(100).nullable().optional(), stockQuantity: z.number().int().min(0), minStockLevel: z.number().int().min(0), unit: z.string().trim().min(1).max(32).default("each"), imageUrl: z.string().url().nullable().optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
         await db.insert(products).values({ ...input, tenantId: ctx.tenant.id, costPrice: input.costPrice.toFixed(2), sellingPrice: input.sellingPrice.toFixed(2), discountPrice: input.discountPrice?.toFixed(2), taxRate: input.taxRate?.toFixed(3) });
         await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "created", entity: "product", metadata: { sku: input.sku } });
+        return { success: true } as const;
+      }),
+    deleteProduct: inventoryProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        await db.delete(products).where(and(eq(products.id, input.id), eq(products.tenantId, ctx.tenant.id)));
+        await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "deleted", entity: "product", metadata: { productId: input.id } });
+        return { success: true } as const;
+      }),
+    updateProduct: inventoryProcedure
+      .input(z.object({ id: z.number().int().positive(), name: z.string().trim().min(1).max(180), sku: z.string().trim().min(1).max(80), categoryId: z.number().int().positive().nullable().optional(), sellingPrice: money, stockQuantity: z.number().int().min(0) }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        await db.update(products).set({ name: input.name, sku: input.sku, categoryId: input.categoryId, sellingPrice: input.sellingPrice.toFixed(2), stockQuantity: input.stockQuantity }).where(and(eq(products.id, input.id), eq(products.tenantId, ctx.tenant.id)));
+        await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "updated", entity: "product", metadata: { productId: input.id, sku: input.sku } });
         return { success: true } as const;
       }),
   }),

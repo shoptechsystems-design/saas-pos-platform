@@ -793,6 +793,30 @@ function ProductCatalogView() {
     onError: err => toast.error(err.message)
   });
 
+  const deleteProductMutation = trpc.catalog.deleteProduct.useMutation({
+    onSuccess: async () => {
+      toast.success("Product deleted successfully!");
+      await utils.catalog.products.invalidate();
+    },
+    onError: err => toast.error(err.message)
+  });
+
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [editProdName, setEditProdName] = useState("");
+  const [editProdSku, setEditProdSku] = useState("");
+  const [editProdPrice, setEditProdPrice] = useState("");
+  const [editProdStock, setEditProdStock] = useState("");
+  const [editProdCatId, setEditProdCatId] = useState<number | undefined>(undefined);
+
+  const updateProductMutation = trpc.catalog.updateProduct.useMutation({
+    onSuccess: async () => {
+      toast.success("Product updated successfully!");
+      setEditingProduct(null);
+      await utils.catalog.products.invalidate();
+    },
+    onError: err => toast.error(err.message)
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -922,6 +946,7 @@ function ProductCatalogView() {
                   <th className="pb-3 font-semibold">Price</th>
                   <th className="pb-3 font-semibold">Stock</th>
                   <th className="pb-3 font-semibold">Status</th>
+                  <th className="pb-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -940,6 +965,35 @@ function ProductCatalogView() {
                       <Badge variant={p.stockQuantity <= p.minStockLevel ? "destructive" : "secondary"} className="rounded-lg">
                         {p.stockQuantity <= p.minStockLevel ? "Low Stock" : "In Stock"}
                       </Badge>
+                    </td>
+                    <td className="py-4 text-right flex items-center justify-end gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingProduct(p);
+                          setEditProdName(p.name);
+                          setEditProdSku(p.sku);
+                          setEditProdPrice(p.sellingPrice.toString());
+                          setEditProdStock(p.stockQuantity.toString());
+                          setEditProdCatId(p.categoryId ?? undefined);
+                        }}
+                        className="h-8 px-2.5 text-xs text-slate-700 hover:bg-slate-100 font-bold rounded-xl"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete product "${p.name}"?`)) {
+                            deleteProductMutation.mutate({ id: p.id });
+                          }
+                        }}
+                        className="h-8 px-2.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 font-bold rounded-xl"
+                      >
+                        Delete
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -970,6 +1024,55 @@ function ProductCatalogView() {
               </div>
               <Button onClick={() => updateCategoryMutation.mutate({ id: editingCategory.id, name: editCatName, color: editCatColor })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg rounded-xl mt-4">
                 Update Category
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {editingProduct && (
+        <Dialog open={!!editingProduct} onOpenChange={open => !open && setEditingProduct(null)}>
+          <DialogContent className="bg-white border-slate-200 text-[#0f172a] rounded-2xl p-6 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-[#0f172a]">Edit Product</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-3">
+              <div>
+                <label className="text-xs text-slate-500 font-medium">Product Name</label>
+                <Input value={editProdName} onChange={e => setEditProdName(e.target.value)} className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 font-medium">SKU</label>
+                <Input value={editProdSku} onChange={e => setEditProdSku(e.target.value)} className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 font-medium">Category</label>
+                <select
+                  value={editProdCatId ?? ""}
+                  onChange={e => setEditProdCatId(e.target.value ? Number(e.target.value) : undefined)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-[#0f172a] mt-1 h-11"
+                >
+                  <option value="">Uncategorized</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-slate-500 font-medium">Selling Price (PKR)</label>
+                  <Input type="number" value={editProdPrice} onChange={e => setEditProdPrice(e.target.value)} className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 font-medium">Stock Quantity</label>
+                  <Input type="number" value={editProdStock} onChange={e => setEditProdStock(e.target.value)} className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
+                </div>
+              </div>
+              <Button
+                onClick={() => updateProductMutation.mutate({ id: editingProduct.id, name: editProdName, sku: editProdSku, categoryId: editProdCatId, sellingPrice: Number(editProdPrice) || 0, stockQuantity: Number(editProdStock) || 0 })}
+                className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg rounded-xl mt-4"
+              >
+                Update Product
               </Button>
             </div>
           </DialogContent>
@@ -1387,6 +1490,16 @@ function TenantSettingsView() {
     onError: err => toast.error(err.message)
   });
 
+  const uploadLogoMutation = trpc.tenant.uploadLogo.useMutation({
+    onSuccess: async (res) => {
+      setLogoUrl(res.url);
+      toast.success("Logo uploaded and applied successfully!");
+      await utils.tenant.settings.invalidate();
+      await utils.tenant.context.invalidate();
+    },
+    onError: err => toast.error(err.message || "Failed to upload logo.")
+  });
+
   return (
     <div className="space-y-6 w-full max-w-6xl">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -1431,7 +1544,7 @@ function TenantSettingsView() {
 
         <Card className="rounded-3xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] space-y-6">
           <h4 className="text-base font-black text-[#0f172a]">Store Logo & Branding</h4>
-          <p className="text-xs text-slate-500 leading-relaxed">Provide an image URL for your logo to display in the application header and printed receipts.</p>
+          <p className="text-xs text-slate-500 leading-relaxed">Upload a logo image file from your computer or provide an image URL to display in the application header and receipts.</p>
           <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
             {logoUrl ? (
               <img src={logoUrl} alt="Store logo preview" className="h-20 w-20 rounded-2xl object-cover shadow-md mb-3 border border-slate-200 bg-white" />
@@ -1443,7 +1556,30 @@ function TenantSettingsView() {
             <p className="text-xs font-bold text-slate-700">Logo preview</p>
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-500">Logo Image URL</label>
+            <label className="text-xs font-bold text-slate-500">Upload Logo File</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async () => {
+                  const base64Data = reader.result as string;
+                  try {
+                    const res = await uploadLogoMutation.mutateAsync({ filename: file.name, contentType: file.type || "image/png", base64Data });
+                    setLogoUrl(res.url);
+                  } catch (err: any) {
+                    // handled by onError
+                  }
+                };
+                reader.readAsDataURL(file);
+              }}
+              className="mt-1.5 block w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#0f172a] file:text-white hover:file:bg-[#1e293b] cursor-pointer"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500">Or Logo Image URL</label>
             <Input value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://example.com/logo.png" className="mt-1.5 h-11 rounded-xl border-slate-200 bg-slate-50 text-xs text-slate-900" />
           </div>
           <Button
