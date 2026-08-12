@@ -175,3 +175,74 @@
     }
   }
 }
+
+/* OmniPOS white-led commercial surface system */
+.omnipos-app {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+.omnipos-app [class*="bg-[#0d2630]"] {
+  background-color: #ffffff !important;
+}
+.omnipos-app [class*="bg-[#07111F]"] {
+  background-color: #f8fafc !important;
+}
+.omnipos-app [class*="border-[#203b42]"] {
+  border-color: #e2e8f0 !important;
+}
+.omnipos-app [class*="text-[#f8f3e7]"],
+.omnipos-app [class*="text-[#eef3ea]"],
+.omnipos-app [class*="text-[#d6e2db]"] {
+  color: #0f172a !important;
+}
+.omnipos-app [class*="text-[#9eb4ae]"],
+.omnipos-app [class*="text-[#78938f]"],
+.omnipos-app [class*="text-[#c7d8d1]"] {
+  color: #64748b !important;
+}
+.omnipos-app [class*="bg-emerald-500"] {
+  background-color: #0f172a !important;
+}
+.omnipos-app [class*="hover:bg-emerald-400"]:hover {
+  background-color: #1e293b !important;
+}
+.omnipos-app [class*="text-emerald-300"],
+.omnipos-app [class*="text-emerald-400"] {
+  color: #0f766e !important;
+}
+.omnipos-app [class*="shadow-emerald-500"] {
+  box-shadow: 0 10px 24px rgb(15 23 42 / 0.10) !important;
+}
+.omnipos-app [class*="bg-slate-800"] {
+  background-color: #f1f5f9 !important;
+}
+.omnipos-app [class*="hover:bg-slate-800"]:hover,
+.omnipos-app [class*="hover:bg-slate-700"]:hover {
+  background-color: #e2e8f0 !important;
+}
+.omnipos-app [class*="bg-slate-700"] {
+  background-color: #e2e8f0 !important;
+}
+.omnipos-app [class*="border-slate-700"] {
+  border-color: #cbd5e1 !important;
+}
+.omnipos-app [class*="text-slate-700"],
+.omnipos-app [class*="text-slate-600"] {
+  color: #94a3b8 !important;
+}
+.omnipos-app [class*="bg-red-500/10"] {
+  background-color: #fff1f2 !important;
+}
+.omnipos-app [class*="bg-amber-400"] {
+  background-color: #fff7ed !important;
+}
+.omnipos-app [class*="border-emerald-500/20"]:hover {
+  border-color: #f9735b !important;
+}
+
+.omnipos-app [class*="bg-emerald-500"] {
+  color: #ffffff !important;
+}
+.omnipos-app [class*="bg-emerald-500"] svg {
+  color: #ffffff !important;
+}

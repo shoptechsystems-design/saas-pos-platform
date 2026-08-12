@@ -1,6 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
+import type { User } from "../drizzle/schema";
 import { and, asc, desc, eq, gte, like, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -60,14 +61,16 @@ function formatMoney(cents: number) {
   return (cents / 100).toFixed(2);
 }
 
+export function toSafeUser(user: User | null | undefined) {
+  if (!user) return null;
+  const { passwordHash: _passwordHash, ...safeUser } = user;
+  return safeUser;
+}
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => {
-      if (!opts.ctx.user) return null;
-      const { passwordHash, ...safe } = opts.ctx.user as any;
-      return safe;
-    }),
+    me: publicProcedure.query(opts => toSafeUser(opts.ctx.user as User | null | undefined)),
     register: publicProcedure
       .input(z.object({
         name: z.string().trim().min(2).max(120),
@@ -110,8 +113,7 @@ export const appRouter = router({
         const createdUser = await getUserByEmail(email);
         const token = await sdk.createSessionToken(openId, { name: input.name });
         ctx.res.cookie(COOKIE_NAME, token, getSessionCookieOptions(ctx.req));
-        const { passwordHash: _, ...safeUser } = (createdUser ?? {}) as any;
-        return { success: true, user: safeUser, tenantId } as const;
+        return { success: true, user: toSafeUser(createdUser), tenantId } as const;
       }),
     login: publicProcedure
       .input(z.object({ email: z.string().trim().email().max(320), password: z.string().min(1).max(128) }))
@@ -125,8 +127,7 @@ export const appRouter = router({
         await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
         const token = await sdk.createSessionToken(user.openId, { name: user.name ?? input.email });
         ctx.res.cookie(COOKIE_NAME, token, getSessionCookieOptions(ctx.req));
-        const { passwordHash: _, ...safeUser } = user as any;
-        return { success: true, user: safeUser } as const;
+        return { success: true, user: toSafeUser(user), } as const;
       }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -338,7 +339,7 @@ export const appRouter = router({
     list: tenantAdminProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) return [];
-      return db.select({ membership: tenantMemberships, user: users }).from(tenantMemberships).innerJoin(users, eq(users.id, tenantMemberships.userId)).where(eq(tenantMemberships.tenantId, ctx.tenant.id)).orderBy(asc(users.name));
+      return db.select({ membership: tenantMemberships, user: { id: users.id, name: users.name, email: users.email, role: users.role, loginMethod: users.loginMethod } }).from(tenantMemberships).innerJoin(users, eq(users.id, tenantMemberships.userId)).where(eq(tenantMemberships.tenantId, ctx.tenant.id)).orderBy(asc(users.name));
     }),
     invite: tenantAdminProcedure.input(z.object({ email: z.string().email(), name: z.string().trim().min(2).max(160), role: z.enum(["cashier", "inventory_manager"]) })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -366,7 +367,7 @@ export const appRouter = router({
     tenants: adminProcedure.query(async () => {
       const db = await getDb();
       if (!db) return [];
-      return db.select({ tenant: tenants, owner: users }).from(tenants).innerJoin(users, eq(users.id, tenants.ownerUserId)).orderBy(desc(tenants.createdAt));
+      return db.select({ tenant: tenants, owner: { id: users.id, name: users.name, email: users.email, role: users.role, loginMethod: users.loginMethod } }).from(tenants).innerJoin(users, eq(users.id, tenants.ownerUserId)).orderBy(desc(tenants.createdAt));
     }),
     setTenantStatus: adminProcedure.input(z.object({ tenantId: z.number().int().positive(), status: z.enum(["active", "suspended", "inactive"]) })).mutation(async ({ ctx, input }) => {
       const db = await getDb();

@@ -42,6 +42,8 @@ export default function Home() {
   const { user, loading, logout, refresh } = useAuth();
   const [activeTab, setActiveTab] = useState("pos");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [publicView, setPublicView] = useState<"home" | "auth">("home");
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
 
   if (loading) {
     return (
@@ -56,7 +58,11 @@ export default function Home() {
     );
   }
 
-  if (!user) return <AuthScreen onAuthenticated={refresh} />;
+  if (!user) {
+    return publicView === "home"
+      ? <PublicHome onLogin={() => { setAuthMode("login"); setPublicView("auth"); }} onRegister={() => { setAuthMode("register"); setPublicView("auth"); }} />
+      : <AuthScreen initialMode={authMode} onBack={() => setPublicView("home")} onAuthenticated={refresh} />;
+  }
 
   const navItems = [
     { id: "pos", label: "POS Terminal", icon: ShoppingBag },
@@ -72,7 +78,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#07111F] text-[#eef3ea] flex">
+    <div className="omnipos-app min-h-screen bg-[#f8fafc] text-[#0f172a] flex">
       {/* Persistent Sidebar */}
       <aside className={`border-r border-[#203b42] bg-[#0d2630]/95 flex flex-col transition-all duration-300 ${sidebarCollapsed ? "w-20" : "w-64"}`}>
         <div className="h-20 flex items-center justify-between px-4 border-b border-[#203b42]">
@@ -185,8 +191,30 @@ export default function Home() {
   );
 }
 
-function AuthScreen({ onAuthenticated }: { onAuthenticated: () => Promise<unknown> }) {
-  const [mode, setMode] = useState<"login" | "register">("login");
+function PublicHome({ onLogin, onRegister }: { onLogin: () => void; onRegister: () => void }) {
+  return (
+    <div className="min-h-screen bg-[#f7f8fa] text-[#0f172a] selection:bg-[#0f172a] selection:text-white">
+      <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+        <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f172a] text-sm font-black text-white shadow-lg">OP</div><div><p className="font-black tracking-tight">OmniPOS</p><p className="hidden text-[11px] text-slate-500 sm:block">The commerce operating system</p></div></div>
+        <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-500 md:flex"><a href="#features" className="transition hover:text-slate-950">Platform</a><a href="#workflow" className="transition hover:text-slate-950">Workflow</a><a href="#security" className="transition hover:text-slate-950">Security</a></nav>
+        <div className="flex items-center gap-2 sm:gap-3"><button onClick={onLogin} className="hidden rounded-xl px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-white hover:text-slate-950 sm:inline-flex">Sign in</button><button onClick={onRegister} className="rounded-xl bg-[#0f172a] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-[#1e293b]">Start free</button></div>
+      </header>
+      <main>
+        <section className="mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-12 sm:px-8 lg:grid-cols-[0.94fr_1.06fr] lg:items-center lg:gap-20 lg:pb-28 lg:pt-20">
+          <div><div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]"><span className="h-2 w-2 rounded-full bg-[#f9735b]" /> Made for ambitious operators</div><h1 className="max-w-2xl text-5xl font-black leading-[0.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl">The calm operating system for your shop.</h1><p className="mt-7 max-w-xl text-lg leading-8 text-slate-500">OmniPOS brings checkout, inventory, customer relationships, and decisions into one beautifully clear workspace built for daily momentum.</p><div className="mt-9 flex flex-col gap-3 sm:flex-row"><button onClick={onRegister} className="inline-flex h-13 items-center justify-center gap-2 rounded-2xl bg-[#0f172a] px-6 text-sm font-black text-white shadow-xl shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-[#1e293b]">Create your workspace <ChevronRight className="h-4 w-4" /></button><button onClick={onLogin} className="inline-flex h-13 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">Sign in to demo</button></div><div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold text-slate-500"><span className="inline-flex items-center gap-2"><CheckCircle className="h-4 w-4 text-[#0f766e]" /> PKR-ready checkout</span><span className="inline-flex items-center gap-2"><CheckCircle className="h-4 w-4 text-[#0f766e]" /> Multi-tenant by design</span></div></div>
+          <div className="relative"><div className="absolute -inset-5 rounded-[2.5rem] bg-gradient-to-br from-[#dff4ef] via-transparent to-[#ffe5df] blur-2xl" /><div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-3 shadow-[0_30px_80px_-28px_rgba(15,23,42,0.35)] sm:p-5"><div className="flex items-center justify-between border-b border-slate-100 pb-4"><div className="flex items-center gap-2"><div className="h-7 w-7 rounded-lg bg-[#0f172a] text-center text-[10px] font-black leading-7 text-white">OP</div><span className="text-xs font-black">Operations overview</span></div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-500">Live workspace</span></div><div className="grid gap-3 py-4 sm:grid-cols-[1.15fr_0.85fr]"><div className="rounded-2xl bg-[#f7f8fa] p-4"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-500">Today at a glance</p><p className="mt-1 text-2xl font-black tracking-tight">Make every sale count</p></div><BarChart3 className="h-5 w-5 text-[#0f766e]" /></div><div className="mt-5 h-28 rounded-xl bg-white p-3"><div className="flex h-full items-end gap-2"><span className="h-8 flex-1 rounded-t-md bg-[#d5eee8]" /><span className="h-14 flex-1 rounded-t-md bg-[#b9e4db]" /><span className="h-11 flex-1 rounded-t-md bg-[#8bcfc3]" /><span className="h-20 flex-1 rounded-t-md bg-[#0f766e]" /><span className="h-16 flex-1 rounded-t-md bg-[#f9735b]" /><span className="h-24 flex-1 rounded-t-md bg-[#0f172a]" /></div></div></div><div className="space-y-3"><div className="rounded-2xl bg-[#0f172a] p-4 text-white"><div className="flex items-center justify-between"><ShoppingBag className="h-5 w-5 text-[#f9735b]" /><span className="text-[10px] font-bold text-slate-400">POS terminal</span></div><p className="mt-6 text-lg font-black">Fast, focused checkout</p><p className="mt-1 text-xs leading-5 text-slate-400">Search products, build the order, finish confidently.</p></div><div className="rounded-2xl border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><Package className="h-5 w-5 text-[#0f766e]" /><span className="text-[10px] font-bold text-slate-400">Inventory</span></div><p className="mt-4 text-sm font-black">Always know what moves</p><div className="mt-3 h-2 rounded-full bg-slate-100"><div className="h-2 w-3/4 rounded-full bg-[#0f766e]" /></div></div></div></div></div></div>
+        </section>
+        <section id="features" className="border-y border-slate-200 bg-white"><div className="mx-auto grid max-w-7xl gap-px bg-slate-200 px-5 sm:px-8 md:grid-cols-3"><div className="bg-white px-1 py-9 md:px-4"><Zap className="h-5 w-5 text-[#f9735b]" /><h3 className="mt-5 text-lg font-black">Checkout without friction</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">A cashier experience shaped around speed, search, smart carts, and clean receipts.</p></div><div className="bg-white px-1 py-9 md:px-8"><ShieldCheck className="h-5 w-5 text-[#0f766e]" /><h3 className="mt-5 text-lg font-black">Every business stays separate</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">Tenants, roles, products, customers, and reports live inside secure business boundaries.</p></div><div className="bg-white px-1 py-9 md:px-8"><Receipt className="h-5 w-5 text-[#0f172a]" /><h3 className="mt-5 text-lg font-black">The complete picture</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">Turn daily transactions into a clear view of revenue, stock, loyalty, and operations.</p></div></div></section>
+        <section id="workflow" className="mx-auto grid max-w-7xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:py-28"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-[#0f766e]">One connected workflow</p><h2 className="mt-4 max-w-md text-4xl font-black leading-tight tracking-tight">From first scan to next decision.</h2><p className="mt-5 max-w-md leading-7 text-slate-500">Give every role the right view without giving them the whole maze. OmniPOS keeps the operation clear for owners, cashiers, and inventory teams.</p></div><div className="grid gap-4 sm:grid-cols-2"><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><span className="text-sm font-black text-[#f9735b]">01</span><h3 className="mt-10 text-xl font-black">Sell</h3><p className="mt-2 text-sm leading-6 text-slate-500">Search by name, SKU, or barcode. Apply discounts. Collect cash, card, or transfer.</p></div><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><span className="text-sm font-black text-[#0f766e]">02</span><h3 className="mt-10 text-xl font-black">Replenish</h3><p className="mt-2 text-sm leading-6 text-slate-500">Catch low stock early, adjust inventory, and create purchase orders before momentum slows.</p></div><div id="security" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:col-span-2"><span className="text-sm font-black text-[#0f172a]">03</span><h3 className="mt-10 text-xl font-black">Understand</h3><p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">See the health of your business in one view with reporting that respects tenant boundaries and role permissions.</p></div></div></section>
+        <section className="mx-5 mb-16 overflow-hidden rounded-[2rem] bg-[#0f172a] px-6 py-12 text-white sm:mx-8 sm:px-12 lg:mx-auto lg:max-w-7xl lg:py-16"><div className="flex flex-col justify-between gap-8 md:flex-row md:items-end"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-[#f9735b]">Ready when you are</p><h2 className="mt-4 max-w-xl text-4xl font-black leading-tight tracking-tight">Make your next shift feel lighter.</h2></div><button onClick={onRegister} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-[#0f172a] transition hover:bg-[#fff1ec]">Create workspace <ChevronRight className="h-4 w-4" /></button></div></section>
+      </main>
+      <footer className="mx-auto flex max-w-7xl flex-col gap-3 px-5 pb-8 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-8"><p>© 2026 OmniPOS. Commerce operations, clarified.</p><p>Secure multi-tenant POS for modern businesses.</p></footer>
+    </div>
+  );
+}
+
+function AuthScreen({ initialMode = "login", onBack, onAuthenticated }: { initialMode?: "login" | "register"; onBack?: () => void; onAuthenticated: () => Promise<unknown> }) {
+  const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [name, setName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
@@ -223,7 +251,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: () => Promise<unknow
   };
 
   return (
-    <div className="min-h-screen bg-[#07111F] text-[#F8F3E7] grid lg:grid-cols-[1.1fr_0.9fr] selection:bg-emerald-400 selection:text-[#07111F]">
+    <div className="min-h-screen bg-[#102c36] text-[#F8F3E7] grid lg:grid-cols-[1.1fr_0.9fr] selection:bg-emerald-400 selection:text-[#07111F]">
       <section className="hidden lg:flex relative overflow-hidden p-14 flex-col justify-between bg-[radial-gradient(circle_at_12%_10%,rgba(56,189,148,0.18),transparent_34%),linear-gradient(145deg,#0a1f2a_0%,#07111f_55%,#24311f_100%)] border-r border-[#1d3b3f]">
         <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-emerald-400/20" />
         <div className="absolute right-16 top-24 h-36 w-36 rounded-full border border-amber-300/20" />
@@ -247,6 +275,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: () => Promise<unknow
       <section className="flex items-center justify-center p-6 sm:p-10 bg-[#f6f2e8] text-[#12312f]">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-3 mb-10"><div className="h-10 w-10 rounded-xl bg-[#0e8f78] text-[#f8f3e7] flex items-center justify-center font-black">OP</div><span className="font-black text-xl">OmniPOS</span></div>
+          {onBack && <button type="button" onClick={onBack} className="mb-6 inline-flex items-center gap-2 text-xs font-black text-[#5b706b] transition hover:text-[#0f172a]">← Back to overview</button>}
           <div className="mb-8"><p className="text-sm font-bold uppercase tracking-[0.18em] text-[#0e8f78]">{mode === "login" ? "Welcome back" : "Start your workspace"}</p><h2 className="mt-2 text-3xl font-black tracking-tight">{mode === "login" ? "Sign in to OmniPOS" : "Create your business account"}</h2><p className="mt-2 text-sm text-[#5b706b]">{mode === "login" ? "Use your OmniPOS email and password to continue." : "Set up your PKR-ready POS workspace in a few steps."}</p></div>
           <div className="grid grid-cols-2 rounded-2xl bg-[#e8e7dc] p-1 mb-7">
             <button type="button" onClick={() => setMode("login")} className={`rounded-xl py-2.5 text-sm font-bold transition ${mode === "login" ? "bg-white text-[#12312f] shadow-sm" : "text-[#71827d]"}`}>Sign in</button>
@@ -1214,10 +1243,17 @@ function TenantSettingsView() {
 }
 
 function SuperAdminView() {
+  const utils = trpc.useUtils();
   const { data: stats } = trpc.admin.platformStats.useQuery();
   const { data: tenants = [] } = trpc.admin.tenants.useQuery();
   const statusMutation = trpc.admin.setTenantStatus.useMutation({
-    onSuccess: () => toast.success("Tenant status updated!"),
+    onSuccess: async () => {
+      toast.success("Organization status updated successfully!");
+      await Promise.all([
+        utils.admin.tenants.invalidate(),
+        utils.admin.platformStats.invalidate(),
+      ]);
+    },
     onError: err => toast.error(err.message)
   });
 
@@ -1243,7 +1279,7 @@ function SuperAdminView() {
       </div>
 
       <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-        <h3 className="font-bold text-[#f8f3e7] mb-4">Super Admin - Tenant Management</h3>
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h3 className="font-bold text-[#f8f3e7]">Organization management</h3><p className="mt-1 text-xs text-[#9eb4ae]">Approve new businesses, pause access, or reactivate an organization without crossing tenant data boundaries.</p></div><Badge className="w-fit rounded-full bg-emerald-500/10 text-emerald-300">Super Admin controls</Badge></div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -1271,9 +1307,9 @@ function SuperAdminView() {
                       size="sm"
                       variant="outline"
                       onClick={() => statusMutation.mutate({ tenantId: tenant.id, status: tenant.status === "active" ? "suspended" : "active" })}
-                      className="border-slate-700 bg-slate-800 text-xs rounded-xl"
+                      className="border-slate-200 bg-white text-xs rounded-xl text-slate-700 hover:bg-slate-50"
                     >
-                      {tenant.status === "active" ? "Suspend" : "Activate"}
+                      {tenant.status === "active" ? "Suspend organization" : tenant.status === "suspended" ? "Reactivate organization" : "Approve organization"}
                     </Button>
                   </td>
                 </tr>

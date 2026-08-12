@@ -21,4 +21,8 @@
 - [x] Implement dedicated direct Register & Login screens instead of forcing external portal login
 - [x] Switch currency formatting across all POS terminals, carts, invoices, and reports to PKR (₨)
 - [x] Optimize cashier terminal layout for responsive laptop and tablet viewports
+- [x] Refresh UI from heavy green to a pristine, white-led commercial design system (clean light surfaces, subtle borders, high contrast)
+- [x] Configure `shoptechsystems@gmail.com` with password `SuperAdmin@05` as Super Admin
+- [x] Ensure Super Admin can fully manage organizations (approve, suspend, reactivate tenants)
+- [x] Redesign the public landing page into a stunning commercial SaaS showcase with live feature highlights and instant access CTAs
 - [x] Save checkpoint and final delivery
