@@ -91,6 +91,21 @@ export const products = mysqlTable("products", {
   tenantCategoryIdx: index("products_tenant_category_idx").on(table.tenantId, table.categoryId),
 }));
 
+export const productVariants = mysqlTable("product_variants", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  productId: int("productId").notNull(),
+  name: varchar("name", { length: 120 }).notNull(), // e.g. "Red / Large" or "250g Pack"
+  sku: varchar("sku", { length: 80 }).notNull(),
+  additionalPrice: decimal("additionalPrice", { precision: 12, scale: 2 }).default("0").notNull(),
+  stockQuantity: int("stockQuantity").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  tenantProductIdx: index("product_variants_tenant_product_idx").on(table.tenantId, table.productId),
+  tenantSkuIdx: uniqueIndex("product_variants_tenant_sku_idx").on(table.tenantId, table.sku),
+}));
+
 export const customers = mysqlTable("customers", {
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),

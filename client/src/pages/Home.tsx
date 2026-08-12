@@ -745,8 +745,17 @@ function ProductCatalogView() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [categoryId, setCategoryId] = useState<number | undefined>();
+  const [productImageUrl, setProductImageUrl] = useState("");
   const [newCatName, setNewCatName] = useState("");
   const [newCatColor, setNewCatColor] = useState("#5B6CFF");
+
+  const uploadImageMutation = trpc.catalog.uploadProductImage.useMutation({
+    onSuccess: (res) => {
+      setProductImageUrl(res.url);
+      toast.success("Product image uploaded successfully!");
+    },
+    onError: err => toast.error(err.message || "Failed to upload image.")
+  });
 
   const createMutation = trpc.catalog.createProduct.useMutation({
     onSuccess: async () => {
@@ -757,6 +766,7 @@ function ProductCatalogView() {
       setPrice("");
       setStock("");
       setCategoryId(undefined);
+      setProductImageUrl("");
       await utils.catalog.products.invalidate();
     },
     onError: err => toast.error(err.message)
@@ -865,17 +875,17 @@ function ProductCatalogView() {
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold text-[#0f172a]">Add New Product</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 pt-3">
+              <div className="space-y-4 pt-3 max-h-[70vh] overflow-y-auto pr-1">
                 <div>
-                  <label className="text-xs text-slate-500 font-medium">Product Name</label>
+                  <label className="text-xs text-slate-500 font-medium">Product Name <span className="text-red-500">*</span></label>
                   <Input value={name} onChange={e => setName(e.target.value)} placeholder="Organic Espresso Beans" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 font-medium">SKU</label>
+                  <label className="text-xs text-slate-500 font-medium">SKU <span className="text-red-500">*</span></label>
                   <Input value={sku} onChange={e => setSku(e.target.value)} placeholder="SKU-ESP-01" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 font-medium">Category</label>
+                  <label className="text-xs text-slate-500 font-medium">Category <span className="text-slate-400 font-normal">(Optional)</span></label>
                   <select
                     value={categoryId ?? ""}
                     onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}
@@ -889,16 +899,48 @@ function ProductCatalogView() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs text-slate-500 font-medium">Selling Price (PKR)</label>
+                    <label className="text-xs text-slate-500 font-medium">Selling Price (PKR) <span className="text-red-500">*</span></label>
                     <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="14.99" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-500 font-medium">Initial Stock</label>
+                    <label className="text-xs text-slate-500 font-medium">Initial Stock <span className="text-red-500">*</span></label>
                     <Input type="number" value={stock} onChange={e => setStock(e.target.value)} placeholder="50" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                   </div>
                 </div>
+                <div>
+                  <label className="text-xs text-slate-500 font-medium">Product Image <span className="text-slate-400 font-normal">(Optional)</span></label>
+                  <div className="mt-1.5 flex items-center gap-3">
+                    {productImageUrl ? (
+                      <img src={productImageUrl} alt="Preview" className="h-14 w-14 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0" />
+                    ) : (
+                      <div className="h-14 w-14 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200 text-slate-400 font-bold text-xs">IMG</div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = async () => {
+                          const base64Data = reader.result as string;
+                          try {
+                            const res = await uploadImageMutation.mutateAsync({ filename: file.name, contentType: file.type || "image/png", base64Data });
+                            setProductImageUrl(res.url);
+                          } catch (err) {}
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                      className="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 font-medium">Or Image URL <span className="text-slate-400 font-normal">(Optional)</span></label>
+                  <Input value={productImageUrl} onChange={e => setProductImageUrl(e.target.value)} placeholder="https://example.com/item.png" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11 text-xs" />
+                </div>
                 <Button
-                  onClick={() => createMutation.mutate({ name, sku, categoryId, costPrice: 0, sellingPrice: Number(price) || 0, stockQuantity: Number(stock) || 0, minStockLevel: 5 })}
+                  onClick={() => createMutation.mutate({ name, sku, categoryId, costPrice: 0, sellingPrice: Number(price) || 0, stockQuantity: Number(stock) || 0, minStockLevel: 5, imageUrl: productImageUrl || null })}
                   className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4"
                 >
                   Save Product
@@ -1084,62 +1126,268 @@ function ProductCatalogView() {
 
 function InventoryManagementView() {
   const { data: lowStock = [] } = trpc.inventory.lowStock.useQuery();
+  const { data: movements = [] } = trpc.inventory.movements.useQuery();
+  const { data: products = [] } = trpc.catalog.products.useQuery();
   const { data: purchases = [] } = trpc.purchases.list.useQuery();
   const { data: suppliers = [] } = trpc.suppliers.list.useQuery();
+  const utils = trpc.useUtils();
+
+  const [selectedProductId, setSelectedProductId] = useState<number | undefined>();
+  const [adjQty, setAdjQty] = useState("");
+  const [adjReason, setAdjReason] = useState("");
+  const [openAdjust, setOpenAdjust] = useState(false);
+
+  const [variantProductId, setVariantProductId] = useState<number | undefined>();
+  const [variantName, setVariantName] = useState("");
+  const [variantSku, setVariantSku] = useState("");
+  const [variantPrice, setVariantPrice] = useState("");
+  const [variantStock, setVariantStock] = useState("");
+  const [openVariant, setOpenVariant] = useState(false);
+
+  const { data: variants = [] } = trpc.inventory.variants.useQuery(
+    { productId: variantProductId! },
+    { enabled: !!variantProductId }
+  );
+
+  const adjustMutation = trpc.inventory.adjust.useMutation({
+    onSuccess: async () => {
+      toast.success("Stock adjusted successfully!");
+      setOpenAdjust(false);
+      setAdjQty("");
+      setAdjReason("");
+      await utils.inventory.lowStock.invalidate();
+      await utils.inventory.movements.invalidate();
+      await utils.catalog.products.invalidate();
+    },
+    onError: err => toast.error(err.message)
+  });
+
+  const createVariantMutation = trpc.inventory.createVariant.useMutation({
+    onSuccess: async () => {
+      toast.success("Variant created successfully!");
+      setVariantName("");
+      setVariantSku("");
+      setVariantPrice("");
+      setVariantStock("");
+      await utils.inventory.variants.invalidate();
+    },
+    onError: err => toast.error(err.message)
+  });
+
+  const deleteVariantMutation = trpc.inventory.deleteVariant.useMutation({
+    onSuccess: async () => {
+      toast.success("Variant deleted!");
+      await utils.inventory.variants.invalidate();
+    },
+    onError: err => toast.error(err.message)
+  });
 
   return (
     <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h3 className="text-xl font-bold text-[#0f172a]">Advanced Inventory Management</h3>
+          <p className="text-xs text-slate-500 mt-1">Track low-stock alerts, manage product variants, and inspect audit movements.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button onClick={() => setOpenAdjust(true)} className="bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold rounded-xl shadow-md">
+            Manual Stock Adjust
+          </Button>
+          <Button onClick={() => setOpenVariant(true)} variant="outline" className="border-slate-300 text-[#0f172a] hover:bg-slate-100 font-bold rounded-xl">
+            Manage Variants
+          </Button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <p className="text-xs text-[#9eb4ae] font-medium">Low Stock Items</p>
-          <h3 className="text-3xl font-extrabold text-amber-400 mt-2">{lowStock.length}</h3>
-          <p className="text-xs text-[#78938f] mt-1.5">Require replenishment</p>
+        <Card className="bg-white border-slate-200 p-6 rounded-2xl shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+          <p className="text-xs text-slate-500 font-medium">Low Stock Alerts</p>
+          <h3 className="text-3xl font-extrabold text-amber-600 mt-2">{lowStock.length}</h3>
+          <p className="text-xs text-slate-400 mt-1.5">Items at or below min threshold</p>
         </Card>
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <p className="text-xs text-[#9eb4ae] font-medium">Active Suppliers</p>
-          <h3 className="text-3xl font-extrabold text-[#f8f3e7] mt-2">{suppliers.length}</h3>
-          <p className="text-xs text-[#78938f] mt-1.5">Wholesale partners</p>
+        <Card className="bg-white border-slate-200 p-6 rounded-2xl shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+          <p className="text-xs text-slate-500 font-medium">Active Suppliers</p>
+          <h3 className="text-3xl font-extrabold text-[#0f172a] mt-2">{suppliers.length}</h3>
+          <p className="text-xs text-slate-400 mt-1.5">Wholesale partners</p>
         </Card>
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <p className="text-xs text-[#9eb4ae] font-medium">Purchase Orders</p>
+        <Card className="bg-white border-slate-200 p-6 rounded-2xl shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+          <p className="text-xs text-slate-500 font-medium">Purchase Orders</p>
           <h3 className="text-3xl font-extrabold text-[#0f766e] mt-2">{purchases.length}</h3>
-          <p className="text-xs text-[#78938f] mt-1.5">Logged in system</p>
+          <p className="text-xs text-slate-400 mt-1.5">Registered POs</p>
         </Card>
       </div>
 
-      <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-        <h3 className="font-bold text-[#f8f3e7] mb-4 flex items-center gap-2">
-          <Truck className="h-5 w-5 text-[#0f766e]" /> Purchase Orders
+      {lowStock.length > 0 && (
+        <Card className="bg-amber-50/60 border-amber-200 p-6 rounded-2xl shadow-sm">
+          <h4 className="font-bold text-amber-900 mb-2">Low Stock Warning Alerts</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {lowStock.map(p => (
+              <div key={p.id} className="bg-white border border-amber-200/70 p-3 rounded-xl flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-slate-900">{p.name}</p>
+                  <p className="text-[11px] text-slate-500">SKU: {p.sku}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-black text-amber-700 bg-amber-100 px-2 py-1 rounded-lg">
+                    {p.stockQuantity} left
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card className="bg-white border-slate-200 p-6 rounded-2xl shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+        <h3 className="font-bold text-[#0f172a] mb-4 flex items-center gap-2">
+          <Truck className="h-5 w-5 text-[#0f766e]" /> Inventory Audit Ledger & Movements
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[#203b42] text-[#9eb4ae] text-xs uppercase tracking-wider">
-                <th className="pb-3 font-semibold">PO Number</th>
-                <th className="pb-3 font-semibold">Supplier</th>
-                <th className="pb-3 font-semibold">Status</th>
-                <th className="pb-3 font-semibold">Total Cost</th>
-                <th className="pb-3 font-semibold">Date</th>
+              <tr className="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                <th className="pb-3 font-semibold">Movement Type</th>
+                <th className="pb-3 font-semibold">Product ID</th>
+                <th className="pb-3 font-semibold">Quantity Change</th>
+                <th className="pb-3 font-semibold">Reason / Reference</th>
+                <th className="pb-3 font-semibold">Timestamp</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {purchases.map(({ purchase, supplier }) => (
-                <tr key={purchase.id} className="hover:bg-[#07111F]/40 transition-colors">
-                  <td className="py-4 font-semibold text-[#f8f3e7]">{purchase.purchaseNumber}</td>
-                  <td className="py-4 text-[#c7d8d1]">{supplier?.name ?? "Direct Supplier"}</td>
+            <tbody className="divide-y divide-slate-100">
+              {movements.map(m => (
+                <tr key={m.id} className="hover:bg-slate-50 transition-colors">
                   <td className="py-4">
-                    <Badge className="bg-[#effaf7] text-[#0f766e] border-[#d5eee8] rounded-lg capitalize">
-                      {purchase.status}
+                    <Badge className={`rounded-lg capitalize ${m.quantity > 0 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"}`}>
+                      {m.type}
                     </Badge>
                   </td>
-                  <td className="py-4 font-bold text-[#0f766e]">₨{Number(purchase.total).toFixed(2)}</td>
-                  <td className="py-4 text-[#9eb4ae] text-xs">{new Date(purchase.createdAt).toLocaleDateString()}</td>
+                  <td className="py-4 font-mono text-xs font-semibold text-slate-700">#{m.productId}</td>
+                  <td className={`py-4 font-bold ${m.quantity > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
+                  </td>
+                  <td className="py-4 text-slate-600 text-xs">{m.reason || "Automatic stock adjustment"}</td>
+                  <td className="py-4 text-slate-400 text-xs">{new Date(m.createdAt).toLocaleString()}</td>
                 </tr>
               ))}
+              {movements.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">No inventory movements recorded yet.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </Card>
+
+      <Dialog open={openAdjust} onOpenChange={setOpenAdjust}>
+        <DialogContent className="bg-white border-slate-200 text-[#0f172a] rounded-2xl p-6 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-[#0f172a]">Manual Stock Adjustment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-3">
+            <div>
+              <label className="text-xs text-slate-500 font-medium">Select Product</label>
+              <select
+                value={selectedProductId ?? ""}
+                onChange={e => setSelectedProductId(e.target.value ? Number(e.target.value) : undefined)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-[#0f172a] mt-1 h-11"
+              >
+                <option value="">Choose product...</option>
+                {products.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} (Stock: {p.stockQuantity})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 font-medium">Quantity Change (+ to add, - to subtract)</label>
+              <Input type="number" value={adjQty} onChange={e => setAdjQty(e.target.value)} placeholder="e.g. 10 or -5" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 font-medium">Reason for Adjustment</label>
+              <Input value={adjReason} onChange={e => setAdjReason(e.target.value)} placeholder="e.g. Stock count correction / Restock" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
+            </div>
+            <Button
+              onClick={() => {
+                if (!selectedProductId) { toast.error("Please select a product."); return; }
+                adjustMutation.mutate({ productId: selectedProductId, quantity: Number(adjQty) || 0, reason: adjReason || "Manual adjustment" });
+              }}
+              className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg rounded-xl mt-4"
+            >
+              Apply Adjustment
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openVariant} onOpenChange={setOpenVariant}>
+        <DialogContent className="bg-white border-slate-200 text-[#0f172a] rounded-2xl p-6 shadow-2xl max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-[#0f172a]">Manage Product Variants</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-3 max-h-[70vh] overflow-y-auto pr-1">
+            <div>
+              <label className="text-xs text-slate-500 font-medium">Select Parent Product</label>
+              <select
+                value={variantProductId ?? ""}
+                onChange={e => setVariantProductId(e.target.value ? Number(e.target.value) : undefined)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-[#0f172a] mt-1 h-11"
+              >
+                <option value="">Choose product...</option>
+                {products.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {variantProductId && (
+              <div className="space-y-4 border-t border-slate-100 pt-4">
+                <h4 className="text-sm font-bold text-slate-800">Existing Variants</h4>
+                <div className="space-y-2 max-h-[160px] overflow-y-auto">
+                  {variants.map(v => (
+                    <div key={v.id} className="flex items-center justify-between bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">{v.name}</p>
+                        <p className="text-[11px] text-slate-500">SKU: {v.sku} | Stock: {v.stockQuantity} | +₨{v.additionalPrice}</p>
+                      </div>
+                      <Button size="sm" variant="ghost" onClick={() => deleteVariantMutation.mutate({ id: v.id })} className="text-xs text-red-600 hover:bg-red-50">Delete</Button>
+                    </div>
+                  ))}
+                  {variants.length === 0 && <p className="text-xs text-slate-400">No variants created for this product yet.</p>}
+                </div>
+
+                <h4 className="text-sm font-bold text-slate-800 pt-2">Add New Variant</h4>
+                <div>
+                  <label className="text-xs text-slate-500 font-medium">Variant Name (e.g. Large / Red)</label>
+                  <Input value={variantName} onChange={e => setVariantName(e.target.value)} placeholder="Large" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-10 text-xs" />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 font-medium">Variant SKU</label>
+                  <Input value={variantSku} onChange={e => setVariantSku(e.target.value)} placeholder="SKU-LRG" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-10 text-xs" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-slate-500 font-medium">Extra Price (PKR)</label>
+                    <Input type="number" value={variantPrice} onChange={e => setVariantPrice(e.target.value)} placeholder="0" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-10 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 font-medium">Initial Stock</label>
+                    <Input type="number" value={variantStock} onChange={e => setVariantStock(e.target.value)} placeholder="20" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-10 text-xs" />
+                  </div>
+                </div>
+                <Button
+                  onClick={() => {
+                    if (!variantName || !variantSku) { toast.error("Please provide name and SKU."); return; }
+                    createVariantMutation.mutate({ productId: variantProductId, name: variantName, sku: variantSku, additionalPrice: Number(variantPrice) || 0, stockQuantity: Number(variantStock) || 0 });
+                  }}
+                  className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-11 rounded-xl"
+                >
+                  Save Variant
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -22,6 +22,13 @@
       "when": 1786522641171,
       "tag": "0002_sad_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1786542674085,
+      "tag": "0003_cool_starbolt",
+      "breakpoints": true
     }
   ]
 }
