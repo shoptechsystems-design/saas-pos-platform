@@ -1,0 +1,26 @@
+# OmniPOS SaaS Platform - Development TODO
+
+- [x] Define comprehensive multi-tenant database schema (`tenants`, `users`, `categories`, `products`, `customers`, `suppliers`, `purchases`, `purchase_items`, `sales`, `sale_items`, `expenses`, `audit_logs`) in `drizzle/schema.ts`
+- [x] Run drizzle migration generation and apply SQL to database
+- [x] Implement robust auth context middleware with tenant ID association & role-based checks (Super Admin, Tenant Admin, Cashier, Inventory Manager)
+- [x] Implement backend tRPC routers for:
+  - [x] Super Admin (tenant management, global stats, user management)
+  - [x] Tenant Management & Settings (business info, tax rate, currency, receipt footer)
+  - [x] Products & Categories CRUD + stock alerts
+  - [x] Inventory adjustments, low-stock tracking, and purchase orders with suppliers
+  - [x] Customers & Loyalty points tracking
+  - [x] Expenses recording and categorization
+  - [x] POS Sales, cart calculations, discounts, tax, payment methods, and receipt generation
+  - [x] Sales Analytics & Revenue reporting
+- [x] Build Frontend UI & Navigation:
+  - [x] Landing page & Tenant Onboarding / Registration modal
+  - [x] Super Admin Dashboard & Tenant Management view
+  - [x] Tenant Admin Dashboard with KPIs, low-stock warnings, and recent sales
+  - [x] Lightning-fast POS Cashier Terminal with product search, barcode scanner simulator, categories, cart drawers, discount/tax handling, payment modal, and printable receipt view
+  - [x] Products & Categories Management table with image & stock status
+  - [x] Inventory & Purchase Orders management with supplier records
+  - [x] Customer Directory & Loyalty points management
+  - [x] Expense Tracker & Financial reports with charts
+  - [x] Role & User management within tenant
+- [x] Write unit & integration tests (`server/pos.test.ts`) covering tenant isolation and POS calculations
+- [x] Save checkpoint and final validation
