@@ -320,7 +320,7 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-        await db.insert(customers).values({ tenantId: ctx.tenant.id, name: input.name, email: input.email, phone: input.phone, groupId: input.groupId });
+        await db.insert(customers).values({ tenantId: ctx.tenant.id, name: input.name, email: input.email || null, phone: input.phone || null, groupId: input.groupId || null });
         return { success: true } as const;
       }),
   }),
