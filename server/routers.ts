@@ -82,7 +82,13 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
         const email = input.email.toLowerCase();
-        if (await getUserByEmail(email)) {
+        let existingUser;
+        try {
+          existingUser = await getUserByEmail(email);
+        } catch {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The workspace database is temporarily unavailable. Please retry in a moment." });
+        }
+        if (existingUser) {
           throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
         }
         const openId = createLocalOpenId();
@@ -120,7 +126,12 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-        const user = await getUserByEmail(input.email.toLowerCase());
+        let user;
+        try {
+          user = await getUserByEmail(input.email.toLowerCase());
+        } catch {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The workspace database is temporarily unavailable. Please retry in a moment." });
+        }
         if (!user || !verifyPassword(input.password, user.passwordHash)) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Email or password is incorrect." });
         }

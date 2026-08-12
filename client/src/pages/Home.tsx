@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Store,
   ShieldCheck,
@@ -44,15 +44,25 @@ export default function Home() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [publicView, setPublicView] = useState<"home" | "auth">("home");
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authBootstrapTimedOut, setAuthBootstrapTimedOut] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading) {
+      setAuthBootstrapTimedOut(false);
+      return;
+    }
+    const timeoutId = window.setTimeout(() => setAuthBootstrapTimedOut(true), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [loading]);
+
+  if (loading && !authBootstrapTimedOut) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0d2630] text-[#eef3ea]">
+      <div className="min-h-screen flex items-center justify-center bg-white text-[#0f172a]">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-xl animate-pulse">
+          <div className="h-12 w-12 rounded-2xl bg-[#0f172a] flex items-center justify-center shadow-xl animate-pulse">
             <Store className="h-6 w-6 text-[#f8f3e7]" />
           </div>
-          <p className="text-sm font-medium tracking-wide text-[#9eb4ae]">Loading OmniPOS Platform...</p>
+          <p className="text-sm font-medium tracking-wide text-slate-500">Loading OmniPOS Platform...</p>
         </div>
       </div>
     );
@@ -138,7 +148,7 @@ export default function Home() {
         <div className="border-t border-slate-100 p-3">
           <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className={`mb-2 flex h-9 w-full items-center gap-2 rounded-xl px-3 text-[11px] font-black text-slate-400 transition hover:bg-slate-50 hover:text-[#0f172a] ${sidebarCollapsed ? "justify-center px-0" : ""}`} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}><SlidersHorizontal className={`h-4 w-4 transition-transform ${sidebarCollapsed ? "rotate-180" : ""}`} />{!sidebarCollapsed && <span className="max-[767px]:hidden">Collapse</span>}</button>
           <div className={`flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-2.5 ${sidebarCollapsed ? "justify-center" : ""}`}>
-            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0f766e] text-xs font-black text-white"><span>{user.name?.charAt(0).toUpperCase()}</span><span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-slate-50 bg-[#36b37e]" /></div>
+            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0f766e] text-xs font-black text-white"><span>{user.name?.charAt(0).toUpperCase()}</span><span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-slate-50 bg-[#f9735b]" /></div>
             {!sidebarCollapsed && <div className="min-w-0 flex-1 max-[767px]:hidden"><p className="truncate text-xs font-black text-[#0f172a]">{user.name}</p><p className="truncate text-[10px] font-medium text-slate-500">{user.email}</p></div>}
           </div>
           <Button variant="ghost" onClick={logout} className={`mt-2 h-10 w-full justify-start gap-2 rounded-xl text-slate-500 hover:bg-[#fff1ec] hover:text-[#c2412d] ${sidebarCollapsed ? "justify-center px-0" : "px-3"}`}><LogOut className="h-4 w-4" />{!sidebarCollapsed && <span className="text-xs font-bold max-[767px]:hidden">Sign Out</span>}</Button>
@@ -147,34 +157,34 @@ export default function Home() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-20 border-b border-[#203b42] bg-[#0d2630]/70 backdrop-blur px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-40">
+        <header className="h-20 border-b border-slate-200 bg-white/95 backdrop-blur px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-40">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="h-9 w-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-[#c7d8d1] hover:bg-slate-700 transition-colors"
+              className="h-9 w-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"
             >
               <SlidersHorizontal className="h-4 w-4" />
             </button>
             <div>
-              <h2 className="text-lg font-bold text-[#f8f3e7] tracking-tight capitalize">
+              <h2 className="text-lg font-bold text-[#0f172a] tracking-tight capitalize">
                 {activeTab === "pos" ? "POS Cashier Terminal" : activeTab.replace("-", " & ")}
               </h2>
-              <p className="text-xs text-[#9eb4ae]">Aura Coffee & Gourmet Market • Tenant Isolation Active</p>
+              <p className="text-xs text-slate-500">{businessName} • Tenant Isolation Active</p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#9eb4ae]" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Global search products, orders..."
-                className="pl-9 bg-[#07111F] border-[#203b42] w-64 text-xs text-[#f8f3e7]"
+                className="pl-9 bg-white border-slate-200 w-64 text-xs text-[#0f172a] shadow-sm"
               />
             </div>
-            <Button variant="outline" size="icon" className="border-[#203b42] bg-[#0d2630] text-[#c7d8d1] hover:bg-slate-800">
+            <Button variant="outline" size="icon" className="border-slate-200 bg-white text-slate-500 hover:bg-slate-50">
               <Bell className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="border-[#203b42] bg-[#0d2630] text-[#c7d8d1] hover:bg-slate-800">
+            <Button variant="outline" size="icon" className="border-slate-200 bg-white text-slate-500 hover:bg-slate-50">
               <HelpCircle className="h-4 w-4" />
             </Button>
           </div>
@@ -220,6 +230,7 @@ function PublicHome({ onLogin, onRegister }: { onLogin: () => void; onRegister: 
 }
 
 function AuthScreen({ initialMode = "login", onBack, onAuthenticated }: { initialMode?: "login" | "register"; onBack?: () => void; onAuthenticated: () => Promise<unknown> }) {
+  const authUtils = trpc.useUtils();
   const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [name, setName] = useState("");
   const [businessName, setBusinessName] = useState("");
@@ -228,14 +239,16 @@ function AuthScreen({ initialMode = "login", onBack, onAuthenticated }: { initia
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: async () => {
+    onSuccess: async result => {
+      authUtils.auth.me.setData(undefined, result.user);
       toast.success("Welcome back to OmniPOS.");
       await onAuthenticated();
     },
     onError: error => toast.error(error.message),
   });
   const registerMutation = trpc.auth.register.useMutation({
-    onSuccess: async () => {
+    onSuccess: async result => {
+      authUtils.auth.me.setData(undefined, result.user);
       toast.success("Workspace created. Welcome to OmniPOS.");
       await onAuthenticated();
     },
@@ -257,13 +270,13 @@ function AuthScreen({ initialMode = "login", onBack, onAuthenticated }: { initia
   };
 
   return (
-    <div className="min-h-screen bg-[#102c36] text-[#F8F3E7] grid lg:grid-cols-[1.1fr_0.9fr] selection:bg-emerald-400 selection:text-[#07111F]">
-      <section className="hidden lg:flex relative overflow-hidden p-14 flex-col justify-between bg-[radial-gradient(circle_at_12%_10%,rgba(56,189,148,0.18),transparent_34%),linear-gradient(145deg,#0a1f2a_0%,#07111f_55%,#24311f_100%)] border-r border-[#1d3b3f]">
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-emerald-400/20" />
+    <div className="min-h-screen bg-[#102c36] text-[#F8F3E7] grid lg:grid-cols-[1.1fr_0.9fr] selection:bg-[#0f172a] selection:text-[#07111F]">
+      <section className="hidden lg:flex relative overflow-hidden p-14 flex-col justify-between bg-[radial-gradient(circle_at_12%_10%,rgba(15,118,110,0.18),transparent_34%),linear-gradient(145deg,#0a1f2a_0%,#07111f_55%,#1e293b_100%)] border-r border-[#1d3b3f]">
+        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-slate-400/20" />
         <div className="absolute right-16 top-24 h-36 w-36 rounded-full border border-amber-300/20" />
         <div className="relative flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-emerald-400 text-[#07111F] flex items-center justify-center font-black shadow-xl shadow-emerald-400/20">OP</div>
-          <div><p className="font-black tracking-tight text-lg">OmniPOS</p><p className="text-xs text-emerald-200/70">Commerce operations, clarified.</p></div>
+          <div className="h-11 w-11 rounded-2xl bg-[#0f172a] text-[#07111F] flex items-center justify-center font-black shadow-xl shadow-slate-900/20">OP</div>
+          <div><p className="font-black tracking-tight text-lg">OmniPOS</p><p className="text-xs text-slate-300/70">Commerce operations, clarified.</p></div>
         </div>
         <div className="relative max-w-xl">
           <Badge className="bg-amber-300/10 text-amber-200 border-amber-300/20 rounded-full px-3 py-1 mb-6">Built for modern retail teams</Badge>
@@ -271,7 +284,7 @@ function AuthScreen({ initialMode = "login", onBack, onAuthenticated }: { initia
           <p className="mt-6 text-base leading-7 text-[#b6c8c5] max-w-lg">A focused POS terminal, live inventory, customer loyalty, and clean financial reporting designed for fast-moving shops and cafés.</p>
           <div className="mt-9 grid grid-cols-3 gap-3 max-w-lg">
             <div className="rounded-2xl border border-[#24454a] bg-[#0d2630]/70 p-4"><Zap className="h-5 w-5 text-amber-300" /><p className="mt-3 text-xs text-[#b6c8c5]">Fast checkout</p></div>
-            <div className="rounded-2xl border border-[#24454a] bg-[#0d2630]/70 p-4"><ShieldCheck className="h-5 w-5 text-emerald-300" /><p className="mt-3 text-xs text-[#b6c8c5]">Tenant-safe</p></div>
+            <div className="rounded-2xl border border-[#24454a] bg-[#0d2630]/70 p-4"><ShieldCheck className="h-5 w-5 text-[#0f766e]" /><p className="mt-3 text-xs text-[#b6c8c5]">Tenant-safe</p></div>
             <div className="rounded-2xl border border-[#24454a] bg-[#0d2630]/70 p-4"><BarChart3 className="h-5 w-5 text-rose-300" /><p className="mt-3 text-xs text-[#b6c8c5]">Actionable data</p></div>
           </div>
         </div>
@@ -280,9 +293,9 @@ function AuthScreen({ initialMode = "login", onBack, onAuthenticated }: { initia
 
       <section className="flex items-center justify-center p-6 sm:p-10 bg-[#f6f2e8] text-[#12312f]">
         <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-3 mb-10"><div className="h-10 w-10 rounded-xl bg-[#0e8f78] text-[#f8f3e7] flex items-center justify-center font-black">OP</div><span className="font-black text-xl">OmniPOS</span></div>
+          <div className="lg:hidden flex items-center gap-3 mb-10"><div className="h-10 w-10 rounded-xl bg-[#0f172a] text-[#f8f3e7] flex items-center justify-center font-black">OP</div><span className="font-black text-xl">OmniPOS</span></div>
           {onBack && <button type="button" onClick={onBack} className="mb-6 inline-flex items-center gap-2 text-xs font-black text-[#5b706b] transition hover:text-[#0f172a]">← Back to overview</button>}
-          <div className="mb-8"><p className="text-sm font-bold uppercase tracking-[0.18em] text-[#0e8f78]">{mode === "login" ? "Welcome back" : "Start your workspace"}</p><h2 className="mt-2 text-3xl font-black tracking-tight">{mode === "login" ? "Sign in to OmniPOS" : "Create your business account"}</h2><p className="mt-2 text-sm text-[#5b706b]">{mode === "login" ? "Use your OmniPOS email and password to continue." : "Set up your PKR-ready POS workspace in a few steps."}</p></div>
+          <div className="mb-8"><p className="text-sm font-bold uppercase tracking-[0.18em] text-[#0f766e]">{mode === "login" ? "Welcome back" : "Start your workspace"}</p><h2 className="mt-2 text-3xl font-black tracking-tight">{mode === "login" ? "Sign in to OmniPOS" : "Create your business account"}</h2><p className="mt-2 text-sm text-[#5b706b]">{mode === "login" ? "Use your OmniPOS email and password to continue." : "Set up your PKR-ready POS workspace in a few steps."}</p></div>
           <div className="grid grid-cols-2 rounded-2xl bg-[#e8e7dc] p-1 mb-7">
             <button type="button" onClick={() => setMode("login")} className={`rounded-xl py-2.5 text-sm font-bold transition ${mode === "login" ? "bg-white text-[#12312f] shadow-sm" : "text-[#71827d]"}`}>Sign in</button>
             <button type="button" onClick={() => setMode("register")} className={`rounded-xl py-2.5 text-sm font-bold transition ${mode === "register" ? "bg-white text-[#12312f] shadow-sm" : "text-[#71827d]"}`}>Register</button>
@@ -295,9 +308,9 @@ function AuthScreen({ initialMode = "login", onBack, onAuthenticated }: { initia
             <div><label className="text-xs font-bold text-[#35524c]">Email address</label><Input type="email" value={email} onChange={event => setEmail(event.target.value)} required placeholder="you@business.com" className="mt-1 h-12 rounded-xl border-[#c8d4cc] bg-white text-[#12312f] placeholder:text-[#9aa9a3]" /></div>
             <div><label className="text-xs font-bold text-[#35524c]">Password</label><Input type="password" value={password} onChange={event => setPassword(event.target.value)} required minLength={mode === "register" ? 8 : 1} placeholder={mode === "register" ? "At least 8 characters" : "Enter your password"} className="mt-1 h-12 rounded-xl border-[#c8d4cc] bg-white text-[#12312f] placeholder:text-[#9aa9a3]" /></div>
             {mode === "register" && <div><label className="text-xs font-bold text-[#35524c]">Confirm password</label><Input type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} required minLength={8} placeholder="Repeat password" className="mt-1 h-12 rounded-xl border-[#c8d4cc] bg-white text-[#12312f] placeholder:text-[#9aa9a3]" /></div>}
-            <Button type="submit" disabled={isPending} className="w-full h-12 rounded-xl bg-[#0e8f78] hover:bg-[#087762] text-[#f8f3e7] font-black shadow-lg shadow-[#0e8f78]/20">{isPending ? "Please wait..." : mode === "login" ? "Sign in to workspace" : "Create PKR workspace"}</Button>
+            <Button type="submit" disabled={isPending} className="w-full h-12 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-black shadow-lg shadow-slate-900/10">{isPending ? "Please wait..." : mode === "login" ? "Sign in to workspace" : "Create PKR workspace"}</Button>
           </form>
-          <div className="mt-7 flex items-start gap-3 rounded-2xl border border-[#cbd7ce] bg-[#eef1e8] p-4"><ShieldCheck className="h-5 w-5 mt-0.5 text-[#0e8f78] shrink-0" /><p className="text-xs leading-5 text-[#5b706b]">Direct OmniPOS accounts use secure server-side password hashing and an httpOnly session. No external Manus sign-in is required for this workspace.</p></div>
+          <div className="mt-7 flex items-start gap-3 rounded-2xl border border-[#cbd7ce] bg-[#eef1e8] p-4"><ShieldCheck className="h-5 w-5 mt-0.5 text-[#0f766e] shrink-0" /><p className="text-xs leading-5 text-[#5b706b]">Direct OmniPOS accounts use secure server-side password hashing and an httpOnly session. No external Manus sign-in is required for this workspace.</p></div>
         </div>
       </section>
     </div>
@@ -425,7 +438,7 @@ function POSTerminalView() {
             variant={selectedCategory === undefined ? "default" : "outline"}
             size="sm"
             onClick={() => setSelectedCategory(undefined)}
-            className={selectedCategory === undefined ? "bg-emerald-500 text-[#f8f3e7] rounded-xl" : "border-[#203b42] bg-[#0d2630] text-[#c7d8d1] rounded-xl hover:bg-slate-800"}
+            className={selectedCategory === undefined ? "bg-[#0f172a] text-[#f8f3e7] rounded-xl" : "border-[#203b42] bg-[#0d2630] text-[#c7d8d1] rounded-xl hover:bg-slate-800"}
           >
             All Categories
           </Button>
@@ -435,7 +448,7 @@ function POSTerminalView() {
               variant={selectedCategory === cat.id ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedCategory(cat.id)}
-              className={selectedCategory === cat.id ? "bg-emerald-500 text-[#f8f3e7] rounded-xl" : "border-[#203b42] bg-[#0d2630] text-[#c7d8d1] rounded-xl hover:bg-slate-800"}
+              className={selectedCategory === cat.id ? "bg-[#0f172a] text-[#f8f3e7] rounded-xl" : "border-[#203b42] bg-[#0d2630] text-[#c7d8d1] rounded-xl hover:bg-slate-800"}
             >
               {cat.name}
             </Button>
@@ -447,7 +460,7 @@ function POSTerminalView() {
             <Card
               key={product.id}
               onClick={() => addToCart(product)}
-              className="bg-[#0d2630]/95 border-[#203b42] hover:border-emerald-500/20 cursor-pointer transition-all p-3.5 flex flex-col justify-between group shadow-lg rounded-2xl min-h-[220px]"
+              className="bg-[#0d2630]/95 border-[#203b42] hover:border-[#f9735b]/40 cursor-pointer transition-all p-3.5 flex flex-col justify-between group shadow-lg rounded-2xl min-h-[220px]"
             >
               <div>
                 <div className="h-32 rounded-xl bg-[#07111F] mb-3 flex items-center justify-center overflow-hidden border border-[#203b42]/80">
@@ -461,7 +474,7 @@ function POSTerminalView() {
                 <p className="text-xs text-[#9eb4ae] mt-0.5">SKU: {product.sku}</p>
               </div>
               <div className="mt-4 flex items-center justify-between">
-                <span className="font-bold text-emerald-300">₨{Number(product.sellingPrice).toFixed(2)}</span>
+                <span className="font-bold text-[#0f766e]">₨{Number(product.sellingPrice).toFixed(2)}</span>
                 <Badge variant={product.stockQuantity <= product.minStockLevel ? "destructive" : "secondary"} className="text-[10px] rounded-lg">
                   Stock: {product.stockQuantity}
                 </Badge>
@@ -477,7 +490,7 @@ function POSTerminalView() {
           <div className="flex items-center justify-between pb-4 border-b border-[#203b42]">
             <div>
               <h3 className="font-bold text-[#f8f3e7] flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4 text-emerald-300" /> Current Order
+                <ShoppingBag className="h-4 w-4 text-[#0f766e]" /> Current Order
               </h3>
               <p className="text-xs text-[#9eb4ae] mt-0.5">Order #{Date.now().toString(36).toUpperCase()}</p>
             </div>
@@ -502,7 +515,7 @@ function POSTerminalView() {
                 <div key={item.product.id} className="flex items-center justify-between bg-[#07111F] p-3.5 rounded-xl border border-[#203b42]/80 shadow-sm">
                   <div className="flex-1 min-w-0 pr-3">
                     <p className="text-sm font-semibold text-[#d6e2db] truncate">{item.product.name}</p>
-                    <p className="text-xs text-emerald-300 mt-1">₨{Number(item.product.sellingPrice).toFixed(2)} each</p>
+                    <p className="text-xs text-[#0f766e] mt-1">₨{Number(item.product.sellingPrice).toFixed(2)} each</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => updateQuantity(item.product.id, -1)} className="h-7 w-7 rounded-lg bg-slate-800 flex items-center justify-center text-[#c7d8d1] hover:bg-slate-700 font-bold">-</button>
@@ -534,14 +547,14 @@ function POSTerminalView() {
               <div className="flex justify-between text-[#9eb4ae]"><span>Tax (18%)</span><span>₨{tax.toFixed(2)}</span></div>
               <div className="flex justify-between font-extrabold text-xl text-[#f8f3e7] pt-2 border-t border-[#203b42]">
                 <span>TOTAL</span>
-                <span className="text-emerald-300">₨{total.toFixed(2)}</span>
+                <span className="text-[#0f766e]">₨{total.toFixed(2)}</span>
               </div>
             </div>
 
             <Button
               onClick={() => setPaymentModalOpen(true)}
               disabled={cart.length === 0}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-bold h-12 shadow-lg shadow-emerald-500/25 rounded-xl text-base mt-2"
+              className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl text-base mt-2"
             >
               Pay ₨{total.toFixed(2)}
             </Button>
@@ -554,13 +567,13 @@ function POSTerminalView() {
         <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] max-w-md rounded-2xl p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#f8f3e7] flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-emerald-300" /> Complete Payment
+              <CreditCard className="h-5 w-5 text-[#0f766e]" /> Complete Payment
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-5 pt-3">
             <div className="bg-[#07111F] p-4 rounded-xl border border-[#203b42] text-center">
               <p className="text-xs text-[#9eb4ae] uppercase tracking-wider font-medium">Amount Due</p>
-              <h3 className="text-3xl font-extrabold text-emerald-300 mt-1">₨{total.toFixed(2)}</h3>
+              <h3 className="text-3xl font-extrabold text-[#0f766e] mt-1">₨{total.toFixed(2)}</h3>
             </div>
 
             <div className="space-y-2">
@@ -571,7 +584,7 @@ function POSTerminalView() {
                     key={m}
                     variant={paymentMethod === m ? "default" : "outline"}
                     onClick={() => setPaymentMethod(m)}
-                    className={paymentMethod === m ? "bg-emerald-500 text-[#f8f3e7] capitalize" : "border-[#203b42] bg-[#07111F] text-[#c7d8d1] capitalize hover:bg-slate-800"}
+                    className={paymentMethod === m ? "bg-[#0f172a] text-[#f8f3e7] capitalize" : "border-[#203b42] bg-[#07111F] text-[#c7d8d1] capitalize hover:bg-slate-800"}
                   >
                     {m}
                   </Button>
@@ -591,7 +604,7 @@ function POSTerminalView() {
                 />
                 <div className="flex justify-between text-sm pt-1">
                   <span className="text-[#9eb4ae]">Change Due:</span>
-                  <span className="font-bold text-emerald-300">₨{changeDue.toFixed(2)}</span>
+                  <span className="font-bold text-[#0f766e]">₨{changeDue.toFixed(2)}</span>
                 </div>
               </div>
             )}
@@ -599,7 +612,7 @@ function POSTerminalView() {
             <Button
               onClick={() => checkoutMutation.mutate({ items: cart.map(i => ({ productId: i.product.id, quantity: i.quantity })), discount: 0, paymentMethod, amountReceived: receivedNum || total, customerId: selectedCustomerId })}
               disabled={checkoutMutation.isPending}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-bold h-12 shadow-lg shadow-emerald-500/25 rounded-xl"
+              className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl"
             >
               Confirm & Print Receipt
             </Button>
@@ -611,7 +624,7 @@ function POSTerminalView() {
       <Dialog open={!!checkoutResult} onOpenChange={() => setCheckoutResult(null)}>
         <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-emerald-300">
+            <DialogTitle className="flex items-center gap-2 text-[#0f766e]">
               <Printer className="h-5 w-5" /> Receipt Generated
             </DialogTitle>
           </DialogHeader>
@@ -626,12 +639,12 @@ function POSTerminalView() {
                 <div className="flex justify-between text-[#c7d8d1]"><span>Subtotal</span><span>₨{checkoutResult.subtotal}</span></div>
                 <div className="flex justify-between text-[#c7d8d1]"><span>Tax (18%)</span><span>₨{checkoutResult.tax}</span></div>
                 <div className="flex justify-between font-bold text-sm pt-2 border-t border-[#203b42] text-[#f8f3e7]"><span>TOTAL</span><span>₨{checkoutResult.total}</span></div>
-                <div className="flex justify-between text-emerald-400 pt-1 font-semibold"><span>Change Returned</span><span>₨{checkoutResult.change}</span></div>
+                <div className="flex justify-between text-[#0f766e] pt-1 font-semibold"><span>Change Returned</span><span>₨{checkoutResult.change}</span></div>
               </div>
               <div className="text-center pt-3 border-t border-[#203b42] text-[11px] text-[#9eb4ae] leading-relaxed">
                 {checkoutResult.footer}
               </div>
-              <Button onClick={() => setCheckoutResult(null)} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-sans font-semibold mt-4 rounded-xl">
+              <Button onClick={() => setCheckoutResult(null)} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-sans font-semibold mt-4 rounded-xl">
                 Done & Next Sale
               </Button>
             </div>
@@ -646,74 +659,41 @@ function TenantDashboardView() {
   const { data: stats } = trpc.dashboard.stats.useQuery();
   const { data: lowStock = [] } = trpc.dashboard.lowStock.useQuery();
   const { data: recentSales = [] } = trpc.dashboard.recentSales.useQuery();
+  const todaySales = Number(stats?.todaySales ?? 0);
+  const monthSales = Number(stats?.monthSales ?? 0);
+  const todayOrders = Number(stats?.todayOrders ?? 0);
+  const activeProducts = Number(stats?.products ?? 0);
+  const registeredCustomers = Number(stats?.customers ?? 0);
+  const lowStockCount = Number(stats?.lowStock ?? lowStock.length);
+  const averageOrder = todayOrders ? todaySales / todayOrders : 0;
+  const healthPercent = activeProducts ? Math.max(0, Math.min(100, ((activeProducts - lowStockCount) / activeProducts) * 100)) : 0;
+
+  const metricCards = [
+    { label: "Today's sales", value: `₨${todaySales.toFixed(2)}`, helper: `${todayOrders} orders completed`, accent: "text-[#0f766e]", icon: Receipt },
+    { label: "Month-to-date revenue", value: `₨${monthSales.toFixed(2)}`, helper: "Current billing period", accent: "text-[#0f172a]", icon: TrendingUp },
+    { label: "Average order value", value: `₨${averageOrder.toFixed(2)}`, helper: "Based on today's sales", accent: "text-[#f9735b]", icon: ShoppingBag },
+    { label: "Customer directory", value: registeredCustomers.toString(), helper: `${lowStockCount} low-stock alerts`, accent: "text-[#0f766e]", icon: Users },
+  ];
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <p className="text-xs text-[#9eb4ae] font-medium">Today's Sales</p>
-          <h3 className="text-3xl font-extrabold text-emerald-300 mt-2">₨{Number(stats?.todaySales ?? 0).toFixed(2)}</h3>
-          <p className="text-xs text-[#78938f] mt-1.5">{stats?.todayOrders ?? 0} orders completed today</p>
-        </Card>
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <p className="text-xs text-[#9eb4ae] font-medium">Month-to-Date Revenue</p>
-          <h3 className="text-3xl font-extrabold text-emerald-300 mt-2">₨{Number(stats?.monthSales ?? 0).toFixed(2)}</h3>
-          <p className="text-xs text-[#78938f] mt-1.5">Active billing period</p>
-        </Card>
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <p className="text-xs text-[#9eb4ae] font-medium">Active Products</p>
-          <h3 className="text-3xl font-extrabold text-[#f8f3e7] mt-2">{stats?.products ?? 0}</h3>
-          <p className="text-xs text-amber-400 mt-1.5">{stats?.lowStock ?? 0} low stock warnings</p>
-        </Card>
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <p className="text-xs text-[#9eb4ae] font-medium">Registered Customers</p>
-          <h3 className="text-3xl font-extrabold text-[#f8f3e7] mt-2">{stats?.customers ?? 0}</h3>
-          <p className="text-xs text-[#78938f] mt-1.5">Loyalty points enabled</p>
-        </Card>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0f766e]">Business overview</p><h3 className="mt-2 text-3xl font-black tracking-[-0.04em] text-[#0f172a]">Good morning, Aura Coffee.</h3><p className="mt-1 text-sm text-slate-500">Here’s what is happening across your workspace today.</p></div>
+        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500">PKR • Live data</div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <h3 className="font-bold text-[#f8f3e7] mb-4 flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-400" /> Low Stock Alerts
-          </h3>
-          <div className="space-y-3">
-            {lowStock.length === 0 ? (
-              <p className="text-sm text-[#78938f] text-center py-8">All inventory levels are optimal.</p>
-            ) : (
-              lowStock.map(p => (
-                <div key={p.id} className="flex items-center justify-between bg-[#07111F] p-4 rounded-xl border border-[#203b42]">
-                  <div>
-                    <p className="text-sm font-semibold text-[#f8f3e7]">{p.name}</p>
-                    <p className="text-xs text-[#9eb4ae]">SKU: {p.sku}</p>
-                  </div>
-                  <Badge variant="destructive" className="rounded-lg">Stock: {p.stockQuantity}</Badge>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metricCards.map(({ label, value, helper, accent, icon: Icon }) => <Card key={label} className="rounded-2xl border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="flex items-start justify-between"><div><p className="text-xs font-bold text-slate-500">{label}</p><p className={`mt-3 text-2xl font-black tracking-tight ${accent}`}>{value}</p></div><div className="rounded-xl bg-slate-50 p-2.5"><Icon className="h-4 w-4 text-slate-500" /></div></div><p className="mt-4 text-[11px] font-medium text-slate-400">{helper}</p></Card>)}
+      </div>
 
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <h3 className="font-bold text-[#f8f3e7] mb-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-emerald-300" /> Recent Transactions
-          </h3>
-          <div className="space-y-3">
-            {recentSales.length === 0 ? (
-              <p className="text-sm text-[#78938f] text-center py-8">No sales recorded today.</p>
-            ) : (
-              recentSales.map(item => (
-                <div key={item.sale.id} className="flex items-center justify-between bg-[#07111F] p-4 rounded-xl border border-[#203b42]">
-                  <div>
-                    <p className="text-sm font-semibold text-[#f8f3e7]">{item.sale.saleNumber}</p>
-                    <p className="text-xs text-[#9eb4ae]">{item.customer?.name ?? "Walk-in Customer"} • {item.sale.paymentMethod.toUpperCase()}</p>
-                  </div>
-                  <span className="font-extrabold text-emerald-300">₨{Number(item.sale.total).toFixed(2)}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.45fr_0.85fr]">
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="flex items-start justify-between"><div><p className="text-xs font-bold text-slate-500">Revenue pulse</p><h4 className="mt-1 text-xl font-black tracking-tight text-[#0f172a]">Keep your operation in view.</h4></div><Badge className="rounded-full border border-[#d5eee8] bg-[#effaf7] text-[#0f766e]">Today</Badge></div><div className="mt-8 grid h-40 grid-cols-7 items-end gap-3 rounded-2xl bg-[#f8fafc] p-4">{[0.34,0.52,0.43,0.68,0.58,0.78, Math.max(0.12, Math.min(0.95, todaySales / Math.max(monthSales / 24, 1) / 10))].map((height, index) => <div key={index} className="group flex h-full flex-col justify-end gap-2"><div className={`w-full rounded-t-lg transition ${index === 6 ? "bg-[#0f172a]" : index === 4 ? "bg-[#f9735b]" : "bg-[#b9e4db]"}`} style={{ height: `${Math.round(height * 100)}%` }} /><span className="text-center text-[9px] font-bold text-slate-400">{["M","T","W","T","F","S","S"][index]}</span></div>)}</div><div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4"><div><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Month-to-date</p><p className="mt-1 text-lg font-black text-[#0f172a]">₨{monthSales.toFixed(2)}</p></div><div className="text-right"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Orders today</p><p className="mt-1 text-lg font-black text-[#0f766e]">{todayOrders}</p></div></div></Card>
+        <Card className="rounded-2xl border-slate-200 bg-[#0f172a] p-6 text-white shadow-[0_18px_35px_rgba(15,23,42,0.18)]"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">Operational health</p><h4 className="mt-1 text-xl font-black">Inventory readiness</h4></div><Package className="h-5 w-5 text-[#f9735b]" /></div><p className="mt-10 text-4xl font-black">{Math.round(healthPercent)}<span className="text-xl text-slate-400">%</span></p><p className="mt-1 text-xs text-slate-400">products above minimum stock</p><div className="mt-7 h-2 rounded-full bg-white/10"><div className="h-2 rounded-full bg-[#f9735b]" style={{ width: `${healthPercent}%` }} /></div><div className="mt-7 space-y-3 text-xs"><div className="flex items-center justify-between"><span className="text-slate-400">Active products</span><span className="font-black">{activeProducts}</span></div><div className="flex items-center justify-between"><span className="text-slate-400">Low-stock alerts</span><span className="font-black text-[#f9735b]">{lowStockCount}</span></div><div className="flex items-center justify-between"><span className="text-slate-400">Customers tracked</span><span className="font-black">{registeredCustomers}</span></div></div></Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-bold text-slate-500">Needs attention</p><h4 className="mt-1 text-lg font-black text-[#0f172a]">Low-stock alerts</h4></div><AlertTriangle className="h-5 w-5 text-[#f9735b]" /></div><div className="space-y-2">{lowStock.length === 0 ? <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">All inventory levels are optimal.</p> : lowStock.slice(0, 5).map(p => <div key={p.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 p-3"><div><p className="text-sm font-bold text-[#0f172a]">{p.name}</p><p className="mt-0.5 text-[11px] text-slate-500">SKU: {p.sku}</p></div><Badge className="rounded-full border border-[#ffd9d2] bg-[#fff1ec] text-[#c2412d]">{p.stockQuantity} left</Badge></div>)}</div></Card>
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-bold text-slate-500">Latest activity</p><h4 className="mt-1 text-lg font-black text-[#0f172a]">Recent transactions</h4></div><Receipt className="h-5 w-5 text-[#0f766e]" /></div><div className="space-y-2">{recentSales.length === 0 ? <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No sales recorded today.</p> : recentSales.slice(0, 5).map(item => <div key={item.sale.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-3"><div><p className="text-sm font-bold text-[#0f172a]">{item.sale.saleNumber}</p><p className="mt-0.5 text-[11px] text-slate-500">{item.customer?.name ?? "Walk-in Customer"} • {item.sale.paymentMethod.toUpperCase()}</p></div><span className="text-sm font-black text-[#0f766e]">₨{Number(item.sale.total).toFixed(2)}</span></div>)}</div></Card>
       </div>
     </div>
   );
@@ -748,7 +728,7 @@ function ProductCatalogView() {
         </div>
         <Dialog open={openNew} onOpenChange={setOpenNew}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-emerald-500/25">
+            <Button className="bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-slate-900/10">
               <Plus className="h-4 w-4 mr-2" /> Add Product
             </Button>
           </DialogTrigger>
@@ -777,7 +757,7 @@ function ProductCatalogView() {
               </div>
               <Button
                 onClick={() => createMutation.mutate({ name, sku, costPrice: 0, sellingPrice: Number(price) || 0, stockQuantity: Number(stock) || 0, minStockLevel: 5 })}
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-bold h-12 shadow-lg shadow-emerald-500/25 rounded-xl mt-4"
+                className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4"
               >
                 Save Product
               </Button>
@@ -808,7 +788,7 @@ function ProductCatalogView() {
                     <span>{p.name}</span>
                   </td>
                   <td className="py-4 text-[#9eb4ae] font-mono text-xs">{p.sku}</td>
-                  <td className="py-4 font-bold text-emerald-300">₨{Number(p.sellingPrice).toFixed(2)}</td>
+                  <td className="py-4 font-bold text-[#0f766e]">₨{Number(p.sellingPrice).toFixed(2)}</td>
                   <td className="py-4 font-semibold">{p.stockQuantity}</td>
                   <td className="py-4">
                     <Badge variant={p.stockQuantity <= p.minStockLevel ? "destructive" : "secondary"} className="rounded-lg">
@@ -845,14 +825,14 @@ function InventoryManagementView() {
         </Card>
         <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
           <p className="text-xs text-[#9eb4ae] font-medium">Purchase Orders</p>
-          <h3 className="text-3xl font-extrabold text-emerald-300 mt-2">{purchases.length}</h3>
+          <h3 className="text-3xl font-extrabold text-[#0f766e] mt-2">{purchases.length}</h3>
           <p className="text-xs text-[#78938f] mt-1.5">Logged in system</p>
         </Card>
       </div>
 
       <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
         <h3 className="font-bold text-[#f8f3e7] mb-4 flex items-center gap-2">
-          <Truck className="h-5 w-5 text-emerald-300" /> Purchase Orders
+          <Truck className="h-5 w-5 text-[#0f766e]" /> Purchase Orders
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -871,11 +851,11 @@ function InventoryManagementView() {
                   <td className="py-4 font-semibold text-[#f8f3e7]">{purchase.purchaseNumber}</td>
                   <td className="py-4 text-[#c7d8d1]">{supplier?.name ?? "Direct Supplier"}</td>
                   <td className="py-4">
-                    <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 rounded-lg capitalize">
+                    <Badge className="bg-[#effaf7] text-[#0f766e] border-[#d5eee8] rounded-lg capitalize">
                       {purchase.status}
                     </Badge>
                   </td>
-                  <td className="py-4 font-bold text-emerald-300">₨{Number(purchase.total).toFixed(2)}</td>
+                  <td className="py-4 font-bold text-[#0f766e]">₨{Number(purchase.total).toFixed(2)}</td>
                   <td className="py-4 text-[#9eb4ae] text-xs">{new Date(purchase.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
@@ -914,7 +894,7 @@ function CustomerDirectoryView() {
         </div>
         <Dialog open={openNew} onOpenChange={setOpenNew}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-emerald-500/25">
+            <Button className="bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-slate-900/10">
               <Plus className="h-4 w-4 mr-2" /> Add Customer
             </Button>
           </DialogTrigger>
@@ -935,7 +915,7 @@ function CustomerDirectoryView() {
                 <label className="text-xs text-[#9eb4ae] font-medium">Phone Number</label>
                 <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555-0191" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
               </div>
-              <Button onClick={() => createMutation.mutate({ name, email, phone })} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-bold h-12 shadow-lg shadow-emerald-500/25 rounded-xl mt-4">
+              <Button onClick={() => createMutation.mutate({ name, email, phone })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
                 Save Customer
               </Button>
             </div>
@@ -961,7 +941,7 @@ function CustomerDirectoryView() {
                   <td className="py-4 font-semibold text-[#f8f3e7]">{c.name}</td>
                   <td className="py-4 text-[#9eb4ae]">{c.email || "-"}</td>
                   <td className="py-4 text-[#9eb4ae]">{c.phone || "-"}</td>
-                  <td className="py-4 font-bold text-emerald-300">{c.loyaltyPoints} pts</td>
+                  <td className="py-4 font-bold text-[#0f766e]">{c.loyaltyPoints} pts</td>
                   <td className="py-4 font-extrabold text-[#f8f3e7]">₨{Number(c.totalSpent).toFixed(2)}</td>
                 </tr>
               ))}
@@ -1000,7 +980,7 @@ function SalesHistoryView() {
                 <tr key={item.sale.id} className="hover:bg-[#07111F]/40 transition-colors">
                   <td className="py-4 font-semibold text-[#f8f3e7]">{item.sale.saleNumber}</td>
                   <td className="py-4 text-[#c7d8d1]">{item.customer?.name ?? "Walk-in Customer"}</td>
-                  <td className="py-4 uppercase text-xs font-semibold text-emerald-300">{item.sale.paymentMethod}</td>
+                  <td className="py-4 uppercase text-xs font-semibold text-[#0f766e]">{item.sale.paymentMethod}</td>
                   <td className="py-4 font-extrabold text-[#f8f3e7]">₨{Number(item.sale.total).toFixed(2)}</td>
                   <td className="py-4 text-[#9eb4ae] text-xs">{new Date(item.sale.createdAt).toLocaleString()}</td>
                 </tr>
@@ -1039,7 +1019,7 @@ function ExpenseTrackerView() {
         </div>
         <Dialog open={openNew} onOpenChange={setOpenNew}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-emerald-500/25">
+            <Button className="bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-slate-900/10">
               <Plus className="h-4 w-4 mr-2" /> Add Expense
             </Button>
           </DialogTrigger>
@@ -1070,7 +1050,7 @@ function ExpenseTrackerView() {
                 <label className="text-xs text-[#9eb4ae] font-medium">Notes</label>
                 <Input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Monthly utility bill" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
               </div>
-              <Button onClick={() => createMutation.mutate({ category, amount: Number(amount) || 0, notes })} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-bold h-12 shadow-lg shadow-emerald-500/25 rounded-xl mt-4">
+              <Button onClick={() => createMutation.mutate({ category, amount: Number(amount) || 0, notes })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
                 Save Expense
               </Button>
             </div>
@@ -1132,7 +1112,7 @@ function TeamRolesView() {
         </div>
         <Dialog open={openInvite} onOpenChange={setOpenInvite}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-emerald-500/25">
+            <Button className="bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-slate-900/10">
               <Plus className="h-4 w-4 mr-2" /> Add Team Member
             </Button>
           </DialogTrigger>
@@ -1160,7 +1140,7 @@ function TeamRolesView() {
                   <option value="inventory_manager">Inventory Manager</option>
                 </select>
               </div>
-              <Button onClick={() => inviteMutation.mutate({ name, email, role })} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-bold h-12 shadow-lg shadow-emerald-500/25 rounded-xl mt-4">
+              <Button onClick={() => inviteMutation.mutate({ name, email, role })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
                 Assign Role
               </Button>
             </div>
@@ -1184,9 +1164,9 @@ function TeamRolesView() {
                 <tr key={membership.id} className="hover:bg-[#07111F]/40 transition-colors">
                   <td className="py-4 font-semibold text-[#f8f3e7]">{user.name}</td>
                   <td className="py-4 text-[#9eb4ae]">{user.email}</td>
-                  <td className="py-4 font-semibold text-emerald-300 uppercase text-xs">{membership.role.replace("_", " ")}</td>
+                  <td className="py-4 font-semibold text-[#0f766e] uppercase text-xs">{membership.role.replace("_", " ")}</td>
                   <td className="py-4">
-                    <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 rounded-lg">
+                    <Badge className="bg-[#effaf7] text-[#0f766e] border-[#d5eee8] rounded-lg">
                       {membership.status}
                     </Badge>
                   </td>
@@ -1240,7 +1220,7 @@ function TenantSettingsView() {
           <label className="text-xs text-[#9eb4ae] font-medium">Receipt Footer Message</label>
           <Input value={receiptFooter} onChange={e => setReceiptFooter(e.target.value)} placeholder="Thank you for your visit!" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
         </div>
-        <Button onClick={() => updateMutation.mutate({ name, businessType, currency, taxRate: Number(taxRate) || 0, receiptFooter })} className="bg-emerald-500 hover:bg-emerald-400 text-[#f8f3e7] font-bold h-12 shadow-lg shadow-emerald-500/25 rounded-xl mt-4">
+        <Button onClick={() => updateMutation.mutate({ name, businessType, currency, taxRate: Number(taxRate) || 0, receiptFooter })} className="bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
           Save Settings
         </Button>
       </div>
@@ -1255,75 +1235,25 @@ function SuperAdminView() {
   const statusMutation = trpc.admin.setTenantStatus.useMutation({
     onSuccess: async () => {
       toast.success("Organization status updated successfully!");
-      await Promise.all([
-        utils.admin.tenants.invalidate(),
-        utils.admin.platformStats.invalidate(),
-      ]);
+      await Promise.all([utils.admin.tenants.invalidate(), utils.admin.platformStats.invalidate()]);
     },
-    onError: err => toast.error(err.message)
+    onError: err => toast.error(err.message),
   });
+  const activeCount = tenants.filter(({ tenant }) => tenant.status === "active").length;
+  const suspendedCount = tenants.filter(({ tenant }) => tenant.status === "suspended").length;
+  const pendingCount = tenants.filter(({ tenant }) => tenant.status === "inactive").length;
+  const activeRate = tenants.length ? Math.round((activeCount / tenants.length) * 100) : 0;
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <p className="text-xs text-[#9eb4ae] font-medium">Total Businesses</p>
-          <h3 className="text-3xl font-extrabold text-emerald-300 mt-2">{stats?.tenants ?? 0}</h3>
-        </Card>
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <p className="text-xs text-[#9eb4ae] font-medium">Active Businesses</p>
-          <h3 className="text-3xl font-extrabold text-emerald-400 mt-2">{stats?.activeTenants ?? 0}</h3>
-        </Card>
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <p className="text-xs text-[#9eb4ae] font-medium">Platform Users</p>
-          <h3 className="text-3xl font-extrabold text-[#f8f3e7] mt-2">{stats?.users ?? 0}</h3>
-        </Card>
-        <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-          <p className="text-xs text-[#9eb4ae] font-medium">Platform Gross Revenue</p>
-          <h3 className="text-3xl font-extrabold text-emerald-300 mt-2">₨{Number(stats?.revenue ?? 0).toFixed(2)}</h3>
-        </Card>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0f766e]">Platform administration</p><h3 className="mt-2 text-3xl font-black tracking-[-0.04em] text-[#0f172a]">Organization control center.</h3><p className="mt-1 text-sm text-slate-500">Monitor every workspace, keep access decisions clear, and protect tenant boundaries.</p></div><Badge className="w-fit rounded-full border border-[#d5eee8] bg-[#effaf7] text-[#0f766e]">Super Admin access</Badge></div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[{ label: "Total businesses", value: stats?.tenants ?? 0, helper: "Registered workspaces", icon: Store, accent: "text-[#0f172a]" }, { label: "Active businesses", value: stats?.activeTenants ?? activeCount, helper: `${activeRate}% of organizations`, icon: CheckCircle, accent: "text-[#0f766e]" }, { label: "Platform users", value: stats?.users ?? 0, helper: "Across all workspaces", icon: Users, accent: "text-[#f9735b]" }, { label: "Gross revenue", value: `₨${Number(stats?.revenue ?? 0).toFixed(2)}`, helper: "Completed transactions", icon: TrendingUp, accent: "text-[#0f766e]" }].map(({ label, value, helper, icon: Icon, accent }) => <Card key={label} className="rounded-2xl border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="flex items-start justify-between"><div><p className="text-xs font-bold text-slate-500">{label}</p><p className={`mt-3 text-2xl font-black tracking-tight ${accent}`}>{value}</p></div><div className="rounded-xl bg-slate-50 p-2.5"><Icon className="h-4 w-4 text-slate-500" /></div></div><p className="mt-4 text-[11px] font-medium text-slate-400">{helper}</p></Card>)}
       </div>
-
-      <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h3 className="font-bold text-[#f8f3e7]">Organization management</h3><p className="mt-1 text-xs text-[#9eb4ae]">Approve new businesses, pause access, or reactivate an organization without crossing tenant data boundaries.</p></div><Badge className="w-fit rounded-full bg-emerald-500/10 text-emerald-300">Super Admin controls</Badge></div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-[#203b42] text-[#9eb4ae] text-xs uppercase tracking-wider">
-                <th className="pb-3 font-semibold">Business Name</th>
-                <th className="pb-3 font-semibold">Owner</th>
-                <th className="pb-3 font-semibold">Business Type</th>
-                <th className="pb-3 font-semibold">Status</th>
-                <th className="pb-3 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {tenants.map(({ tenant, owner }) => (
-                <tr key={tenant.id} className="hover:bg-[#07111F]/40 transition-colors">
-                  <td className="py-4 font-semibold text-[#f8f3e7]">{tenant.name}</td>
-                  <td className="py-4 text-[#9eb4ae]">{owner.name} ({owner.email})</td>
-                  <td className="py-4">{tenant.businessType}</td>
-                  <td className="py-4">
-                    <Badge variant={tenant.status === "active" ? "default" : "destructive"} className="rounded-lg">
-                      {tenant.status}
-                    </Badge>
-                  </td>
-                  <td className="py-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => statusMutation.mutate({ tenantId: tenant.id, status: tenant.status === "active" ? "suspended" : "active" })}
-                      className="border-slate-200 bg-white text-xs rounded-xl text-slate-700 hover:bg-slate-50"
-                    >
-                      {tenant.status === "active" ? "Suspend organization" : tenant.status === "suspended" ? "Reactivate organization" : "Approve organization"}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+        <Card className="rounded-2xl border-slate-200 bg-[#0f172a] p-6 text-white shadow-[0_18px_35px_rgba(15,23,42,0.18)]"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">Workspace health</p><h4 className="mt-1 text-xl font-black">Access distribution</h4></div><ShieldCheck className="h-5 w-5 text-[#f9735b]" /></div><p className="mt-9 text-4xl font-black">{activeRate}<span className="text-xl text-slate-400">%</span></p><p className="mt-1 text-xs text-slate-400">of organizations currently active</p><div className="mt-6 h-2 rounded-full bg-white/10"><div className="h-2 rounded-full bg-[#f9735b]" style={{ width: `${activeRate}%` }} /></div><div className="mt-7 space-y-3 text-xs"><div className="flex items-center justify-between"><span className="text-slate-400">Active</span><span className="font-black text-[#b9e4db]">{activeCount}</span></div><div className="flex items-center justify-between"><span className="text-slate-400">Suspended</span><span className="font-black text-[#f9735b]">{suspendedCount}</span></div><div className="flex items-center justify-between"><span className="text-slate-400">Pending approval</span><span className="font-black">{pendingCount}</span></div></div></Card>
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold text-slate-500">Tenant directory</p><h4 className="mt-1 text-lg font-black text-[#0f172a]">Organization management</h4><p className="mt-1 text-xs text-slate-500">Approve, suspend, or reactivate workspaces without crossing their data boundaries.</p></div><Badge className="w-fit rounded-full border border-slate-200 bg-slate-50 text-slate-500">Live control</Badge></div><div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead><tr className="border-b border-slate-100 text-[10px] uppercase tracking-wider text-slate-400"><th className="pb-3 font-black">Business</th><th className="pb-3 font-black">Owner</th><th className="pb-3 font-black">Type</th><th className="pb-3 font-black">Status</th><th className="pb-3 font-black">Action</th></tr></thead><tbody className="divide-y divide-slate-100">{tenants.map(({ tenant, owner }) => <tr key={tenant.id} className="transition hover:bg-slate-50"><td className="py-4 font-bold text-[#0f172a]">{tenant.name}</td><td className="py-4 text-xs text-slate-500">{owner.name}<br /><span className="text-[10px]">{owner.email}</span></td><td className="py-4 text-xs text-slate-500">{tenant.businessType}</td><td className="py-4"><Badge className={`rounded-full border ${tenant.status === "active" ? "border-[#d5eee8] bg-[#effaf7] text-[#0f766e]" : tenant.status === "suspended" ? "border-[#ffd9d2] bg-[#fff1ec] text-[#c2412d]" : "border-slate-200 bg-slate-50 text-slate-500"}`}>{tenant.status}</Badge></td><td className="py-4"><Button size="sm" variant="outline" onClick={() => statusMutation.mutate({ tenantId: tenant.id, status: tenant.status === "active" ? "suspended" : "active" })} className="rounded-xl border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50">{tenant.status === "active" ? "Suspend" : tenant.status === "suspended" ? "Reactivate" : "Approve"}</Button></td></tr>)}</tbody></table></div></Card>
+      </div>
     </div>
   );
 }

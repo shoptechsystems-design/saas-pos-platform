@@ -285,6 +285,12 @@ class SDKServer {
       return buildCronUser(userInfo);
     }
 
+    // OmniPOS uses direct local accounts. Ignore legacy external preview sessions
+    // before touching the database so an old Manus cookie cannot block the public entry screen.
+    if (!session.openId.startsWith("local:")) {
+      throw ForbiddenError("External authentication is disabled for this workspace");
+    }
+
     const sessionUserId = session.openId;
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);

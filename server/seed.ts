@@ -1,11 +1,27 @@
+import { eq } from "drizzle-orm";
 import { getDb } from "./db";
-import { tenants, tenantMemberships, categories, products, customers, suppliers, sales, saleItems, purchases, purchaseItems, expenses } from "../drizzle/schema";
+import { tenants, tenantMemberships, categories, products, customers, suppliers, sales, saleItems, purchases, purchaseItems, expenses, users } from "../drizzle/schema";
+
+const SUPER_ADMIN_EMAIL = "shoptechsystems@gmail.com";
+const SUPER_ADMIN_OPEN_ID = "local:superadmin";
+const SUPER_ADMIN_PASSWORD_HASH = "f862b71b3598d9a584114253b03e97f3:b0923b7aea9b34725d6851bc0fbc387fa68ecd06649851f17ff10854168f0909441cf7551ef9625297d4645205e8b90fb5e0ecc195ca01844f6a685d6b01dd5f";
 
 export async function seedDemoData() {
   const db = await getDb();
   if (!db) return;
   console.log("[Seed] Starting demo data seeding for OmniPOS...");
-  
+
+  // Keep the explicit platform owner reproducible across fresh environments and restarts.
+  const existingSuperAdmins = await db.select().from(users).where(eq(users.email, SUPER_ADMIN_EMAIL)).limit(1);
+  let superAdminId = existingSuperAdmins[0]?.id;
+  if (superAdminId) {
+    await db.update(users).set({ openId: SUPER_ADMIN_OPEN_ID, name: "ShopTech Systems", loginMethod: "local", role: "admin", passwordHash: SUPER_ADMIN_PASSWORD_HASH }).where(eq(users.id, superAdminId));
+  } else {
+    const result = await db.insert(users).values({ openId: SUPER_ADMIN_OPEN_ID, name: "ShopTech Systems", email: SUPER_ADMIN_EMAIL, loginMethod: "local", role: "admin", passwordHash: SUPER_ADMIN_PASSWORD_HASH }).$returningId();
+    superAdminId = result[0]?.id;
+  }
+  if (!superAdminId) throw new Error("Could not provision the Super Admin account.");
+
   // Check if tenant already exists
   const existingTenants = await db.select().from(tenants).limit(1);
   if (existingTenants.length > 0) {

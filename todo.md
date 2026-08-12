@@ -26,4 +26,8 @@
 - [x] Ensure Super Admin can fully manage organizations (approve, suspend, reactivate tenants)
 - [x] Redesign the public landing page into a stunning commercial SaaS showcase with live feature highlights and instant access CTAs
 - [x] Redesign sidebar into professional grouped navigation (Overview, Commerce, Operations, Workspace, Administration) matching high-end SaaS references
-- [x] Save checkpoint and final delivery
+- [x] Eliminate all unintended green color accents across buttons, modals, and badges, enforcing the professional white/navy/teal/coral design tokens
+- [x] Fix Super Admin login authentication flow so `shoptechsystems@gmail.com` authenticates reliably with `SuperAdmin@05` (hash format, local-only session handling, deterministic startup provisioning)
+- [x] Upgrade dashboard information architecture with professional metrics widgets, activity streams, and structured tables matching high-end SaaS references
+- [x] Verify Super Admin login end-to-end after the managed database endpoint recovers: direct login returns 200, auth.me returns role admin, and admin.platformStats returns platform metrics
+- [ ] Save checkpoint and final delivery

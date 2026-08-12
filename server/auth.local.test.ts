@@ -12,6 +12,12 @@ describe("direct account authentication", () => {
     expect(verifyPassword("wrong-password", storedHash)).toBe(false);
   });
 
+  it("verifies the configured Super Admin password hash", () => {
+    const configuredHash = "f862b71b3598d9a584114253b03e97f3:b0923b7aea9b34725d6851bc0fbc387fa68ecd06649851f17ff10854168f0909441cf7551ef9625297d4645205e8b90fb5e0ecc195ca01844f6a685d6b01dd5f";
+    expect(verifyPassword("SuperAdmin@05", configuredHash)).toBe(true);
+    expect(verifyPassword("wrong-password", configuredHash)).toBe(false);
+  });
+
   it("never exposes passwordHash in a safe auth DTO", () => {
     const safeUser = toSafeUser({
       id: 42,

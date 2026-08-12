@@ -246,3 +246,33 @@
 .omnipos-app [class*="bg-emerald-500"] svg {
   color: #ffffff !important;
 }
+
+/* Portal surfaces: keep dialogs aligned with the white-led authenticated UI. */
+[data-radix-portal] [class*="bg-[#0d2630]"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+[data-radix-portal] [class*="bg-[#07111F]"] {
+  background-color: #f8fafc !important;
+}
+[data-radix-portal] [class*="border-[#203b42]"] {
+  border-color: #e2e8f0 !important;
+}
+[data-radix-portal] [class*="text-[#f8f3e7]"],
+[data-radix-portal] [class*="text-[#eef3ea]"],
+[data-radix-portal] [class*="text-[#d6e2db]"] {
+  color: #0f172a !important;
+}
+[data-radix-portal] [class*="text-[#9eb4ae]"],
+[data-radix-portal] [class*="text-[#78938f]"],
+[data-radix-portal] [class*="text-[#c7d8d1]"] {
+  color: #64748b !important;
+}
+[data-radix-portal] [class*="bg-emerald-500"] {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+[data-radix-portal] [class*="text-emerald-300"],
+[data-radix-portal] [class*="text-emerald-400"] {
+  color: #0f766e !important;
+}
