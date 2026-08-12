@@ -1,26 +1,20 @@
-# OmniPOS SaaS Platform - Development TODO
+# OmniPOS SaaS Platform - Professional Redesign TODO
 
-- [x] Define comprehensive multi-tenant database schema (`tenants`, `users`, `categories`, `products`, `customers`, `suppliers`, `purchases`, `purchase_items`, `sales`, `sale_items`, `expenses`, `audit_logs`) in `drizzle/schema.ts`
-- [x] Run drizzle migration generation and apply SQL to database
-- [x] Implement robust auth context middleware with tenant ID association & role-based checks (Super Admin, Tenant Admin, Cashier, Inventory Manager)
-- [x] Implement backend tRPC routers for:
-  - [x] Super Admin (tenant management, global stats, user management)
-  - [x] Tenant Management & Settings (business info, tax rate, currency, receipt footer)
-  - [x] Products & Categories CRUD + stock alerts
-  - [x] Inventory adjustments, low-stock tracking, and purchase orders with suppliers
-  - [x] Customers & Loyalty points tracking
-  - [x] Expenses recording and categorization
-  - [x] POS Sales, cart calculations, discounts, tax, payment methods, and receipt generation
-  - [x] Sales Analytics & Revenue reporting
-- [x] Build Frontend UI & Navigation:
-  - [x] Landing page & Tenant Onboarding / Registration modal
-  - [x] Super Admin Dashboard & Tenant Management view
-  - [x] Tenant Admin Dashboard with KPIs, low-stock warnings, and recent sales
-  - [x] Lightning-fast POS Cashier Terminal with product search, barcode scanner simulator, categories, cart drawers, discount/tax handling, payment modal, and printable receipt view
-  - [x] Products & Categories Management table with image & stock status
-  - [x] Inventory & Purchase Orders management with supplier records
-  - [x] Customer Directory & Loyalty points management
-  - [x] Expense Tracker & Financial reports with charts
-  - [x] Role & User management within tenant
-- [x] Write unit & integration tests (`server/pos.test.ts`) covering tenant isolation and POS calculations
-- [x] Save checkpoint and final validation
+- [x] Establish high-end design system with crisp light/dark surfaces, professional typography, and robust color palette
+- [x] Build comprehensive database seeding script for tenants, categories (10+), products (35+), customers (15+), suppliers (10+), sales (50+), purchases (20+), and expenses (20+)
+- [x] Redesign application shell with persistent sidebar, clear tenant context, role indicators, and professional top header
+- [x] Redesign POS Cashier Terminal into a lightning-fast two-panel interface:
+  - [x] Prominent search (name, SKU, barcode) & barcode scanner simulation
+  - [x] Rich category navigation with count badges
+  - [x] Visually appealing product grid with images, prices, and stock indicators
+  - [x] Professional cart panel with order numbers, quantity controls, hold/resume orders, and customer selector
+  - [x] Clear order summary (subtotal, discount, tax, total) with bold visual hierarchy
+  - [x] Polished payment modal supporting cash (with change calculation), card, transfer, and instant receipt generation
+- [x] Redesign Tenant Admin Dashboard with professional KPI cards (sales, orders, average order, profit), revenue charts, low stock alerts, and recent transactions
+- [x] Redesign Product Catalog with advanced table, pagination, search, filters, import/export simulation, and structured creation modal
+- [x] Redesign Inventory Management with stock adjustments, valuation, low stock warnings, and purchase order tracking
+- [x] Redesign Customer Directory with loyalty points, total spending, and customer history
+- [x] Redesign Team & Roles Management with granular module permissions (POS, products, inventory, reports, settings)
+- [x] Redesign Super Admin Panel with platform revenue, tenant management, and account activation/suspension
+- [x] Verify responsive layout across desktop, laptop, and tablet screens
+- [x] Save checkpoint and final delivery

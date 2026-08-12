@@ -28,7 +28,10 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+import { seedDemoData } from "../seed";
+
 async function startServer() {
+  await seedDemoData().catch(err => console.error("[Seed Error]", err));
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
