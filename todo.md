@@ -35,4 +35,7 @@
 - [x] Implement dynamic tenant-specific category management so each business can create, edit, and use their own custom categories
 - [x] Support custom role naming and permission definitions per tenant workspace
 - [x] Add show/hide password toggle (eye icon) on all login, register, and credential inputs
+- [x] Add tenant category editing (update and delete) procedures and UI so each organization can fully manage their custom categories
+- [x] Connect Expense Tracker category selector to tenant-scoped custom categories from tRPC
+- [x] Refine dialog and input color classes in Customers, Expenses, Products, and Team views to consistently use white-led design system classes
 - [x] Save checkpoint and final delivery

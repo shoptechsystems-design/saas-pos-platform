@@ -43,33 +43,33 @@
 }
 
 :root {
-  --primary: oklch(0.52 0.14 166);
-  --primary-foreground: oklch(0.98 0.02 95);
-  --sidebar-primary: oklch(0.58 0.15 166);
-  --sidebar-primary-foreground: oklch(0.98 0.02 95);
-  --chart-1: oklch(0.73 0.14 166);
-  --chart-2: oklch(0.63 0.16 166);
+  --primary: oklch(0.20 0.02 260);
+  --primary-foreground: oklch(0.98 0.01 260);
+  --sidebar-primary: oklch(0.20 0.02 260);
+  --sidebar-primary-foreground: oklch(0.98 0.01 260);
+  --chart-1: oklch(0.55 0.15 260);
+  --chart-2: oklch(0.65 0.12 180);
   --chart-3: oklch(0.57 0.17 38);
   --chart-4: oklch(0.78 0.13 84);
   --chart-5: oklch(0.49 0.10 194);
   --radius: 0.65rem;
-  --background: oklch(0.97 0.018 95);
-  --foreground: oklch(0.20 0.035 170);
-  --card: oklch(0.995 0.009 95);
-  --card-foreground: oklch(0.20 0.035 170);
-  --popover: oklch(0.995 0.009 95);
-  --popover-foreground: oklch(0.20 0.035 170);
-  --secondary: oklch(0.93 0.03 160);
-  --secondary-foreground: oklch(0.26 0.05 170);
-  --muted: oklch(0.94 0.02 95);
-  --muted-foreground: oklch(0.45 0.035 170);
-  --accent: oklch(0.91 0.05 42);
-  --accent-foreground: oklch(0.24 0.04 38);
+  --background: oklch(0.98 0.002 260);
+  --foreground: oklch(0.15 0.01 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.01 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.01 260);
+  --secondary: oklch(0.96 0.005 260);
+  --secondary-foreground: oklch(0.20 0.02 260);
+  --muted: oklch(0.95 0.005 260);
+  --muted-foreground: oklch(0.50 0.01 260);
+  --accent: oklch(0.94 0.01 260);
+  --accent-foreground: oklch(0.20 0.02 260);
   --destructive: oklch(0.61 0.19 30);
   --destructive-foreground: oklch(0.99 0.01 95);
-  --border: oklch(0.86 0.035 160);
-  --input: oklch(0.86 0.035 160);
-  --ring: oklch(0.58 0.15 166);
+  --border: oklch(0.90 0.005 260);
+  --input: oklch(0.90 0.005 260);
+  --ring: oklch(0.20 0.02 260);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.235 0.015 65);
   --sidebar-accent: oklch(0.967 0.001 286.375);
@@ -312,4 +312,53 @@
   background-color: #ffffff !important;
   color: #0f172a !important;
   border-color: #e2e8f0 !important;
+}
+
+/* Comprehensive white-led override for all portal dialogs, dark inputs, and cards */
+[data-radix-portal] div[role="dialog"],
+[data-radix-portal] .bg-\[\#0d2630\],
+[data-radix-portal] [class*="bg-[#0d2630]"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.15) !important;
+}
+
+[data-radix-portal] input,
+[data-radix-portal] select,
+[data-radix-portal] textarea,
+[data-radix-portal] .bg-\[\#07111F\],
+[data-radix-portal] [class*="bg-[#07111F]"] {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-radix-portal] label,
+[data-radix-portal] h2,
+[data-radix-portal] h3,
+[data-radix-portal] h4,
+[data-radix-portal] span,
+[data-radix-portal] p {
+  color: #0f172a !important;
+}
+
+[data-radix-portal] input::placeholder,
+[data-radix-portal] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Force clean neutral focus rings in all dialog inputs and selects */
+[data-radix-portal] input:focus,
+[data-radix-portal] select:focus,
+[data-radix-portal] textarea:focus {
+  outline: none !important;
+  border-color: #0f172a !important;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.15) !important;
+}
+
+[data-radix-portal] [class*="emerald"],
+[data-radix-portal] [class*="ring-emerald"],
+[data-radix-portal] [class*="border-emerald"] {
+  border-color: #cbd5e1 !important;
 }

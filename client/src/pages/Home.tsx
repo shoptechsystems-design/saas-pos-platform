@@ -43,7 +43,7 @@ import { toast } from "sonner";
 
 export default function Home() {
   const { user, loading, logout, refresh } = useAuth();
-  const [activeTab, setActiveTab] = useState("pos");
+  const [activeTab, setActiveTab] = useState(user?.role === "admin" ? "superadmin" : "pos");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [publicView, setPublicView] = useState<"home" | "auth">("home");
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
@@ -93,7 +93,9 @@ export default function Home() {
     ? "Platform Administration"
     : (tenantSettings?.name || "OmniPOS Workspace");
 
-  const navGroups = [
+  const navGroups = user.role === "admin" ? [
+    { label: "Platform Administration", items: [{ id: "superadmin", label: "Super Admin Console", icon: Store }] }
+  ] : [
     { label: "Overview", items: [{ id: "dashboard", label: "Dashboard", icon: BarChart3 }] },
     { label: "Commerce", items: [
       { id: "pos", label: "POS Terminal", icon: ShoppingBag },
@@ -109,7 +111,6 @@ export default function Home() {
       { id: "team", label: "Team & Roles", icon: ShieldCheck },
       { id: "settings", label: "Business Settings", icon: Settings },
     ] },
-    ...(user.role === "admin" ? [{ label: "Administration", items: [{ id: "superadmin", label: "Super Admin", icon: Store }] }] : []),
   ];
 
   return (
@@ -194,16 +195,21 @@ export default function Home() {
         </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto min-w-0">
-          {activeTab === "pos" && <POSTerminalView />}
-          {activeTab === "dashboard" && <TenantDashboardView />}
-          {activeTab === "products" && <ProductCatalogView />}
-          {activeTab === "inventory" && <InventoryManagementView />}
-          {activeTab === "customers" && <CustomerDirectoryView />}
-          {activeTab === "sales" && <SalesHistoryView />}
-          {activeTab === "expenses" && <ExpenseTrackerView />}
-          {activeTab === "team" && <TeamRolesView />}
-          {activeTab === "settings" && <TenantSettingsView />}
-          {activeTab === "superadmin" && user.role === "admin" && <SuperAdminView />}
+          {user.role === "admin" ? (
+            <SuperAdminView />
+          ) : (
+            <>
+              {activeTab === "pos" && <POSTerminalView />}
+              {activeTab === "dashboard" && <TenantDashboardView />}
+              {activeTab === "products" && <ProductCatalogView />}
+              {activeTab === "inventory" && <InventoryManagementView />}
+              {activeTab === "customers" && <CustomerDirectoryView />}
+              {activeTab === "sales" && <SalesHistoryView />}
+              {activeTab === "expenses" && <ExpenseTrackerView />}
+              {activeTab === "team" && <TeamRolesView />}
+              {activeTab === "settings" && <TenantSettingsView />}
+            </>
+          )}
         </main>
       </div>
     </div>
@@ -750,11 +756,32 @@ function ProductCatalogView() {
     onError: err => toast.error(err.message)
   });
 
+  const [editingCategory, setEditingCategory] = useState<any | null>(null);
+  const [editCatName, setEditCatName] = useState("");
+  const [editCatColor, setEditCatColor] = useState("#5B6CFF");
+
   const createCategoryMutation = trpc.catalog.createCategory.useMutation({
     onSuccess: async () => {
       toast.success("Category added successfully!");
       setOpenCategory(false);
       setNewCatName("");
+      await utils.catalog.categories.invalidate();
+    },
+    onError: err => toast.error(err.message)
+  });
+
+  const updateCategoryMutation = trpc.catalog.updateCategory.useMutation({
+    onSuccess: async () => {
+      toast.success("Category updated successfully!");
+      setEditingCategory(null);
+      await utils.catalog.categories.invalidate();
+    },
+    onError: err => toast.error(err.message)
+  });
+
+  const deleteCategoryMutation = trpc.catalog.deleteCategory.useMutation({
+    onSuccess: async () => {
+      toast.success("Category deleted successfully!");
       await utils.catalog.categories.invalidate();
     },
     onError: err => toast.error(err.message)
@@ -774,24 +801,24 @@ function ProductCatalogView() {
                 <FolderPlus className="h-4 w-4 mr-2" /> Add Category
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] rounded-2xl p-6">
+            <DialogContent className="bg-white border-slate-200 text-[#0f172a] rounded-2xl p-6 shadow-2xl">
               <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-[#f8f3e7]">Add Custom Category</DialogTitle>
+                <DialogTitle className="text-xl font-bold text-[#0f172a]">Add Custom Category</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-3">
                 <div>
-                  <label className="text-xs text-[#9eb4ae] font-medium">Category Name</label>
-                  <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="e.g. Special Brews" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                  <label className="text-xs text-slate-500 font-medium">Category Name</label>
+                  <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="e.g. Special Brews" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                 </div>
                 <div>
-                  <label className="text-xs text-[#9eb4ae] font-medium">Color Badge</label>
+                  <label className="text-xs text-slate-500 font-medium">Color Badge</label>
                   <div className="flex gap-2 mt-1">
                     {["#5B6CFF", "#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#F97316"].map(c => (
-                      <button key={c} type="button" onClick={() => setNewCatColor(c)} className={`h-8 w-8 rounded-lg border-2 ${newCatColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+                      <button key={c} type="button" onClick={() => setNewCatColor(c)} className={`h-8 w-8 rounded-lg border-2 ${newCatColor === c ? "border-[#0f172a] scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
                     ))}
                   </div>
                 </div>
-                <Button onClick={() => createCategoryMutation.mutate({ name: newCatName, color: newCatColor })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
+                <Button onClick={() => createCategoryMutation.mutate({ name: newCatName, color: newCatColor })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
                   Save Category
                 </Button>
               </div>
@@ -804,25 +831,25 @@ function ProductCatalogView() {
                 <Plus className="h-4 w-4 mr-2" /> Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] rounded-2xl p-6">
+            <DialogContent className="bg-white border-slate-200 text-[#0f172a] rounded-2xl p-6 shadow-2xl">
               <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-[#f8f3e7]">Add New Product</DialogTitle>
+                <DialogTitle className="text-xl font-bold text-[#0f172a]">Add New Product</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-3">
                 <div>
-                  <label className="text-xs text-[#9eb4ae] font-medium">Product Name</label>
-                  <Input value={name} onChange={e => setName(e.target.value)} placeholder="Organic Espresso Beans" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                  <label className="text-xs text-slate-500 font-medium">Product Name</label>
+                  <Input value={name} onChange={e => setName(e.target.value)} placeholder="Organic Espresso Beans" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                 </div>
                 <div>
-                  <label className="text-xs text-[#9eb4ae] font-medium">SKU</label>
-                  <Input value={sku} onChange={e => setSku(e.target.value)} placeholder="SKU-ESP-01" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                  <label className="text-xs text-slate-500 font-medium">SKU</label>
+                  <Input value={sku} onChange={e => setSku(e.target.value)} placeholder="SKU-ESP-01" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                 </div>
                 <div>
-                  <label className="text-xs text-[#9eb4ae] font-medium">Category</label>
+                  <label className="text-xs text-slate-500 font-medium">Category</label>
                   <select
                     value={categoryId ?? ""}
                     onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}
-                    className="w-full bg-[#07111F] border border-[#203b42] rounded-xl px-3 py-2 text-sm text-[#f8f3e7] mt-1 h-11"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-[#0f172a] mt-1 h-11"
                   >
                     <option value="">Uncategorized</option>
                     {categories.map(cat => (
@@ -832,17 +859,17 @@ function ProductCatalogView() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs text-[#9eb4ae] font-medium">Selling Price (PKR)</label>
-                    <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="14.99" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                    <label className="text-xs text-slate-500 font-medium">Selling Price (PKR)</label>
+                    <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="14.99" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                   </div>
                   <div>
-                    <label className="text-xs text-[#9eb4ae] font-medium">Initial Stock</label>
-                    <Input type="number" value={stock} onChange={e => setStock(e.target.value)} placeholder="50" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                    <label className="text-xs text-slate-500 font-medium">Initial Stock</label>
+                    <Input type="number" value={stock} onChange={e => setStock(e.target.value)} placeholder="50" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                   </div>
                 </div>
                 <Button
                   onClick={() => createMutation.mutate({ name, sku, categoryId, costPrice: 0, sellingPrice: Number(price) || 0, stockQuantity: Number(stock) || 0, minStockLevel: 5 })}
-                  className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4"
+                  className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4"
                 >
                   Save Product
                 </Button>
@@ -852,41 +879,96 @@ function ProductCatalogView() {
         </div>
       </div>
 
-      <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-[#203b42] text-[#9eb4ae] text-xs uppercase tracking-wider">
-                <th className="pb-3 font-semibold">Product</th>
-                <th className="pb-3 font-semibold">SKU</th>
-                <th className="pb-3 font-semibold">Price</th>
-                <th className="pb-3 font-semibold">Stock</th>
-                <th className="pb-3 font-semibold">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {products.map(p => (
-                <tr key={p.id} className="hover:bg-[#07111F]/40 transition-colors">
-                  <td className="py-4 font-semibold text-[#f8f3e7] flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden">
-                      {p.imageUrl ? <img src={p.imageUrl} alt="" className="h-full w-full object-cover" /> : <Tag className="h-4 w-4 text-[#78938f]" />}
-                    </div>
-                    <span>{p.name}</span>
-                  </td>
-                  <td className="py-4 text-[#9eb4ae] font-mono text-xs">{p.sku}</td>
-                  <td className="py-4 font-bold text-[#0f766e]">₨{Number(p.sellingPrice).toFixed(2)}</td>
-                  <td className="py-4 font-semibold">{p.stockQuantity}</td>
-                  <td className="py-4">
-                    <Badge variant={p.stockQuantity <= p.minStockLevel ? "destructive" : "secondary"} className="rounded-lg">
-                      {p.stockQuantity <= p.minStockLevel ? "Low Stock" : "In Stock"}
-                    </Badge>
-                  </td>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] xl:col-span-1">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-base font-black text-[#0f172a]">Tenant Categories</h4>
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">{categories.length}</span>
+          </div>
+          <p className="text-xs text-slate-500 mb-4">Categories are fully dynamic per business workspace (e.g., bookshop, stationery, café).</p>
+          <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+            {categories.map(cat => (
+              <div key={cat.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/75 p-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-3.5 w-3.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                  <span className="text-xs font-bold text-[#0f172a]">{cat.name}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => { setEditingCategory(cat); setEditCatName(cat.name); setEditCatColor(cat.color); }} className="h-7 px-2 text-xs text-slate-600 hover:bg-slate-200">Edit</Button>
+                  <Button size="sm" variant="ghost" onClick={() => deleteCategoryMutation.mutate({ id: cat.id })} className="h-7 px-2 text-xs text-red-600 hover:bg-red-50">Delete</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] xl:col-span-2">
+          <div className="mb-4 flex items-center justify-between">
+            <h4 className="text-base font-black text-[#0f172a]">Products</h4>
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">{products.length} items</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                  <th className="pb-3 font-semibold">Product</th>
+                  <th className="pb-3 font-semibold">SKU</th>
+                  <th className="pb-3 font-semibold">Price</th>
+                  <th className="pb-3 font-semibold">Stock</th>
+                  <th className="pb-3 font-semibold">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {products.map(p => (
+                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-4 font-semibold text-[#0f172a] flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
+                        {p.imageUrl ? <img src={p.imageUrl} alt="" className="h-full w-full object-cover" /> : <Tag className="h-4 w-4 text-slate-500" />}
+                      </div>
+                      <span>{p.name}</span>
+                    </td>
+                    <td className="py-4 text-slate-500 font-mono text-xs">{p.sku}</td>
+                    <td className="py-4 font-bold text-[#0f766e]">₨{Number(p.sellingPrice).toFixed(2)}</td>
+                    <td className="py-4 font-semibold text-slate-700">{p.stockQuantity}</td>
+                    <td className="py-4">
+                      <Badge variant={p.stockQuantity <= p.minStockLevel ? "destructive" : "secondary"} className="rounded-lg">
+                        {p.stockQuantity <= p.minStockLevel ? "Low Stock" : "In Stock"}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+
+      {editingCategory && (
+        <Dialog open={!!editingCategory} onOpenChange={open => !open && setEditingCategory(null)}>
+          <DialogContent className="bg-white border-slate-200 text-[#0f172a] rounded-2xl p-6 shadow-xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-[#0f172a]">Edit Category</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-3">
+              <div>
+                <label className="text-xs text-slate-500 font-medium">Category Name</label>
+                <Input value={editCatName} onChange={e => setEditCatName(e.target.value)} className="bg-slate-50 border-slate-200 mt-1 rounded-xl h-11 text-[#0f172a]" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 font-medium">Color Badge</label>
+                <div className="flex gap-2 mt-1">
+                  {["#5B6CFF", "#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#F97316"].map(c => (
+                    <button key={c} type="button" onClick={() => setEditCatColor(c)} className={`h-8 w-8 rounded-lg border-2 ${editCatColor === c ? "border-[#0f172a] scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+                  ))}
+                </div>
+              </div>
+              <Button onClick={() => updateCategoryMutation.mutate({ id: editingCategory.id, name: editCatName, color: editCatColor })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg rounded-xl mt-4">
+                Update Category
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
@@ -984,24 +1066,24 @@ function CustomerDirectoryView() {
               <Plus className="h-4 w-4 mr-2" /> Add Customer
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] rounded-2xl p-6">
+          <DialogContent className="bg-white border-slate-200 text-[#0f172a] rounded-2xl p-6 shadow-2xl">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-[#f8f3e7]">New Customer</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#0f172a]">New Customer</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-3">
               <div>
-                <label className="text-xs text-[#9eb4ae] font-medium">Full Name</label>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Eleanor Vance" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                <label className="text-xs text-slate-500 font-medium">Full Name</label>
+                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Eleanor Vance" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
               </div>
               <div>
-                <label className="text-xs text-[#9eb4ae] font-medium">Email Address</label>
-                <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="eleanor@example.com" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                <label className="text-xs text-slate-500 font-medium">Email Address</label>
+                <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="eleanor@example.com" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
               </div>
               <div>
-                <label className="text-xs text-[#9eb4ae] font-medium">Phone Number</label>
-                <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555-0191" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                <label className="text-xs text-slate-500 font-medium">Phone Number</label>
+                <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555-0191" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
               </div>
-              <Button onClick={() => createMutation.mutate({ name, email, phone })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
+              <Button onClick={() => createMutation.mutate({ name, email, phone })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
                 Save Customer
               </Button>
             </div>
@@ -1081,8 +1163,9 @@ function SalesHistoryView() {
 
 function ExpenseTrackerView() {
   const { data: expenses = [] } = trpc.expenses.list.useQuery();
+  const { data: categories = [] } = trpc.catalog.categories.useQuery();
   const [openNew, setOpenNew] = useState(false);
-  const [category, setCategory] = useState("Rent & Utilities");
+  const [category, setCategory] = useState(categories[0]?.name ?? "Rent & Utilities");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -1109,34 +1192,36 @@ function ExpenseTrackerView() {
               <Plus className="h-4 w-4 mr-2" /> Add Expense
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] rounded-2xl p-6">
+          <DialogContent className="bg-white border-slate-200 text-[#0f172a] rounded-2xl p-6 shadow-2xl">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-[#f8f3e7]">Record Expense</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#0f172a]">Record Expense</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-3">
               <div>
-                <label className="text-xs text-[#9eb4ae] font-medium">Category</label>
+                <label className="text-xs text-slate-500 font-medium">Category (Dynamic Workspace Categories)</label>
                 <select
                   value={category}
                   onChange={e => setCategory(e.target.value)}
-                  className="w-full bg-[#07111F] border border-[#203b42] rounded-xl px-3 py-2 text-sm text-[#f8f3e7] mt-1"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-[#0f172a] mt-1 h-11"
                 >
-                  <option value="Rent & Utilities">Rent & Utilities</option>
-                  <option value="Marketing & Ads">Marketing & Ads</option>
-                  <option value="Equipment Maintenance">Equipment Maintenance</option>
-                  <option value="Staff Payroll">Staff Payroll</option>
-                  <option value="Packaging & Supplies">Packaging & Supplies</option>
+                  {categories.length === 0 ? (
+                    <option value="General Overhead">General Overhead</option>
+                  ) : (
+                    categories.map(cat => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))
+                  )}
                 </select>
               </div>
               <div>
-                <label className="text-xs text-[#9eb4ae] font-medium">Amount (PKR)</label>
-                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="250.00" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                <label className="text-xs text-slate-500 font-medium">Amount (PKR)</label>
+                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="250.00" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
               </div>
               <div>
-                <label className="text-xs text-[#9eb4ae] font-medium">Notes</label>
-                <Input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Monthly utility bill" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                <label className="text-xs text-slate-500 font-medium">Notes</label>
+                <Input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Monthly utility bill" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
               </div>
-              <Button onClick={() => createMutation.mutate({ category, amount: Number(amount) || 0, notes })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
+              <Button onClick={() => createMutation.mutate({ category, amount: Number(amount) || 0, notes })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
                 Save Expense
               </Button>
             </div>

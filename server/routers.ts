@@ -198,6 +198,22 @@ export const appRouter = router({
         await db.insert(categories).values({ tenantId: ctx.tenant.id, ...input });
         return { success: true } as const;
       }),
+    updateCategory: tenantAdminProcedure
+      .input(z.object({ id: z.number().int().positive(), name: z.string().trim().min(2).max(120), color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#5B6CFF") }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        await db.update(categories).set({ name: input.name, color: input.color }).where(and(eq(categories.id, input.id), eq(categories.tenantId, ctx.tenant.id)));
+        return { success: true } as const;
+      }),
+    deleteCategory: tenantAdminProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        await db.delete(categories).where(and(eq(categories.id, input.id), eq(categories.tenantId, ctx.tenant.id)));
+        return { success: true } as const;
+      }),
     products: tenantProcedure
       .input(z.object({ query: z.string().trim().optional(), categoryId: z.number().int().positive().optional() }).optional())
       .query(({ ctx, input }) => getProductsForTenant(ctx.tenant.id, input?.query, input?.categoryId)),
