@@ -205,7 +205,7 @@ export default function Home() {
             <SuperAdminView />
           ) : (
             <>
-              {activeTab === "pos" && <POSTerminalView />}
+              {activeTab === "pos" && <POSTerminalView setActiveTab={setActiveTab} />}
               {activeTab === "dashboard" && <TenantDashboardView />}
               {activeTab === "products" && <ProductCatalogView />}
               {activeTab === "inventory" && <InventoryManagementView />}
@@ -352,7 +352,7 @@ function AuthScreen({ initialMode = "login", onBack, onAuthenticated }: { initia
   );
 }
 
-function POSTerminalView() {
+function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | undefined>();
   const [cart, setCart] = useState<Array<{ product: any; quantity: number }>>([]);
@@ -565,16 +565,27 @@ function POSTerminalView() {
           <div className="border-t border-[#203b42] pt-4 space-y-3 mt-auto">
             <div className="flex items-center justify-between text-sm">
               <span className="text-[#9eb4ae]">Customer</span>
-              <select
-                value={selectedCustomerId ?? ""}
-                onChange={e => setSelectedCustomerId(e.target.value ? Number(e.target.value) : null)}
-                className="bg-[#07111F] border border-[#203b42] rounded-xl px-3 py-1.5 text-xs text-[#f8f3e7]"
-              >
-                <option value="">Walk-in Customer</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} ({c.loyaltyPoints} pts)</option>
-                ))}
-              </select>
+              <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={selectedCustomerId ?? ""}
+                      onChange={e => {
+                        if (e.target.value === "NEW_CUSTOMER") {
+                          setActiveTab("customers");
+                          return;
+                        }
+                        setSelectedCustomerId(e.target.value ? Number(e.target.value) : null);
+                      }}
+                      className="bg-[#07111F] border border-[#203b42] rounded-xl px-3 py-1.5 text-xs text-[#f8f3e7]"
+                    >
+                      <option value="">Walk-in Customer</option>
+                      {customers.map(c => (
+                        <option key={c.id} value={c.id}>{c.name} ({c.loyaltyPoints} pts)</option>
+                      ))}
+                      <option value="NEW_CUSTOMER">+ Add New Customer...</option>
+                    </select>
+                  </div>
+              </div>
             </div>
 
             <div className="space-y-1.5 pt-3 border-t border-[#203b42] text-sm">

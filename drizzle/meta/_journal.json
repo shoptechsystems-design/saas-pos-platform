@@ -29,6 +29,13 @@
       "when": 1786542674085,
       "tag": "0003_cool_starbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1786545521694,
+      "tag": "0004_lowly_spitfire",
+      "breakpoints": true
     }
   ]
 }

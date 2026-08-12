@@ -232,6 +232,75 @@ export const auditLogs = mysqlTable("audit_logs", {
   userDateIdx: index("audit_user_date_idx").on(table.userId, table.createdAt),
 }));
 
+export const accounts = mysqlTable("accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  code: varchar("code", { length: 32 }).notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  type: mysqlEnum("type", ["asset", "liability", "equity", "revenue", "expense"]).notNull(),
+  description: text("description"),
+  isActive: int("isActive").default(1).notNull(), // 1 = active, 0 = inactive
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  tenantCodeIdx: uniqueIndex("accounts_tenant_code_idx").on(table.tenantId, table.code),
+  tenantTypeIdx: index("accounts_tenant_type_idx").on(table.tenantId, table.type),
+}));
+
+export const journalEntries = mysqlTable("journal_entries", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  entryNumber: varchar("entryNumber", { length: 48 }).notNull(),
+  date: timestamp("date").defaultNow().notNull(),
+  description: text("description").notNull(),
+  reference: varchar("reference", { length: 80 }),
+  sourceType: varchar("sourceType", { length: 48 }).default("manual").notNull(), // sale, purchase, expense, payment, manual
+  sourceId: int("sourceId"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  tenantNumberIdx: uniqueIndex("journal_entries_tenant_number_idx").on(table.tenantId, table.entryNumber),
+  tenantDateIdx: index("journal_entries_tenant_date_idx").on(table.tenantId, table.date),
+  tenantSourceIdx: index("journal_entries_tenant_source_idx").on(table.tenantId, table.sourceType, table.sourceId),
+}));
+
+export const journalLines = mysqlTable("journal_lines", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  journalEntryId: int("journalEntryId").notNull(),
+  accountId: int("accountId").notNull(),
+  debit: decimal("debit", { precision: 12, scale: 2 }).default("0").notNull(),
+  credit: decimal("credit", { precision: 12, scale: 2 }).default("0").notNull(),
+  description: text("description"),
+}, table => ({
+  tenantEntryIdx: index("journal_lines_tenant_entry_idx").on(table.tenantId, table.journalEntryId),
+  tenantAccountIdx: index("journal_lines_tenant_account_idx").on(table.tenantId, table.accountId),
+}));
+
+export const paymentsReceived = mysqlTable("payments_received", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  customerId: int("customerId").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  paymentMethod: varchar("paymentMethod", { length: 32 }).notNull(),
+  reference: varchar("reference", { length: 80 }),
+  notes: text("notes"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({ tenantCustomerIdx: index("payments_received_tenant_customer_idx").on(table.tenantId, table.customerId) }));
+
+export const paymentsMade = mysqlTable("payments_made", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  supplierId: int("supplierId").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  paymentMethod: varchar("paymentMethod", { length: 32 }).notNull(),
+  reference: varchar("reference", { length: 80 }),
+  notes: text("notes"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({ tenantSupplierIdx: index("payments_made_tenant_supplier_idx").on(table.tenantId, table.supplierId) }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Tenant = typeof tenants.$inferSelect;
