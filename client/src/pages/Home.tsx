@@ -68,14 +68,14 @@ export default function Home() {
     );
   }
 
+  const { data: tenantCtx } = trpc.tenant.context.useQuery(undefined, { enabled: !!user && user.role !== "admin" });
+  const { data: tenantSettings } = trpc.tenant.settings.useQuery(undefined, { enabled: !!user && user.role !== "admin" });
+
   if (!user) {
     return publicView === "home"
       ? <PublicHome onLogin={() => { setAuthMode("login"); setPublicView("auth"); }} onRegister={() => { setAuthMode("register"); setPublicView("auth"); }} />
       : <AuthScreen initialMode={authMode} onBack={() => setPublicView("home")} onAuthenticated={refresh} />;
   }
-
-  const { data: tenantCtx } = trpc.tenant.context.useQuery(undefined, { enabled: user.role !== "admin" });
-  const { data: tenantSettings } = trpc.tenant.settings.useQuery(undefined, { enabled: user.role !== "admin" });
 
   const roleLabel = user.role === "admin"
     ? "Super Admin"
