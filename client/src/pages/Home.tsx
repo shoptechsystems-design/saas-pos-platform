@@ -28,6 +28,9 @@ import {
   CreditCard,
   Tag,
   Clock,
+  FolderPlus,
+  Eye,
+  EyeOff,
   RotateCcw,
   CheckCircle,
   FileText,
@@ -237,6 +240,8 @@ function AuthScreen({ initialMode = "login", onBack, onAuthenticated }: { initia
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: async result => {
@@ -306,8 +311,26 @@ function AuthScreen({ initialMode = "login", onBack, onAuthenticated }: { initia
               <div><label className="text-xs font-bold text-[#35524c]">Business name</label><Input value={businessName} onChange={event => setBusinessName(event.target.value)} required placeholder="Khan Mart & Café" className="mt-1 h-12 rounded-xl border-[#c8d4cc] bg-white text-[#12312f] placeholder:text-[#9aa9a3]" /></div>
             </>}
             <div><label className="text-xs font-bold text-[#35524c]">Email address</label><Input type="email" value={email} onChange={event => setEmail(event.target.value)} required placeholder="you@business.com" className="mt-1 h-12 rounded-xl border-[#c8d4cc] bg-white text-[#12312f] placeholder:text-[#9aa9a3]" /></div>
-            <div><label className="text-xs font-bold text-[#35524c]">Password</label><Input type="password" value={password} onChange={event => setPassword(event.target.value)} required minLength={mode === "register" ? 8 : 1} placeholder={mode === "register" ? "At least 8 characters" : "Enter your password"} className="mt-1 h-12 rounded-xl border-[#c8d4cc] bg-white text-[#12312f] placeholder:text-[#9aa9a3]" /></div>
-            {mode === "register" && <div><label className="text-xs font-bold text-[#35524c]">Confirm password</label><Input type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} required minLength={8} placeholder="Repeat password" className="mt-1 h-12 rounded-xl border-[#c8d4cc] bg-white text-[#12312f] placeholder:text-[#9aa9a3]" /></div>}
+            <div>
+              <label className="text-xs font-bold text-[#35524c]">Password</label>
+              <div className="relative mt-1">
+                <Input type={showPassword ? "text" : "password"} value={password} onChange={event => setPassword(event.target.value)} required minLength={mode === "register" ? 8 : 1} placeholder={mode === "register" ? "At least 8 characters" : "Enter your password"} className="h-12 rounded-xl border-[#c8d4cc] bg-white pr-11 text-[#12312f] placeholder:text-[#9aa9a3]" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#12312f]">
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            {mode === "register" && (
+              <div>
+                <label className="text-xs font-bold text-[#35524c]">Confirm password</label>
+                <div className="relative mt-1">
+                  <Input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} required minLength={8} placeholder="Repeat password" className="h-12 rounded-xl border-[#c8d4cc] bg-white pr-11 text-[#12312f] placeholder:text-[#9aa9a3]" />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#12312f]">
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            )}
             <Button type="submit" disabled={isPending} className="w-full h-12 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-black shadow-lg shadow-slate-900/10">{isPending ? "Please wait..." : mode === "login" ? "Sign in to workspace" : "Create PKR workspace"}</Button>
           </form>
           <div className="mt-7 flex items-start gap-3 rounded-2xl border border-[#cbd7ce] bg-[#eef1e8] p-4"><ShieldCheck className="h-5 w-5 mt-0.5 text-[#0f766e] shrink-0" /><p className="text-xs leading-5 text-[#5b706b]">Direct OmniPOS accounts use secure server-side password hashing and an httpOnly session. No external Manus sign-in is required for this workspace.</p></div>
@@ -700,70 +723,133 @@ function TenantDashboardView() {
 }
 
 function ProductCatalogView() {
+  const utils = trpc.useUtils();
   const { data: products = [] } = trpc.catalog.products.useQuery();
+  const { data: categories = [] } = trpc.catalog.categories.useQuery();
   const [openNew, setOpenNew] = useState(false);
+  const [openCategory, setOpenCategory] = useState(false);
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+  const [categoryId, setCategoryId] = useState<number | undefined>();
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatColor, setNewCatColor] = useState("#5B6CFF");
 
   const createMutation = trpc.catalog.createProduct.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Product created successfully!");
       setOpenNew(false);
       setName("");
       setSku("");
       setPrice("");
       setStock("");
+      setCategoryId(undefined);
+      await utils.catalog.products.invalidate();
+    },
+    onError: err => toast.error(err.message)
+  });
+
+  const createCategoryMutation = trpc.catalog.createCategory.useMutation({
+    onSuccess: async () => {
+      toast.success("Category added successfully!");
+      setOpenCategory(false);
+      setNewCatName("");
+      await utils.catalog.categories.invalidate();
     },
     onError: err => toast.error(err.message)
   });
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-xl font-bold text-[#f8f3e7]">Product Catalog Management</h3>
-          <p className="text-xs text-[#9eb4ae] mt-1">Manage pricing, SKUs, and stock thresholds across inventory.</p>
+          <h3 className="text-xl font-bold text-[#f8f3e7]">Product Catalog & Category Management</h3>
+          <p className="text-xs text-[#9eb4ae] mt-1">Manage pricing, SKUs, stock thresholds, and dynamic tenant categories.</p>
         </div>
-        <Dialog open={openNew} onOpenChange={setOpenNew}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-slate-900/10">
-              <Plus className="h-4 w-4 mr-2" /> Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] rounded-2xl p-6">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-[#f8f3e7]">Add New Product</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-3">
-              <div>
-                <label className="text-xs text-[#9eb4ae] font-medium">Product Name</label>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Organic Espresso Beans" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
-              </div>
-              <div>
-                <label className="text-xs text-[#9eb4ae] font-medium">SKU</label>
-                <Input value={sku} onChange={e => setSku(e.target.value)} placeholder="SKU-ESP-01" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-[#9eb4ae] font-medium">Selling Price (PKR)</label>
-                  <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="14.99" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
-                </div>
-                <div>
-                  <label className="text-xs text-[#9eb4ae] font-medium">Initial Stock</label>
-                  <Input type="number" value={stock} onChange={e => setStock(e.target.value)} placeholder="50" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
-                </div>
-              </div>
-              <Button
-                onClick={() => createMutation.mutate({ name, sku, costPrice: 0, sellingPrice: Number(price) || 0, stockQuantity: Number(stock) || 0, minStockLevel: 5 })}
-                className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4"
-              >
-                Save Product
+        <div className="flex items-center gap-3">
+          <Dialog open={openCategory} onOpenChange={setOpenCategory}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-[#203b42] bg-[#0d2630] text-[#f8f3e7] hover:bg-slate-800 font-semibold rounded-xl">
+                <FolderPlus className="h-4 w-4 mr-2" /> Add Category
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] rounded-2xl p-6">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold text-[#f8f3e7]">Add Custom Category</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-3">
+                <div>
+                  <label className="text-xs text-[#9eb4ae] font-medium">Category Name</label>
+                  <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="e.g. Special Brews" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                </div>
+                <div>
+                  <label className="text-xs text-[#9eb4ae] font-medium">Color Badge</label>
+                  <div className="flex gap-2 mt-1">
+                    {["#5B6CFF", "#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#F97316"].map(c => (
+                      <button key={c} type="button" onClick={() => setNewCatColor(c)} className={`h-8 w-8 rounded-lg border-2 ${newCatColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                </div>
+                <Button onClick={() => createCategoryMutation.mutate({ name: newCatName, color: newCatColor })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
+                  Save Category
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={openNew} onOpenChange={setOpenNew}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-slate-900/10">
+                <Plus className="h-4 w-4 mr-2" /> Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] rounded-2xl p-6">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold text-[#f8f3e7]">Add New Product</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-3">
+                <div>
+                  <label className="text-xs text-[#9eb4ae] font-medium">Product Name</label>
+                  <Input value={name} onChange={e => setName(e.target.value)} placeholder="Organic Espresso Beans" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                </div>
+                <div>
+                  <label className="text-xs text-[#9eb4ae] font-medium">SKU</label>
+                  <Input value={sku} onChange={e => setSku(e.target.value)} placeholder="SKU-ESP-01" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                </div>
+                <div>
+                  <label className="text-xs text-[#9eb4ae] font-medium">Category</label>
+                  <select
+                    value={categoryId ?? ""}
+                    onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}
+                    className="w-full bg-[#07111F] border border-[#203b42] rounded-xl px-3 py-2 text-sm text-[#f8f3e7] mt-1 h-11"
+                  >
+                    <option value="">Uncategorized</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-[#9eb4ae] font-medium">Selling Price (PKR)</label>
+                    <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="14.99" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#9eb4ae] font-medium">Initial Stock</label>
+                    <Input type="number" value={stock} onChange={e => setStock(e.target.value)} placeholder="50" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
+                  </div>
+                </div>
+                <Button
+                  onClick={() => createMutation.mutate({ name, sku, categoryId, costPrice: 0, sellingPrice: Number(price) || 0, stockQuantity: Number(stock) || 0, minStockLevel: 5 })}
+                  className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4"
+                >
+                  Save Product
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">

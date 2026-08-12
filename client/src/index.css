@@ -276,3 +276,40 @@
 [data-radix-portal] [class*="text-emerald-400"] {
   color: #0f766e !important;
 }
+
+/* Additional white-led overrides for black/dark buttons, hover states, and dialog portals */
+.omnipos-app [class*="bg-[#0f172a]"]:hover,
+.omnipos-app [class*="bg-slate-900"]:hover,
+[data-radix-portal] [class*="bg-[#0f172a]"]:hover,
+[data-radix-portal] [class*="bg-slate-900"]:hover {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+.omnipos-app [class*="bg-[#0f172a]"],
+.omnipos-app [class*="bg-slate-900"],
+[data-radix-portal] [class*="bg-[#0f172a]"],
+[data-radix-portal] [class*="bg-slate-900"] {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+.omnipos-app [class*="bg-emerald-500"],
+[data-radix-portal] [class*="bg-emerald-500"] {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+.omnipos-app [class*="bg-emerald-500"]:hover,
+[data-radix-portal] [class*="bg-emerald-500"]:hover {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+[data-radix-portal] [role="dialog"],
+[data-radix-portal] .fixed.inset-0 + div,
+[data-radix-portal] [class*="bg-slate-900/90"],
+[data-radix-portal] [class*="bg-[#07111F]"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
