@@ -36,6 +36,7 @@ import {
   FileText,
   SlidersHorizontal,
   ChevronRight,
+  Database,
   HelpCircle,
   Bell
 } from "lucide-react";
@@ -108,6 +109,7 @@ export default function Home() {
       { id: "expenses", label: "Expenses", icon: DollarSign },
     ] },
     { label: "Workspace", items: [
+      { id: "masterdata", label: "Master Data", icon: Database },
       { id: "team", label: "Team & Roles", icon: ShieldCheck },
       { id: "settings", label: "Business Settings", icon: Settings },
     ] },
@@ -213,6 +215,7 @@ export default function Home() {
               {activeTab === "sales" && <SalesHistoryView />}
               {activeTab === "expenses" && <ExpenseTrackerView />}
               {activeTab === "team" && <TeamRolesView />}
+              {activeTab === "masterdata" && <MasterDataView />}
               {activeTab === "settings" && <TenantSettingsView />}
             </>
           )}
@@ -1715,6 +1718,157 @@ function TeamRolesView() {
           </table>
         </div>
       </Card>
+    </div>
+  );
+}
+
+function MasterDataView() {
+  const { data: categories = [] } = trpc.catalog.categories.useQuery();
+  const { data: customerGroups = [] } = trpc.customerGroups.list.useQuery();
+  const utils = trpc.useUtils();
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatColor, setNewCatColor] = useState("#0f766e");
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupDiscount, setNewGroupDiscount] = useState("0");
+
+  const createCatMutation = trpc.catalog.createCategory.useMutation({
+    onSuccess: () => {
+      utils.catalog.categories.invalidate();
+      setNewCatName("");
+      toast.success("Category added successfully.");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const deleteCatMutation = trpc.catalog.deleteCategory.useMutation({
+    onSuccess: () => {
+      utils.catalog.categories.invalidate();
+      toast.success("Category deleted.");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const createGroupMutation = trpc.customerGroups.create.useMutation({
+    onSuccess: () => {
+      utils.customerGroups.list.invalidate();
+      setNewGroupName("");
+      setNewGroupDiscount("0");
+      toast.success("Customer group/type added.");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const deleteGroupMutation = trpc.customerGroups.delete.useMutation({
+    onSuccess: () => {
+      utils.customerGroups.list.invalidate();
+      toast.success("Customer group deleted.");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h3 className="text-xl font-black text-[#0f172a]">Tenant Master Data</h3>
+        <p className="text-xs text-slate-500 mt-1">Manage your store's custom product categories and customer types/groups. These options instantly populate your product catalog, POS terminal, and customer management screens.</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Product Categories */}
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h4 className="text-base font-black text-[#0f172a]">Product Categories</h4>
+              <p className="text-xs text-slate-500 mt-0.5">Organize items for your inventory and POS terminal.</p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">{categories.length} categories</span>
+          </div>
+
+          <div className="flex gap-2 mb-4">
+            <Input
+              value={newCatName}
+              onChange={e => setNewCatName(e.target.value)}
+              placeholder="e.g. Stationery, Beverages"
+              className="bg-slate-50 border-slate-200 h-10 rounded-xl text-xs flex-1"
+            />
+            <input
+              type="color"
+              value={newCatColor}
+              onChange={e => setNewCatColor(e.target.value)}
+              className="h-10 w-12 rounded-xl border border-slate-200 p-1 cursor-pointer bg-white"
+            />
+            <Button
+              onClick={() => {
+                if (!newCatName.trim()) return toast.error("Please enter a category name");
+                createCatMutation.mutate({ name: newCatName.trim(), color: newCatColor });
+              }}
+              className="bg-[#0f172a] hover:bg-[#1e293b] text-white rounded-xl h-10 px-4 text-xs font-bold"
+            >
+              Add Category
+            </Button>
+          </div>
+
+          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+            {categories.map(cat => (
+              <div key={cat.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/75 p-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-3.5 w-3.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                  <span className="text-xs font-bold text-[#0f172a]">{cat.name}</span>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => deleteCatMutation.mutate({ id: cat.id })} className="h-7 px-2 text-xs text-red-600 hover:bg-red-50">
+                  Delete
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Customer Groups & Types */}
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h4 className="text-base font-black text-[#0f172a]">Customer Groups & Types</h4>
+              <p className="text-xs text-slate-500 mt-0.5">Define membership tiers or pricing groups (e.g. Wholesale, VIP).</p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">{customerGroups.length} groups</span>
+          </div>
+
+          <div className="flex gap-2 mb-4">
+            <Input
+              value={newGroupName}
+              onChange={e => setNewGroupName(e.target.value)}
+              placeholder="e.g. VIP Member, Wholesale"
+              className="bg-slate-50 border-slate-200 h-10 rounded-xl text-xs flex-1"
+            />
+            <Button
+              onClick={() => {
+                if (!newGroupName.trim()) return toast.error("Please enter a group name");
+                createGroupMutation.mutate({ name: newGroupName.trim(), discountPercent: Number(newGroupDiscount) || 0 });
+              }}
+              className="bg-[#0f172a] hover:bg-[#1e293b] text-white rounded-xl h-10 px-4 text-xs font-bold"
+            >
+              Add Group
+            </Button>
+          </div>
+
+          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+            {customerGroups.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-8">No custom customer groups created yet. Add one above to organize your customers.</p>
+            ) : (
+              customerGroups.map(group => (
+                <div key={group.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/75 p-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xs font-bold text-[#0f172a]">{group.name}</span>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => deleteGroupMutation.mutate({ id: group.id })} className="h-7 px-2 text-xs text-red-600 hover:bg-red-50">
+                    Delete
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

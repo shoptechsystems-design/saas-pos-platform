@@ -36,6 +36,13 @@
       "when": 1786545521694,
       "tag": "0004_lowly_spitfire",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1786546290287,
+      "tag": "0005_striped_red_hulk",
+      "breakpoints": true
     }
   ]
 }

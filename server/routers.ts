@@ -19,6 +19,7 @@ import {
 import {
   auditLogs,
   categories,
+  customerGroups,
   customers,
   expenses,
   inventoryMovements,
@@ -288,14 +289,38 @@ export const appRouter = router({
       }),
   }),
 
-  customers: router({
-    list: tenantProcedure.input(z.object({ query: z.string().trim().optional() }).optional()).query(({ ctx, input }) => getCustomersForTenant(ctx.tenant.id, input?.query)),
-    create: cashierProcedure
-      .input(z.object({ name: z.string().trim().min(2).max(160), email: z.string().email().nullable().optional(), phone: z.string().trim().max(40).nullable().optional() }))
+  customerGroups: router({
+    list: tenantProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      return db.select().from(customerGroups).where(eq(customerGroups.tenantId, ctx.tenant.id)).orderBy(asc(customerGroups.name));
+    }),
+    create: tenantAdminProcedure
+      .input(z.object({ name: z.string().trim().min(2).max(120), discountPercent: z.number().min(0).max(100).default(0) }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-        await db.insert(customers).values({ tenantId: ctx.tenant.id, ...input });
+        await db.insert(customerGroups).values({ tenantId: ctx.tenant.id, name: input.name, discountPercent: input.discountPercent.toFixed(2) });
+        return { success: true } as const;
+      }),
+    delete: tenantAdminProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        await db.delete(customerGroups).where(and(eq(customerGroups.id, input.id), eq(customerGroups.tenantId, ctx.tenant.id)));
+        return { success: true } as const;
+      }),
+  }),
+
+  customers: router({
+    list: tenantProcedure.input(z.object({ query: z.string().trim().optional() }).optional()).query(({ ctx, input }) => getCustomersForTenant(ctx.tenant.id, input?.query)),
+    create: cashierProcedure
+      .input(z.object({ name: z.string().trim().min(2).max(160), email: z.string().email().nullable().optional(), phone: z.string().trim().max(40).nullable().optional(), groupId: z.number().int().positive().nullable().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        await db.insert(customers).values({ tenantId: ctx.tenant.id, name: input.name, email: input.email, phone: input.phone, groupId: input.groupId });
         return { success: true } as const;
       }),
   }),

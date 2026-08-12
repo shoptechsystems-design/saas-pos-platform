@@ -106,9 +106,19 @@ export const productVariants = mysqlTable("product_variants", {
   tenantSkuIdx: uniqueIndex("product_variants_tenant_sku_idx").on(table.tenantId, table.sku),
 }));
 
+export const customerGroups = mysqlTable("customer_groups", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  name: varchar("name", { length: 120 }).notNull(), // e.g. "Wholesale", "VIP Member", "Retail"
+  discountPercent: decimal("discountPercent", { precision: 5, scale: 2 }).default("0").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({ tenantNameIdx: uniqueIndex("customer_groups_tenant_name_idx").on(table.tenantId, table.name) }));
+
 export const customers = mysqlTable("customers", {
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),
+  groupId: int("groupId"),
   name: varchar("name", { length: 160 }).notNull(),
   email: varchar("email", { length: 320 }),
   phone: varchar("phone", { length: 40 }),
@@ -120,6 +130,7 @@ export const customers = mysqlTable("customers", {
 }, table => ({
   tenantNameIdx: index("customers_tenant_name_idx").on(table.tenantId, table.name),
   tenantEmailIdx: index("customers_tenant_email_idx").on(table.tenantId, table.email),
+  tenantGroupIdx: index("customers_tenant_group_idx").on(table.tenantId, table.groupId),
 }));
 
 export const suppliers = mysqlTable("suppliers", {
