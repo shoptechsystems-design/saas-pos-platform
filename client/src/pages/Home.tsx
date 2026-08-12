@@ -831,6 +831,15 @@ function ProductCatalogView() {
   const [editProdPrice, setEditProdPrice] = useState("");
   const [editProdStock, setEditProdStock] = useState("");
   const [editProdCatId, setEditProdCatId] = useState<number | undefined>(undefined);
+  const [editProdImageUrl, setEditProdImageUrl] = useState("");
+
+  const uploadEditImageMutation = trpc.catalog.uploadProductImage.useMutation({
+    onSuccess: (res) => {
+      setEditProdImageUrl(res.url);
+      toast.success("Product image uploaded successfully!");
+    },
+    onError: err => toast.error(err.message || "Failed to upload image.")
+  });
 
   const updateProductMutation = trpc.catalog.updateProduct.useMutation({
     onSuccess: async () => {
@@ -1027,12 +1036,13 @@ function ProductCatalogView() {
                         size="sm"
                         variant="ghost"
                         onClick={() => {
-                          setEditingProduct(p);
-                          setEditProdName(p.name);
-                          setEditProdSku(p.sku);
-                          setEditProdPrice(p.sellingPrice.toString());
-                          setEditProdStock(p.stockQuantity.toString());
-                          setEditProdCatId(p.categoryId ?? undefined);
+                      setEditingProduct(p);
+                      setEditProdName(p.name);
+                      setEditProdSku(p.sku);
+                      setEditProdPrice(p.sellingPrice.toString());
+                      setEditProdStock(p.stockQuantity.toString());
+                      setEditProdCatId(p.categoryId ?? undefined);
+                      setEditProdImageUrl(p.imageUrl ?? "");
                         }}
                         className="h-8 px-2.5 text-xs text-slate-700 hover:bg-slate-100 font-bold rounded-xl"
                       >
@@ -1124,8 +1134,35 @@ function ProductCatalogView() {
                   <Input type="number" value={editProdStock} onChange={e => setEditProdStock(e.target.value)} className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
                 </div>
               </div>
+              <div>
+                <label className="text-xs text-slate-500 font-medium">Product Image (Optional)</label>
+                <div className="flex items-center gap-3 mt-1">
+                  <div className="h-12 w-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                    {editProdImageUrl ? <img src={editProdImageUrl} alt="" className="h-full w-full object-cover" /> : <Tag className="h-5 w-5 text-slate-400" />}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = async () => {
+                        const base64Data = reader.result as string;
+                        await uploadEditImageMutation.mutateAsync({
+                          filename: file.name,
+                          contentType: file.type || "image/png",
+                          base64Data: base64Data.split(",")[1] || base64Data,
+                        });
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    className="text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
+                  />
+                </div>
+              </div>
               <Button
-                onClick={() => updateProductMutation.mutate({ id: editingProduct.id, name: editProdName, sku: editProdSku, categoryId: editProdCatId, sellingPrice: Number(editProdPrice) || 0, stockQuantity: Number(editProdStock) || 0 })}
+                onClick={() => updateProductMutation.mutate({ id: editingProduct.id, name: editProdName, sku: editProdSku, categoryId: editProdCatId, sellingPrice: Number(editProdPrice) || 0, stockQuantity: Number(editProdStock) || 0, imageUrl: editProdImageUrl || undefined })}
                 className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg rounded-xl mt-4"
               >
                 Update Product
