@@ -1529,28 +1529,39 @@ function CustomerDirectoryView() {
         </Dialog>
       </div>
 
-      <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
+      <Card className="bg-[#0d2630]/95 border border-[#203b42] rounded-2xl shadow-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm border-collapse">
             <thead>
-              <tr className="border-b border-[#203b42] text-[#9eb4ae] text-xs uppercase tracking-wider">
-                <th className="pb-3 font-semibold">Customer Name</th>
-                <th className="pb-3 font-semibold">Email</th>
-                <th className="pb-3 font-semibold">Phone</th>
-                <th className="pb-3 font-semibold">Loyalty Points</th>
-                <th className="pb-3 font-semibold">Total Spent</th>
+              <tr className="bg-[#07111F]/80 border-b border-[#203b42] text-[#9eb4ae] text-xs font-bold uppercase tracking-wider">
+                <th className="py-4 px-6">Customer Name</th>
+                <th className="py-4 px-6">Email Address</th>
+                <th className="py-4 px-6">Phone Number</th>
+                <th className="py-4 px-6 text-right">Loyalty Points</th>
+                <th className="py-4 px-6 text-right">Total Spent</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {customers.map(c => (
-                <tr key={c.id} className="hover:bg-[#07111F]/40 transition-colors">
-                  <td className="py-4 font-semibold text-[#f8f3e7]">{c.name}</td>
-                  <td className="py-4 text-[#9eb4ae]">{c.email || "-"}</td>
-                  <td className="py-4 text-[#9eb4ae]">{c.phone || "-"}</td>
-                  <td className="py-4 font-bold text-[#0f766e]">{c.loyaltyPoints} pts</td>
-                  <td className="py-4 font-extrabold text-[#f8f3e7]">₨{Number(c.totalSpent).toFixed(2)}</td>
+            <tbody className="divide-y divide-[#203b42]/60">
+              {customers.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-[#9eb4ae] text-sm">No customers registered yet. Click &quot;Add Customer&quot; above.</td>
                 </tr>
-              ))}
+              ) : (
+                customers.map(c => (
+                  <tr key={c.id} className="hover:bg-[#07111F]/50 transition-colors group">
+                    <td className="py-4 px-6 font-bold text-[#f8f3e7] flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-[#0f766e]/20 text-[#0f766e] flex items-center justify-center font-black text-xs shrink-0 border border-[#0f766e]/30">
+                        {c.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span>{c.name}</span>
+                    </td>
+                    <td className="py-4 px-6 text-[#9eb4ae] text-xs font-mono">{c.email || "-"}</td>
+                    <td className="py-4 px-6 text-[#9eb4ae] text-xs font-mono">{c.phone || "-"}</td>
+                    <td className="py-4 px-6 text-right font-bold text-[#0f766e]">{c.loyaltyPoints} pts</td>
+                    <td className="py-4 px-6 text-right font-black text-[#f8f3e7]">₨{Number(c.totalSpent).toFixed(2)}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -1680,33 +1691,37 @@ function SalesHistoryView() {
       </Card>
 
       {/* Transactions Table */}
-      <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
+      <Card className="bg-[#0d2630]/95 border border-[#203b42] rounded-2xl shadow-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm border-collapse">
             <thead>
-              <tr className="border-b border-[#203b42] text-[#9eb4ae] text-xs uppercase tracking-wider">
-                <th className="pb-3 font-semibold">Order Number</th>
-                <th className="pb-3 font-semibold">Customer</th>
-                <th className="pb-3 font-semibold">Payment Method</th>
-                <th className="pb-3 font-semibold">Total</th>
-                <th className="pb-3 font-semibold">Date</th>
+              <tr className="bg-[#07111F]/80 border-b border-[#203b42] text-[#9eb4ae] text-xs font-bold uppercase tracking-wider">
+                <th className="py-4 px-6">Order Number</th>
+                <th className="py-4 px-6">Customer</th>
+                <th className="py-4 px-6">Payment Method</th>
+                <th className="py-4 px-6 text-right">Total Amount</th>
+                <th className="py-4 px-6 text-right">Date & Time</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/80">
+            <tbody className="divide-y divide-[#203b42]/60">
               {filteredSales.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-[#9eb4ae]">
+                  <td colSpan={5} className="py-12 text-center text-[#9eb4ae] text-sm">
                     No sales found matching the selected filters.
                   </td>
                 </tr>
               ) : (
                 filteredSales.map(item => (
-                  <tr key={item.sale.id} className="hover:bg-[#07111F]/40 transition-colors">
-                    <td className="py-4 font-semibold text-[#f8f3e7]">{item.sale.saleNumber}</td>
-                    <td className="py-4 text-[#c7d8d1]">{item.customer?.name ?? "Walk-in Customer"}</td>
-                    <td className="py-4 uppercase text-xs font-semibold text-[#0f766e]">{item.sale.paymentMethod}</td>
-                    <td className="py-4 font-extrabold text-[#f8f3e7]">₨{Number(item.sale.total).toFixed(2)}</td>
-                    <td className="py-4 text-[#9eb4ae] text-xs">{new Date(item.sale.createdAt).toLocaleString()}</td>
+                  <tr key={item.sale.id} className="hover:bg-[#07111F]/50 transition-colors group">
+                    <td className="py-4 px-6 font-mono font-bold text-[#f8f3e7]">{item.sale.saleNumber}</td>
+                    <td className="py-4 px-6 font-semibold text-[#c7d8d1]">{item.customer?.name ?? "Walk-in Customer"}</td>
+                    <td className="py-4 px-6">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase bg-[#0f766e]/20 text-[#0f766e] border border-[#0f766e]/30">
+                        {item.sale.paymentMethod}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-right font-black text-[#f8f3e7]">₨{Number(item.sale.total).toFixed(2)}</td>
+                    <td className="py-4 px-6 text-right text-[#9eb4ae] text-xs font-mono">{new Date(item.sale.createdAt).toLocaleString()}</td>
                   </tr>
                 ))
               )}
