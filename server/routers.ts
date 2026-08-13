@@ -141,7 +141,7 @@ export const appRouter = router({
         await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
         const token = await sdk.createSessionToken(user.openId, { name: user.name ?? input.email });
         ctx.res.cookie(COOKIE_NAME, token, getSessionCookieOptions(ctx.req));
-        return { success: true, user: toSafeUser(user), } as const;
+        return { success: true, user: toSafeUser(user), token } as const;
       }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
