@@ -50,7 +50,7 @@ import {
   hashPassword,
   verifyPassword,
 } from "./db";
-import { storagePut } from "./storage";
+import { storagePut, storageGetSignedUrl } from "./storage";
 import { systemRouter } from "./_core/systemRouter";
 
 const money = z.coerce.number().finite().nonnegative();
@@ -171,13 +171,13 @@ export const appRouter = router({
         }
         const safeName = input.filename.replace(/[^a-zA-Z0-9.-]/g, "_");
         const stored = await storagePut(`tenants/${ctx.tenant.id}/logo_${safeName}`, buffer, input.contentType);
-        // Store the direct signed URL or proxy URL
-        const finalUrl = stored.url;
+        // Obtain a fully signed, directly loadable URL so the browser loads it without 404 proxy misses
+        const signedUrl = await storageGetSignedUrl(stored.key).catch(() => stored.url);
         const db = await getDb();
         if (db) {
-          await db.update(tenants).set({ logoUrl: finalUrl }).where(eq(tenants.id, ctx.tenant.id));
+          await db.update(tenants).set({ logoUrl: signedUrl }).where(eq(tenants.id, ctx.tenant.id));
         }
-        return { url: finalUrl };
+        return { url: signedUrl };
       }),
     updateSettings: tenantAdminProcedure
       .input(z.object({ name: tenantName, businessType: z.string().trim().min(2).max(80), currency: z.string().trim().min(3).max(8), taxRate: z.number().min(0).max(100), logoUrl: z.string().nullable().optional().or(z.literal("")), receiptFooter: z.string().max(500).nullable().optional() }))
