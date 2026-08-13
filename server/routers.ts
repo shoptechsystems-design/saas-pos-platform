@@ -286,14 +286,16 @@ export const appRouter = router({
         }
         const safeName = input.filename.replace(/[^a-zA-Z0-9.-]/g, "_");
         const stored = await storagePut(`tenants/${ctx.tenant.id}/products/prod_${safeName}`, buffer, input.contentType);
-        return { url: stored.url };
+        const signedUrl = await storageGetSignedUrl(stored.key).catch(() => stored.url);
+        return { url: signedUrl };
       }),
     updateProduct: inventoryProcedure
-      .input(z.object({ id: z.number().int().positive(), name: z.string().trim().min(1).max(180), sku: z.string().trim().min(1).max(80), categoryId: z.number().int().positive().nullable().optional(), sellingPrice: money, stockQuantity: z.number().int().min(0), imageUrl: z.string().url().nullable().optional() }))
+      .input(z.object({ id: z.number().int().positive(), name: z.string().trim().min(1).max(180), sku: z.string().trim().min(1).max(80), categoryId: z.number().int().positive().nullable().optional(), sellingPrice: money, stockQuantity: z.number().int().min(0), imageUrl: z.string().nullable().optional().or(z.literal("")) }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-        await db.update(products).set({ name: input.name, sku: input.sku, categoryId: input.categoryId, sellingPrice: input.sellingPrice.toFixed(2), stockQuantity: input.stockQuantity, imageUrl: input.imageUrl }).where(and(eq(products.id, input.id), eq(products.tenantId, ctx.tenant.id)));
+        const normalizedImage = input.imageUrl && input.imageUrl.trim() !== "" ? input.imageUrl.trim() : null;
+        await db.update(products).set({ name: input.name, sku: input.sku, categoryId: input.categoryId, sellingPrice: input.sellingPrice.toFixed(2), stockQuantity: input.stockQuantity, imageUrl: normalizedImage }).where(and(eq(products.id, input.id), eq(products.tenantId, ctx.tenant.id)));
         await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "updated", entity: "product", metadata: { productId: input.id, sku: input.sku } });
         return { success: true } as const;
       }),
