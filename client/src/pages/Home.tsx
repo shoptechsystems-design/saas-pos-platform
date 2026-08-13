@@ -1453,14 +1453,16 @@ function CustomerDirectoryView() {
   const [phone, setPhone] = useState("");
   const [groupId, setGroupId] = useState<number | null>(null);
 
+  const utils = trpc.useUtils();
   const createMutation = trpc.customers.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Customer added successfully!");
       setOpenNew(false);
       setName("");
       setEmail("");
       setPhone("");
       setGroupId(null);
+      await utils.customers.list.invalidate();
     },
     onError: err => toast.error(err.message)
   });
