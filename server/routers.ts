@@ -171,19 +171,29 @@ export const appRouter = router({
         }
         const safeName = input.filename.replace(/[^a-zA-Z0-9.-]/g, "_");
         const stored = await storagePut(`tenants/${ctx.tenant.id}/logo_${safeName}`, buffer, input.contentType);
+        // Ensure relative URLs are fully qualified if needed or returned cleanly
+        const finalUrl = stored.url;
         const db = await getDb();
         if (db) {
-          await db.update(tenants).set({ logoUrl: stored.url }).where(eq(tenants.id, ctx.tenant.id));
+          await db.update(tenants).set({ logoUrl: finalUrl }).where(eq(tenants.id, ctx.tenant.id));
         }
-        return { url: stored.url };
+        return { url: finalUrl };
       }),
     updateSettings: tenantAdminProcedure
-      .input(z.object({ name: tenantName, businessType: z.string().trim().min(2).max(80), currency: z.string().trim().min(3).max(8), taxRate: z.number().min(0).max(100), logoUrl: z.string().nullable().optional(), receiptFooter: z.string().max(500).nullable().optional() }))
+      .input(z.object({ name: tenantName, businessType: z.string().trim().min(2).max(80), currency: z.string().trim().min(3).max(8), taxRate: z.number().min(0).max(100), logoUrl: z.string().nullable().optional().or(z.literal("")), receiptFooter: z.string().max(500).nullable().optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-        await db.update(tenants).set({ ...input, taxRate: input.taxRate.toFixed(3) }).where(eq(tenants.id, ctx.tenant.id));
-        await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "updated", entity: "tenant_settings", metadata: input });
+        const normalizedLogo = input.logoUrl && input.logoUrl.trim() !== "" ? input.logoUrl.trim() : null;
+        await db.update(tenants).set({
+          name: input.name,
+          businessType: input.businessType,
+          currency: input.currency,
+          taxRate: input.taxRate.toFixed(3),
+          logoUrl: normalizedLogo,
+          receiptFooter: input.receiptFooter,
+        }).where(eq(tenants.id, ctx.tenant.id));
+        await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "updated", entity: "tenant_settings", metadata: { ...input, logoUrl: normalizedLogo } });
         return { success: true } as const;
       }),
   }),

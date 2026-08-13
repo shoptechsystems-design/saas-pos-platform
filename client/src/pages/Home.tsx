@@ -121,10 +121,10 @@ export default function Home() {
       <aside className={`omnipos-sidebar shrink-0 border-r border-slate-200 bg-white flex flex-col transition-[width] duration-300 max-[767px]:w-[84px] ${sidebarCollapsed ? "w-[84px]" : "w-[280px]"}`}>
         <div className={`flex h-[88px] items-center border-b border-slate-100 ${sidebarCollapsed ? "justify-center px-3" : "gap-3 px-5"}`}>
           {tenantSettings?.logoUrl ? (
-            <img src={tenantSettings.logoUrl} alt="Store logo" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl object-cover shadow-[0_8px_18px_rgba(15,23,42,0.16)] border border-slate-200" />
+            <img src={tenantSettings.logoUrl.startsWith('/') ? tenantSettings.logoUrl : tenantSettings.logoUrl} alt="Store logo" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl object-cover shadow-[0_8px_18px_rgba(15,23,42,0.16)] border border-slate-200 bg-white" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
           ) : (
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0f172a] text-sm font-black tracking-tight text-white shadow-[0_8px_18px_rgba(15,23,42,0.16)]">
-              {businessName ? businessName.charAt(0).toUpperCase() : "OP"}
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0f172a] text-white font-black text-sm shadow-[0_8px_18px_rgba(15,23,42,0.16)]">
+              {tenantSettings?.name ? tenantSettings.name.charAt(0).toUpperCase() : "OP"}
             </div>
           )}
           {!sidebarCollapsed && <div className="min-w-0 max-[767px]:hidden"><p className="truncate text-[15px] font-black tracking-[-0.02em] text-[#0f172a]">{businessName}</p><div className="mt-1 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#0f766e]" /><span className="truncate text-[11px] font-bold text-[#0f766e]">{currentRole}</span></div></div>}
@@ -1997,7 +1997,7 @@ function TenantSettingsView() {
           <p className="text-xs text-slate-500 leading-relaxed">Upload a logo image file from your computer or provide an image URL to display in the application header and receipts.</p>
           <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
             {logoUrl ? (
-              <img src={logoUrl} alt="Store logo preview" className="h-20 w-20 rounded-2xl object-cover shadow-md mb-3 border border-slate-200 bg-white" />
+              <img src={logoUrl} alt="Store logo preview" className="h-20 w-20 rounded-2xl object-cover shadow-md mb-3 border border-slate-200 bg-white" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
             ) : (
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0f172a] text-white font-black text-xl shadow-md mb-3">
                 {name ? name.charAt(0).toUpperCase() : "OP"}
