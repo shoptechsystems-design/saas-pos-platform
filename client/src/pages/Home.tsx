@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -1445,10 +1446,12 @@ function InventoryManagementView() {
 
 function CustomerDirectoryView() {
   const { data: customers = [] } = trpc.customers.list.useQuery();
+  const { data: groups = [] } = trpc.customerGroups.list.useQuery();
   const [openNew, setOpenNew] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [groupId, setGroupId] = useState<number | null>(null);
 
   const createMutation = trpc.customers.create.useMutation({
     onSuccess: () => {
@@ -1457,6 +1460,7 @@ function CustomerDirectoryView() {
       setName("");
       setEmail("");
       setPhone("");
+      setGroupId(null);
     },
     onError: err => toast.error(err.message)
   });
@@ -1491,7 +1495,21 @@ function CustomerDirectoryView() {
                 <label className="text-xs text-slate-500 font-medium">Phone Number</label>
                 <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555-0191" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
               </div>
-              <Button onClick={() => createMutation.mutate({ name, email, phone })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
+              <div>
+                <label className="text-xs text-slate-500 font-medium">Customer Group / Tier</label>
+                <Select value={groupId ? groupId.toString() : "none"} onValueChange={val => setGroupId(val === "none" ? null : Number(val))}>
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11 w-full">
+                    <SelectValue placeholder="Select group (optional)" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200 text-[#0f172a]">
+                    <SelectItem value="none">Standard / None</SelectItem>
+                    {groups.map(g => (
+                      <SelectItem key={g.id} value={g.id.toString()}>{g.name} ({g.discountPercent}% off)</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={() => createMutation.mutate({ name, email, phone, groupId })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
                 Save Customer
               </Button>
             </div>
