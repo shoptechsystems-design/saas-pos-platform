@@ -1037,13 +1037,13 @@ function ProductCatalogView() {
                         size="sm"
                         variant="ghost"
                         onClick={() => {
-                      setEditingProduct(p);
-                      setEditProdName(p.name);
-                      setEditProdSku(p.sku);
-                      setEditProdPrice(p.sellingPrice.toString());
-                      setEditProdStock(p.stockQuantity.toString());
-                      setEditProdCatId(p.categoryId ?? undefined);
-                      setEditProdImageUrl(p.imageUrl ?? "");
+                          setEditProdName(p.name);
+                          setEditProdSku(p.sku);
+                          setEditProdPrice(p.sellingPrice.toString());
+                          setEditProdStock(p.stockQuantity.toString());
+                          setEditProdCatId(p.categoryId ?? undefined);
+                          setEditProdImageUrl(p.imageUrl ?? "");
+                          setEditingProduct(p);
                         }}
                         className="h-8 px-2.5 text-xs text-slate-700 hover:bg-slate-100 font-bold rounded-xl"
                       >
