@@ -1997,7 +1997,7 @@ function TenantSettingsView() {
           <p className="text-xs text-slate-500 leading-relaxed">Upload a logo image file from your computer or provide an image URL to display in the application header and receipts.</p>
           <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
             {logoUrl ? (
-              <img src={logoUrl} alt="Store logo preview" className="h-20 w-20 rounded-2xl object-cover shadow-md mb-3 border border-slate-200 bg-white" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+              <img src={logoUrl} alt="Store logo preview" className="h-20 w-20 rounded-2xl object-cover shadow-md mb-3 border border-slate-200 bg-white" onError={(e) => { console.error("Logo preview load error for URL:", logoUrl); }} />
             ) : (
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0f172a] text-white font-black text-xl shadow-md mb-3">
                 {name ? name.charAt(0).toUpperCase() : "OP"}
@@ -2016,6 +2016,8 @@ function TenantSettingsView() {
                 const reader = new FileReader();
                 reader.onload = async () => {
                   const base64Data = reader.result as string;
+                  // Set immediate local data URI preview so user sees it right away
+                  setLogoUrl(base64Data);
                   try {
                     const res = await uploadLogoMutation.mutateAsync({ filename: file.name, contentType: file.type || "image/png", base64Data });
                     setLogoUrl(res.url);

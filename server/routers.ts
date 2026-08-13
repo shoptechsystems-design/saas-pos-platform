@@ -171,7 +171,7 @@ export const appRouter = router({
         }
         const safeName = input.filename.replace(/[^a-zA-Z0-9.-]/g, "_");
         const stored = await storagePut(`tenants/${ctx.tenant.id}/logo_${safeName}`, buffer, input.contentType);
-        // Ensure relative URLs are fully qualified if needed or returned cleanly
+        // Store the direct signed URL or proxy URL
         const finalUrl = stored.url;
         const db = await getDb();
         if (db) {
