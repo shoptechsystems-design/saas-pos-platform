@@ -1561,14 +1561,125 @@ function CustomerDirectoryView() {
 
 function SalesHistoryView() {
   const { data: recentSales = [] } = trpc.dashboard.recentSales.useQuery();
+  const { data: customers = [] } = trpc.customers.list.useQuery();
+  const [dateRange, setDateRange] = useState<"all" | "today" | "yesterday" | "last3" | "week" | "month" | "custom">("all");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("all");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+
+  const filteredSales = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterdayStart = todayStart - 86400000;
+    const last3Start = todayStart - 3 * 86400000;
+    const weekStart = todayStart - 7 * 86400000;
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+    return recentSales.filter(item => {
+      const saleTime = new Date(item.sale.createdAt).getTime();
+
+      // Date filter
+      if (dateRange === "today" && saleTime < todayStart) return false;
+      if (dateRange === "yesterday" && (saleTime < yesterdayStart || saleTime >= todayStart)) return false;
+      if (dateRange === "last3" && saleTime < last3Start) return false;
+      if (dateRange === "week" && saleTime < weekStart) return false;
+      if (dateRange === "month" && saleTime < monthStart) return false;
+      if (dateRange === "custom") {
+        if (customStart && saleTime < new Date(customStart).getTime()) return false;
+        if (customEnd && saleTime > new Date(customEnd).getTime() + 86400000) return false;
+      }
+
+      // Customer filter
+      if (selectedCustomerId !== "all") {
+        const custIdNum = Number(selectedCustomerId);
+        if (item.customer?.id !== custIdNum) return false;
+      }
+
+      return true;
+    });
+  }, [recentSales, dateRange, selectedCustomerId, customStart, customEnd]);
+
+  const totalFilteredRevenue = useMemo(() => {
+    return filteredSales.reduce((acc, item) => acc + Number(item.sale.total), 0);
+  }, [filteredSales]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-xl font-bold text-[#f8f3e7]">Sales History & Transactions</h3>
-        <p className="text-xs text-[#9eb4ae] mt-1">Audit completed transactions, payment methods, and receipts.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-xl font-bold text-[#f8f3e7]">Sales History & Analytics</h3>
+          <p className="text-xs text-[#9eb4ae] mt-1">Audit completed transactions with date ranges and customer filters.</p>
+        </div>
+        <div className="flex items-center gap-3 bg-[#0d2630]/95 border border-[#203b42] p-3 rounded-2xl shadow-sm">
+          <div>
+            <p className="text-[10px] uppercase text-[#9eb4ae] font-bold">Filtered Revenue</p>
+            <p className="text-lg font-black text-[#0f766e]">₨{totalFilteredRevenue.toFixed(2)} ({filteredSales.length} orders)</p>
+          </div>
+        </div>
       </div>
 
+      {/* Filter Toolbar */}
+      <Card className="bg-[#0d2630]/95 border-[#203b42] p-5 rounded-2xl shadow-xl space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="text-xs text-[#9eb4ae] font-bold mb-1.5 block">Date Range</label>
+            <Select value={dateRange} onValueChange={(val: any) => setDateRange(val)}>
+              <SelectTrigger className="bg-[#07111F] border-[#203b42] text-[#f8f3e7] rounded-xl h-11">
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7]">
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="yesterday">Yesterday</SelectItem>
+                <SelectItem value="last3">Last 3 Days</SelectItem>
+                <SelectItem value="week">Past Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="custom">Custom Date Range</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-xs text-[#9eb4ae] font-bold mb-1.5 block">Customer Filter</label>
+            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+              <SelectTrigger className="bg-[#07111F] border-[#203b42] text-[#f8f3e7] rounded-xl h-11">
+                <SelectValue placeholder="All customers" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7]">
+                <SelectItem value="all">All Customers & Walk-ins</SelectItem>
+                {customers.map(c => (
+                  <SelectItem key={c.id} value={c.id.toString()}>{c.name} ({c.email || c.phone || "No contact"})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-end">
+            <Button
+              variant="outline"
+              onClick={() => { setDateRange("all"); setSelectedCustomerId("all"); setCustomStart(""); setCustomEnd(""); }}
+              className="w-full border-[#203b42] bg-[#07111F] text-[#c7d8d1] hover:bg-slate-800 h-11 rounded-xl"
+            >
+              Reset Filters
+            </Button>
+          </div>
+        </div>
+
+        {dateRange === "custom" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#203b42]">
+            <div>
+              <label className="text-xs text-[#9eb4ae] font-medium mb-1 block">Start Date</label>
+              <Input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="bg-[#07111F] border-[#203b42] text-[#f8f3e7] rounded-xl h-11" />
+            </div>
+            <div>
+              <label className="text-xs text-[#9eb4ae] font-medium mb-1 block">End Date</label>
+              <Input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="bg-[#07111F] border-[#203b42] text-[#f8f3e7] rounded-xl h-11" />
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Transactions Table */}
       <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -1582,15 +1693,23 @@ function SalesHistoryView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
-              {recentSales.map(item => (
-                <tr key={item.sale.id} className="hover:bg-[#07111F]/40 transition-colors">
-                  <td className="py-4 font-semibold text-[#f8f3e7]">{item.sale.saleNumber}</td>
-                  <td className="py-4 text-[#c7d8d1]">{item.customer?.name ?? "Walk-in Customer"}</td>
-                  <td className="py-4 uppercase text-xs font-semibold text-[#0f766e]">{item.sale.paymentMethod}</td>
-                  <td className="py-4 font-extrabold text-[#f8f3e7]">₨{Number(item.sale.total).toFixed(2)}</td>
-                  <td className="py-4 text-[#9eb4ae] text-xs">{new Date(item.sale.createdAt).toLocaleString()}</td>
+              {filteredSales.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-[#9eb4ae]">
+                    No sales found matching the selected filters.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                filteredSales.map(item => (
+                  <tr key={item.sale.id} className="hover:bg-[#07111F]/40 transition-colors">
+                    <td className="py-4 font-semibold text-[#f8f3e7]">{item.sale.saleNumber}</td>
+                    <td className="py-4 text-[#c7d8d1]">{item.customer?.name ?? "Walk-in Customer"}</td>
+                    <td className="py-4 uppercase text-xs font-semibold text-[#0f766e]">{item.sale.paymentMethod}</td>
+                    <td className="py-4 font-extrabold text-[#f8f3e7]">₨{Number(item.sale.total).toFixed(2)}</td>
+                    <td className="py-4 text-[#9eb4ae] text-xs">{new Date(item.sale.createdAt).toLocaleString()}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
