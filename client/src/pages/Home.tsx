@@ -614,27 +614,27 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
 
       {/* Payment Modal */}
       <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
-        <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] max-w-md rounded-2xl p-6">
+        <DialogContent className="bg-white border-slate-200 text-[#0f172a] max-w-md rounded-2xl p-6 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#f8f3e7] flex items-center gap-2">
+            <DialogTitle className="text-xl font-bold text-[#0f172a] flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-[#0f766e]" /> Complete Payment
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-5 pt-3">
-            <div className="bg-[#07111F] p-4 rounded-xl border border-[#203b42] text-center">
-              <p className="text-xs text-[#9eb4ae] uppercase tracking-wider font-medium">Amount Due</p>
-              <h3 className="text-3xl font-extrabold text-[#0f766e] mt-1">₨{total.toFixed(2)}</h3>
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center shadow-sm">
+              <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Amount Due</p>
+              <h3 className="text-3xl font-black text-[#0f172a] mt-1">₨{total.toFixed(2)}</h3>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs text-[#9eb4ae] font-medium">Payment Method</label>
+              <label className="text-xs text-slate-500 font-bold">Payment Method</label>
               <div className="grid grid-cols-4 gap-2">
                 {(["cash", "card", "transfer", "other"] as const).map(m => (
                   <Button
                     key={m}
                     variant={paymentMethod === m ? "default" : "outline"}
                     onClick={() => setPaymentMethod(m)}
-                    className={paymentMethod === m ? "bg-[#0f172a] text-[#f8f3e7] capitalize" : "border-[#203b42] bg-[#07111F] text-[#c7d8d1] capitalize hover:bg-slate-800"}
+                    className={paymentMethod === m ? "bg-[#0f172a] text-white capitalize rounded-xl font-bold h-11" : "border-slate-200 bg-slate-50 text-slate-700 capitalize hover:bg-slate-100 rounded-xl font-medium h-11"}
                   >
                     {m}
                   </Button>
@@ -644,16 +644,16 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
 
             {paymentMethod === "cash" && (
               <div className="space-y-2">
-                <label className="text-xs text-[#9eb4ae] font-medium">Cash Received (PKR)</label>
+                <label className="text-xs text-slate-500 font-bold">Cash Received (PKR)</label>
                 <Input
                   type="number"
                   value={amountReceived}
                   onChange={e => setAmountReceived(e.target.value)}
                   placeholder="0.00"
-                  className="bg-[#07111F] border-[#203b42] h-11 text-lg font-bold text-[#f8f3e7]"
+                  className="bg-slate-50 border-slate-200 h-12 text-lg font-bold text-[#0f172a] rounded-xl"
                 />
                 <div className="flex justify-between text-sm pt-1">
-                  <span className="text-[#9eb4ae]">Change Due:</span>
+                  <span className="text-slate-500 font-medium">Change Due:</span>
                   <span className="font-bold text-[#0f766e]">₨{changeDue.toFixed(2)}</span>
                 </div>
               </div>
@@ -662,7 +662,7 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
             <Button
               onClick={() => checkoutMutation.mutate({ items: cart.map(i => ({ productId: i.product.id, quantity: i.quantity })), discount: 0, paymentMethod, amountReceived: receivedNum || total, customerId: selectedCustomerId })}
               disabled={checkoutMutation.isPending}
-              className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl"
+              className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl"
             >
               Confirm & Print Receipt
             </Button>
@@ -672,29 +672,29 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
 
       {/* Receipt Dialog */}
       <Dialog open={!!checkoutResult} onOpenChange={() => setCheckoutResult(null)}>
-        <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] max-w-sm rounded-2xl">
+        <DialogContent className="bg-white border-slate-200 text-[#0f172a] max-w-sm rounded-2xl shadow-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#0f766e]">
-              <Printer className="h-5 w-5" /> Receipt Generated
+            <DialogTitle className="flex items-center gap-2 text-[#0f172a] font-bold text-lg">
+              <Printer className="h-5 w-5 text-[#0f766e]" /> Receipt Generated
             </DialogTitle>
           </DialogHeader>
           {checkoutResult && (
-            <div className="space-y-4 font-mono text-xs bg-[#07111F] p-5 rounded-xl border border-[#203b42]">
-              <div className="text-center pb-3 border-b border-[#203b42]">
-                <p className="font-bold text-sm text-[#f8f3e7]">Aura Coffee & Gourmet</p>
-                <p className="text-[#9eb4ae] mt-1">{checkoutResult.saleNumber}</p>
-                <p className="text-[10px] text-[#78938f] mt-0.5">{new Date().toLocaleString()}</p>
+            <div className="space-y-4 font-mono text-xs bg-slate-50 p-5 rounded-2xl border border-slate-200 text-slate-800">
+              <div className="text-center pb-3 border-b border-slate-200">
+                <p className="font-bold text-sm text-[#0f172a]">Aura Coffee & Gourmet</p>
+                <p className="text-slate-500 mt-1">{checkoutResult.saleNumber}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{new Date().toLocaleString()}</p>
               </div>
               <div className="space-y-1.5">
-                <div className="flex justify-between text-[#c7d8d1]"><span>Subtotal</span><span>₨{checkoutResult.subtotal}</span></div>
-                <div className="flex justify-between text-[#c7d8d1]"><span>Tax (18%)</span><span>₨{checkoutResult.tax}</span></div>
-                <div className="flex justify-between font-bold text-sm pt-2 border-t border-[#203b42] text-[#f8f3e7]"><span>TOTAL</span><span>₨{checkoutResult.total}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Subtotal</span><span>₨{checkoutResult.subtotal}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Tax (18%)</span><span>₨{checkoutResult.tax}</span></div>
+                <div className="flex justify-between font-bold text-sm pt-2 border-t border-slate-200 text-[#0f172a]"><span>TOTAL</span><span>₨{checkoutResult.total}</span></div>
                 <div className="flex justify-between text-[#0f766e] pt-1 font-semibold"><span>Change Returned</span><span>₨{checkoutResult.change}</span></div>
               </div>
-              <div className="text-center pt-3 border-t border-[#203b42] text-[11px] text-[#9eb4ae] leading-relaxed">
+              <div className="text-center pt-3 border-t border-slate-200 text-[11px] text-slate-500 leading-relaxed font-sans">
                 {checkoutResult.footer}
               </div>
-              <Button onClick={() => setCheckoutResult(null)} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-sans font-semibold mt-4 rounded-xl">
+              <Button onClick={() => setCheckoutResult(null)} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-sans font-bold mt-4 rounded-xl h-11 shadow-sm">
                 Done & Next Sale
               </Button>
             </div>
