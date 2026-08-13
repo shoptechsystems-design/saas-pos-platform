@@ -372,6 +372,7 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
   const { data: categories = [] } = trpc.catalog.categories.useQuery();
   const { data: products = [] } = trpc.catalog.products.useQuery({ query: search, categoryId: selectedCategory });
   const { data: customers = [] } = trpc.customers.list.useQuery();
+  const { data: tenantSettings } = trpc.tenant.settings.useQuery();
 
   const checkoutMutation = trpc.pos.checkout.useMutation({
     onSuccess: (res) => {
@@ -681,10 +682,13 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
           </DialogHeader>
           {checkoutResult && (
             <div className="space-y-4 font-mono text-xs bg-slate-50 p-5 rounded-2xl border border-slate-200 text-slate-800">
-              <div className="text-center pb-3 border-b border-slate-200">
-                <p className="font-bold text-sm text-[#0f172a]">Aura Coffee & Gourmet</p>
-                <p className="text-slate-500 mt-1">{checkoutResult.saleNumber}</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">{new Date().toLocaleString()}</p>
+              <div className="text-center pb-3 border-b border-slate-200 flex flex-col items-center gap-2">
+                {tenantSettings?.logoUrl && (
+                  <img src={tenantSettings.logoUrl} alt="Store Logo" className="h-12 max-w-[120px] object-contain rounded-lg shadow-sm" />
+                )}
+                <p className="font-bold text-sm text-[#0f172a]">{tenantSettings?.name || "OmniPOS Store"}</p>
+                <p className="text-slate-500 text-xs">{checkoutResult.saleNumber}</p>
+                <p className="text-[10px] text-slate-400">{new Date().toLocaleString()}</p>
               </div>
               <div className="space-y-1.5">
                 <div className="flex justify-between text-slate-600"><span>Subtotal</span><span>₨{checkoutResult.subtotal}</span></div>
