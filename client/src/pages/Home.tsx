@@ -28,6 +28,7 @@ import {
   Truck,
   CreditCard,
   Tag,
+  Loader2,
   Clock,
   FolderPlus,
   Eye,
@@ -1511,8 +1512,13 @@ function CustomerDirectoryView() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={() => createMutation.mutate({ name, email, phone, groupId })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
-                Save Customer
+              <Button 
+                onClick={() => createMutation.mutate({ name, email, phone, groupId })} 
+                disabled={createMutation.isPending}
+                className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4 flex items-center justify-center gap-2"
+              >
+                {createMutation.isPending && <Loader2 className="h-5 w-5 animate-spin" />}
+                {createMutation.isPending ? "Saving Customer..." : "Save Customer"}
               </Button>
             </div>
           </DialogContent>
