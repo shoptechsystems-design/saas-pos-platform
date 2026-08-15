@@ -19,6 +19,7 @@ import {
   type InsertUser,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { storageGetSignedUrl } from "./storage";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -128,7 +129,17 @@ export async function getProductsForTenant(tenantId: number, query?: string, cat
     const search = `%${query}%`;
     predicates.push(or(like(products.name, search), like(products.sku, search), like(products.barcode, search))!);
   }
-  return db.select().from(products).where(and(...predicates)).orderBy(asc(products.name));
+  const rows = await db.select().from(products).where(and(...predicates)).orderBy(asc(products.name));
+  return Promise.all(rows.map(async (product) => {
+    const image = product.imageUrl?.trim();
+    if (!image || image.startsWith("http://") || image.startsWith("https://") || image.startsWith("data:")) return product;
+    try {
+      const signedImageUrl = await storageGetSignedUrl(image.replace(/^\/?manus-storage\//, ""));
+      return { ...product, imageUrl: signedImageUrl };
+    } catch {
+      return product;
+    }
+  }));
 }
 
 export async function getCategoriesForTenant(tenantId: number) {
