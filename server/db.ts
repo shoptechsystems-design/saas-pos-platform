@@ -132,9 +132,11 @@ export async function getProductsForTenant(tenantId: number, query?: string, cat
   const rows = await db.select().from(products).where(and(...predicates)).orderBy(asc(products.name));
   return Promise.all(rows.map(async (product) => {
     const image = product.imageUrl?.trim();
-    if (!image || image.startsWith("http://") || image.startsWith("https://") || image.startsWith("data:")) return product;
+    if (!image || image.startsWith("data:")) return product;
+    const storageKey = image.match(/\/tenants\/[^?]+/)?.[0]?.replace(/^\//, "")
+      ?? image.replace(/^\/?manus-storage\//, "");
     try {
-      const signedImageUrl = await storageGetSignedUrl(image.replace(/^\/?manus-storage\//, ""));
+      const signedImageUrl = await storageGetSignedUrl(storageKey);
       return { ...product, imageUrl: signedImageUrl };
     } catch {
       return product;
