@@ -393,6 +393,7 @@ export const appRouter = router({
   }),
 
   inventory: router({
+    list: tenantProcedure.input(z.object({ query: z.string().trim().optional() }).optional()).query(({ ctx, input }) => getProductsForTenant(ctx.tenant.id, input?.query)),
     lowStock: tenantProcedure.query(({ ctx }) => getLowStockProducts(ctx.tenant.id)),
     adjust: inventoryProcedure
       .input(z.object({ productId: z.number().int().positive(), quantity: z.number().int(), reason: z.string().trim().min(2).max(220) }))
