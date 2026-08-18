@@ -586,7 +586,7 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
                     >
                       <option value="">Walk-in Customer</option>
                       {customers.map(c => (
-                        <option key={c.id} value={c.id}>{c.name} ({c.loyaltyPoints} pts)</option>
+                        <option key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ""}</option>
                       ))}
                       <option value="NEW_CUSTOMER">+ Add New Customer...</option>
                     </select>
@@ -1537,14 +1537,13 @@ function CustomerDirectoryView() {
                 <th className="py-4 px-6">Customer Name</th>
                 <th className="py-4 px-6">Email Address</th>
                 <th className="py-4 px-6">Phone Number</th>
-                <th className="py-4 px-6 text-right">Loyalty Points</th>
-                <th className="py-4 px-6 text-right">Total Spent</th>
+                <th className="py-4 px-6 text-right">Lifetime Spend</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#203b42]/60">
               {customers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-[#9eb4ae] text-sm">No customers registered yet. Click &quot;Add Customer&quot; above.</td>
+                  <td colSpan={4} className="py-12 text-center text-[#9eb4ae] text-sm">No customers registered yet. Click &quot;Add Customer&quot; above.</td>
                 </tr>
               ) : (
                 customers.map(c => (
@@ -1557,7 +1556,6 @@ function CustomerDirectoryView() {
                     </td>
                     <td className="py-4 px-6 text-[#9eb4ae] text-xs font-mono">{c.email || "-"}</td>
                     <td className="py-4 px-6 text-[#9eb4ae] text-xs font-mono">{c.phone || "-"}</td>
-                    <td className="py-4 px-6 text-right font-bold text-[#0f766e]">{c.loyaltyPoints} pts</td>
                     <td className="py-4 px-6 text-right font-black text-[#f8f3e7]">₨{Number(c.totalSpent).toFixed(2)}</td>
                   </tr>
                 ))
