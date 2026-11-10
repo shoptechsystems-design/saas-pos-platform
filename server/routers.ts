@@ -275,12 +275,44 @@ export const appRouter = router({
         if (!db) return [];
         const from = new Date();
         from.setDate(from.getDate() - input.days + 1);
+        from.setHours(0, 0, 0, 0); // include the whole first day, not just its trailing hours
         const rows = await db.select({ day: sql<string>`DATE(${sales.createdAt})`, total: sql<string>`COALESCE(SUM(${sales.total}), 0)`, orders: sql<number>`COUNT(*)` })
           .from(sales)
           .where(and(eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed"), gte(sales.createdAt, from)))
           .groupBy(sql`DATE(${sales.createdAt})`)
           .orderBy(asc(sql`DATE(${sales.createdAt})`));
         return rows.map(row => ({ day: String(row.day), total: Number(row.total), orders: Number(row.orders) }));
+      }),
+    topProducts: tenantProcedure
+      .input(z.object({ days: z.number().int().min(1).max(90).default(30) }).default({ days: 30 }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const from = new Date();
+        from.setDate(from.getDate() - input.days + 1);
+        from.setHours(0, 0, 0, 0);
+        const rows = await db.select({ productId: saleItems.productId, name: saleItems.productName, units: sql<string>`SUM(${saleItems.quantity})`, revenue: sql<string>`SUM(${saleItems.lineTotal})` })
+          .from(saleItems)
+          .innerJoin(sales, eq(sales.id, saleItems.saleId))
+          .where(and(eq(saleItems.tenantId, ctx.tenant.id), eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed"), gte(sales.createdAt, from)))
+          .groupBy(saleItems.productId, saleItems.productName)
+          .orderBy(desc(sql`SUM(${saleItems.lineTotal})`))
+          .limit(5);
+        return rows.map(r => ({ productId: r.productId, name: r.name, units: Number(r.units), revenue: Number(r.revenue) }));
+      }),
+    paymentMix: tenantProcedure
+      .input(z.object({ days: z.number().int().min(1).max(90).default(30) }).default({ days: 30 }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const from = new Date();
+        from.setDate(from.getDate() - input.days + 1);
+        from.setHours(0, 0, 0, 0);
+        const rows = await db.select({ method: sales.paymentMethod, total: sql<string>`SUM(${sales.total})`, orders: sql<number>`COUNT(*)` })
+          .from(sales)
+          .where(and(eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed"), gte(sales.createdAt, from)))
+          .groupBy(sales.paymentMethod);
+        return rows.map(r => ({ method: r.method, total: Number(r.total), orders: Number(r.orders) }));
       }),
   }),
 
@@ -364,6 +396,42 @@ export const appRouter = router({
         await db.update(products).set({ name: input.name, sku: input.sku, categoryId: input.categoryId, sellingPrice: input.sellingPrice.toFixed(2), stockQuantity: input.stockQuantity, imageUrl: normalizedImage }).where(and(eq(products.id, input.id), eq(products.tenantId, ctx.tenant.id)));
         await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "updated", entity: "product", metadata: { productId: input.id, sku: input.sku } });
         return { success: true } as const;
+      }),
+  }),
+
+  salesHistory: router({
+    list: tenantProcedure
+      .input(z.object({
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(5).max(100).default(15),
+        search: z.string().trim().max(80).optional(),
+        customerId: z.number().int().optional(),
+        paymentMethod: z.enum(["cash", "card", "transfer"]).optional(),
+        from: z.number().optional(),
+        to: z.number().optional(),
+      }).default({ page: 1, pageSize: 15 }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) return { rows: [], total: 0, revenue: 0, avgOrder: 0 };
+        const conds = [eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed")];
+        if (input.customerId) conds.push(eq(sales.customerId, input.customerId));
+        if (input.paymentMethod) conds.push(eq(sales.paymentMethod, input.paymentMethod));
+        if (input.from) conds.push(gte(sales.createdAt, new Date(input.from)));
+        if (input.to) conds.push(lte(sales.createdAt, new Date(input.to)));
+        if (input.search) conds.push(or(like(sales.saleNumber, `%${input.search}%`), like(customers.name, `%${input.search}%`))!);
+        const where = and(...conds);
+        const [agg] = await db.select({ total: sql<number>`COUNT(*)`.mapWith(Number), revenue: sql<string>`COALESCE(SUM(${sales.total}), 0)` })
+          .from(sales).leftJoin(customers, eq(customers.id, sales.customerId)).where(where);
+        const rows = await db.select({
+            sale: sales,
+            customer: { id: customers.id, name: customers.name },
+            itemCount: sql<number>`(SELECT COALESCE(SUM(${saleItems.quantity}), 0) FROM ${saleItems} WHERE ${saleItems.saleId} = ${sales.id})`.mapWith(Number),
+          })
+          .from(sales).leftJoin(customers, eq(customers.id, sales.customerId)).where(where)
+          .orderBy(desc(sales.createdAt)).limit(input.pageSize).offset((input.page - 1) * input.pageSize);
+        const revenue = Number(agg?.revenue ?? 0);
+        const total = agg?.total ?? 0;
+        return { rows, total, revenue, avgOrder: total ? revenue / total : 0 };
       }),
   }),
 
@@ -532,7 +600,7 @@ export const appRouter = router({
       if (!db) return [];
       const predicates = [eq(inventoryMovements.tenantId, ctx.tenant.id)];
       if (input?.productId) predicates.push(eq(inventoryMovements.productId, input.productId));
-      return db.select().from(inventoryMovements).where(and(...predicates)).orderBy(desc(inventoryMovements.createdAt)).limit(100);
+      return db.select().from(inventoryMovements).where(and(...predicates)).orderBy(desc(inventoryMovements.createdAt)).limit(500);
     }),
     variants: tenantProcedure.input(z.object({ productId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = await getDb();
@@ -596,7 +664,7 @@ export const appRouter = router({
     list: tenantProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) return [];
-      return db.select().from(expenses).where(eq(expenses.tenantId, ctx.tenant.id)).orderBy(desc(expenses.expenseDate)).limit(100);
+      return db.select().from(expenses).where(eq(expenses.tenantId, ctx.tenant.id)).orderBy(desc(expenses.expenseDate)).limit(500);
     }),
     create: tenantAdminProcedure.input(z.object({ category: z.string().trim().min(2).max(100), amount: money, notes: z.string().max(500).nullable().optional(), expenseDate: z.date().optional() })).mutation(async ({ ctx, input }) => {
       const db = await getDb();

@@ -226,10 +226,6 @@
 .omnipos-app [class*="border-slate-700"] {
   border-color: #cbd5e1 !important;
 }
-.omnipos-app [class*="text-slate-700"],
-.omnipos-app [class*="text-slate-600"] {
-  color: #94a3b8 !important;
-}
 .omnipos-app [class*="bg-red-500/10"] {
   background-color: #fff1f2 !important;
 }

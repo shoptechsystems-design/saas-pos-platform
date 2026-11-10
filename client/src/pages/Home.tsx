@@ -40,12 +40,20 @@ import {
   ChevronRight,
   Database,
   HelpCircle,
-  Bell
+  Bell,
+  Pencil,
+  Tags
 } from "lucide-react";
 import { toast } from "sonner";
-import { money } from "@/lib/format";
+import { money, moneyWhole } from "@/lib/format";
+import { DataTable, Pill, SearchBox, Segmented, StatTile, fmtDate, fmtTime, relativeTime } from "@/components/data/kit";
 import Landing from "./Landing";
 import AuthScreen from "./Auth";
+import DashboardView from "./Dashboard";
+import CustomersView from "./Customers";
+import SalesView from "./Sales";
+import ExpensesView from "./Expenses";
+import TeamView from "./Team";
 
 export default function Home() {
   const { user, loading, logout, refresh } = useAuth();
@@ -121,9 +129,9 @@ export default function Home() {
   ];
 
   return (
-    <div className="omnipos-app min-h-screen bg-[#f8fafc] text-[#0f172a] flex">
+    <div className="omnipos-app flex h-screen w-full overflow-hidden bg-[#f8fafc] text-[#0f172a]">
       {/* Grouped premium sidebar */}
-      <aside className={`omnipos-sidebar shrink-0 border-r border-white/5 bg-[#0b1220] text-slate-300 flex flex-col transition-[width] duration-300 max-[767px]:w-[84px] ${sidebarCollapsed ? "w-[84px]" : "w-[280px]"}`}>
+      <aside className={`omnipos-sidebar h-screen shrink-0 border-r border-white/5 bg-[#0b1220] text-slate-300 flex flex-col transition-[width] duration-300 max-[767px]:w-[84px] ${sidebarCollapsed ? "w-[84px]" : "w-[280px]"}`}>
         <div className={`flex h-[88px] items-center border-b border-white/10 ${sidebarCollapsed ? "justify-center px-3" : "gap-3 px-5"}`}>
           {tenantSettings?.logoUrl ? (
             <img src={tenantSettings.logoUrl.startsWith('/') ? tenantSettings.logoUrl : tenantSettings.logoUrl} alt="Store logo" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl object-cover shadow-[0_8px_18px_rgba(15,23,42,0.16)] border border-slate-200 bg-white" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
@@ -163,18 +171,17 @@ export default function Home() {
         </div>
 
         <div className="border-t border-white/10 p-3">
-          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className={`mb-2 flex h-9 w-full items-center gap-2 rounded-xl px-3 text-[11px] font-bold text-slate-500 transition hover:bg-white/5 hover:text-white ${sidebarCollapsed ? "justify-center px-0" : ""}`} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}><SlidersHorizontal className={`h-4 w-4 transition-transform ${sidebarCollapsed ? "rotate-180" : ""}`} />{!sidebarCollapsed && <span className="max-[767px]:hidden">Collapse</span>}</button>
-          <div className={`flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-2.5 ${sidebarCollapsed ? "justify-center" : ""}`}>
+          <div className={`flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-2.5 ${sidebarCollapsed ? "flex-col justify-center" : ""}`}>
             <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0f766e] text-xs font-black text-white"><span>{user.name?.charAt(0).toUpperCase()}</span><span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0b1220] bg-[#2dd4bf]" /></div>
             {!sidebarCollapsed && <div className="min-w-0 flex-1 max-[767px]:hidden"><p className="truncate text-xs font-bold text-white">{user.name}</p><p className="truncate text-[10px] font-medium text-slate-400">{user.email}</p></div>}
+            <button onClick={logout} aria-label="Sign out" title="Sign out" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-500/10 hover:text-red-300"><LogOut className="h-4 w-4" /></button>
           </div>
-          <Button variant="ghost" onClick={logout} className={`mt-2 h-10 w-full justify-start gap-2 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-300 ${sidebarCollapsed ? "justify-center px-0" : "px-3"}`}><LogOut className="h-4 w-4" />{!sidebarCollapsed && <span className="text-xs font-bold max-[767px]:hidden">Sign Out</span>}</Button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-20 border-b border-slate-200 bg-white/95 backdrop-blur px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-40">
+      <div className="flex h-screen min-w-0 flex-1 flex-col">
+        <header className="z-40 flex h-20 shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -183,10 +190,10 @@ export default function Home() {
               <SlidersHorizontal className="h-4 w-4" />
             </button>
             <div>
-              <h2 className="text-lg font-bold text-[#0f172a] tracking-tight capitalize">
-                {activeTab === "pos" ? "POS Cashier Terminal" : activeTab.replace("-", " & ")}
+              <h2 className="text-lg font-bold text-[#0f172a] tracking-tight">
+                {({ pos: "POS Terminal", dashboard: "Dashboard", products: "Products", inventory: "Inventory & purchase orders", customers: "Customers", sales: "Sales history", expenses: "Expenses", masterdata: "Master data", team: "Team & roles", settings: "Business settings", superadmin: "Super admin console" } as Record<string, string>)[activeTab] ?? activeTab}
               </h2>
-              <p className="text-xs text-slate-500">{businessName} • Tenant Isolation Active</p>
+              <p className="text-xs text-slate-500">{businessName}</p>
             </div>
           </div>
 
@@ -207,24 +214,24 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto min-w-0">
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8"><div className="mx-auto w-full max-w-[1600px]">
           {user.role === "admin" ? (
             <SuperAdminView />
           ) : (
             <>
               {activeTab === "pos" && <POSTerminalView setActiveTab={setActiveTab} />}
-              {activeTab === "dashboard" && <TenantDashboardView />}
+              {activeTab === "dashboard" && <DashboardView setActiveTab={setActiveTab} />}
               {activeTab === "products" && <ProductCatalogView />}
               {activeTab === "inventory" && <InventoryManagementView />}
-              {activeTab === "customers" && <CustomerDirectoryView />}
-              {activeTab === "sales" && <SalesHistoryView />}
-              {activeTab === "expenses" && <ExpenseTrackerView />}
-              {activeTab === "team" && <TeamRolesView />}
+              {activeTab === "customers" && <CustomersView />}
+              {activeTab === "sales" && <SalesView />}
+              {activeTab === "expenses" && <ExpensesView />}
+              {activeTab === "team" && <TeamView />}
               {activeTab === "masterdata" && <MasterDataView />}
               {activeTab === "settings" && <TenantSettingsView />}
             </>
           )}
-        </main>
+        </div></main>
       </div>
     </div>
   );
@@ -583,50 +590,6 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
   );
 }
 
-function TenantDashboardView() {
-  const { data: stats } = trpc.dashboard.stats.useQuery();
-  const { data: lowStock = [] } = trpc.dashboard.lowStock.useQuery();
-  const { data: recentSales = [] } = trpc.dashboard.recentSales.useQuery();
-  const todaySales = Number(stats?.todaySales ?? 0);
-  const monthSales = Number(stats?.monthSales ?? 0);
-  const todayOrders = Number(stats?.todayOrders ?? 0);
-  const activeProducts = Number(stats?.products ?? 0);
-  const registeredCustomers = Number(stats?.customers ?? 0);
-  const lowStockCount = Number(stats?.lowStock ?? lowStock.length);
-  const averageOrder = todayOrders ? todaySales / todayOrders : 0;
-  const healthPercent = activeProducts ? Math.max(0, Math.min(100, ((activeProducts - lowStockCount) / activeProducts) * 100)) : 0;
-
-  const metricCards = [
-    { label: "Today's sales", value: money(todaySales), helper: `${todayOrders} orders completed`, accent: "text-[#0f766e]", icon: Receipt },
-    { label: "Month-to-date revenue", value: money(monthSales), helper: "Current billing period", accent: "text-[#0f172a]", icon: TrendingUp },
-    { label: "Average order value", value: money(averageOrder), helper: "Based on today's sales", accent: "text-[#f9735b]", icon: ShoppingBag },
-    { label: "Customer directory", value: registeredCustomers.toString(), helper: `${lowStockCount} low-stock alerts`, accent: "text-[#0f766e]", icon: Users },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0f766e]">Business overview</p><h3 className="mt-2 text-3xl font-black tracking-[-0.02em] text-[#0f172a]">Good morning, Aura Coffee.</h3><p className="mt-1 text-sm text-slate-500">Here’s what is happening across your workspace today.</p></div>
-        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500">PKR • Live data</div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metricCards.map(({ label, value, helper, accent, icon: Icon }) => <Card key={label} className="rounded-2xl border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="flex items-start justify-between"><div><p className="text-xs font-bold text-slate-500">{label}</p><p className={`mt-3 text-2xl font-black tracking-tight ${accent}`}>{value}</p></div><div className="rounded-xl bg-slate-50 p-2.5"><Icon className="h-4 w-4 text-slate-500" /></div></div><p className="mt-4 text-[11px] font-medium text-slate-400">{helper}</p></Card>)}
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.45fr_0.85fr]">
-        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="flex items-start justify-between"><div><p className="text-xs font-bold text-slate-500">Revenue pulse</p><h4 className="mt-1 text-xl font-black tracking-tight text-[#0f172a]">Keep your operation in view.</h4></div><Badge className="rounded-full border border-[#d5eee8] bg-[#effaf7] text-[#0f766e]">Today</Badge></div><div className="mt-8 grid h-40 grid-cols-7 items-end gap-3 rounded-2xl bg-[#f8fafc] p-4">{[0.34,0.52,0.43,0.68,0.58,0.78, Math.max(0.12, Math.min(0.95, todaySales / Math.max(monthSales / 24, 1) / 10))].map((height, index) => <div key={index} className="group flex h-full flex-col justify-end gap-2"><div className={`w-full rounded-t-lg transition ${index === 6 ? "bg-[#0f172a]" : index === 4 ? "bg-[#f9735b]" : "bg-[#b9e4db]"}`} style={{ height: `${Math.round(height * 100)}%` }} /><span className="text-center text-[9px] font-bold text-slate-400">{["M","T","W","T","F","S","S"][index]}</span></div>)}</div><div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4"><div><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Month-to-date</p><p className="mt-1 text-lg font-black text-[#0f172a]">{money(monthSales)}</p></div><div className="text-right"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Orders today</p><p className="mt-1 text-lg font-black text-[#0f766e]">{todayOrders}</p></div></div></Card>
-        <Card className="rounded-2xl border-slate-200 bg-[#0f172a] p-6 text-white shadow-[0_18px_35px_rgba(15,23,42,0.18)]"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">Operational health</p><h4 className="mt-1 text-xl font-black">Inventory readiness</h4></div><Package className="h-5 w-5 text-[#f9735b]" /></div><p className="mt-10 text-4xl font-black">{Math.round(healthPercent)}<span className="text-xl text-slate-400">%</span></p><p className="mt-1 text-xs text-slate-400">products above minimum stock</p><div className="mt-7 h-2 rounded-full bg-white/10"><div className="h-2 rounded-full bg-[#f9735b]" style={{ width: `${healthPercent}%` }} /></div><div className="mt-7 space-y-3 text-xs"><div className="flex items-center justify-between"><span className="text-slate-400">Active products</span><span className="font-black">{activeProducts}</span></div><div className="flex items-center justify-between"><span className="text-slate-400">Low-stock alerts</span><span className="font-black text-[#f9735b]">{lowStockCount}</span></div><div className="flex items-center justify-between"><span className="text-slate-400">Customers tracked</span><span className="font-black">{registeredCustomers}</span></div></div></Card>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-bold text-slate-500">Needs attention</p><h4 className="mt-1 text-lg font-black text-[#0f172a]">Low-stock alerts</h4></div><AlertTriangle className="h-5 w-5 text-[#f9735b]" /></div><div className="space-y-2">{lowStock.length === 0 ? <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">All inventory levels are optimal.</p> : lowStock.slice(0, 5).map(p => <div key={p.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 p-3"><div><p className="text-sm font-bold text-[#0f172a]">{p.name}</p><p className="mt-0.5 text-[11px] text-slate-500">SKU: {p.sku}</p></div><Badge className="rounded-full border border-[#ffd9d2] bg-[#fff1ec] text-[#c2412d]">{p.stockQuantity} left</Badge></div>)}</div></Card>
-        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-bold text-slate-500">Latest activity</p><h4 className="mt-1 text-lg font-black text-[#0f172a]">Recent transactions</h4></div><Receipt className="h-5 w-5 text-[#0f766e]" /></div><div className="space-y-2">{recentSales.length === 0 ? <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No sales recorded today.</p> : recentSales.slice(0, 5).map(item => <div key={item.sale.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-3"><div><p className="text-sm font-bold text-[#0f172a]">{item.sale.saleNumber}</p><p className="mt-0.5 text-[11px] text-slate-500">{item.customer?.name ?? "Walk-in Customer"} • {item.sale.paymentMethod.toUpperCase()}</p></div><span className="text-sm font-black text-[#0f766e]">{money(Number(item.sale.total))}</span></div>)}</div></Card>
-      </div>
-    </div>
-  );
-}
-
 function ProductCatalogView() {
   const utils = trpc.useUtils();
   const { data: products = [] } = trpc.catalog.products.useQuery();
@@ -705,6 +668,23 @@ function ProductCatalogView() {
   });
 
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [prodSearch, setProdSearch] = useState("");
+  const [prodCat, setProdCat] = useState("all");
+  const [prodStock, setProdStock] = useState<"all" | "low" | "out">("all");
+  const [manageCats, setManageCats] = useState(false);
+  const filteredProducts = useMemo(() => {
+    const q = prodSearch.trim().toLowerCase();
+    return products.filter(p =>
+      (prodCat === "all" || String(p.categoryId) === prodCat) &&
+      (prodStock === "all" || (prodStock === "out" ? p.stockQuantity <= 0 : p.stockQuantity <= p.minStockLevel)) &&
+      (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || (p.barcode ?? "").includes(q)));
+  }, [products, prodSearch, prodCat, prodStock]);
+  const inventoryValue = products.reduce((s, p) => s + Number(p.costPrice) * p.stockQuantity, 0);
+  const lowCount = products.filter(p => p.stockQuantity <= p.minStockLevel).length;
+  const startEditProduct = (p: any) => {
+    setEditProdName(p.name); setEditProdSku(p.sku); setEditProdPrice(p.sellingPrice.toString()); setEditProdStock(p.stockQuantity.toString());
+    setEditProdCatId(p.categoryId ?? undefined); setEditProdImageUrl(p.imageUrl ?? ""); setEditingProduct(p);
+  };
   const [editProdName, setEditProdName] = useState("");
   const [editProdSku, setEditProdSku] = useState("");
   const [editProdPrice, setEditProdPrice] = useState("");
@@ -733,13 +713,14 @@ function ProductCatalogView() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-xl font-bold text-[#f8f3e7]">Product Catalog & Category Management</h3>
-          <p className="text-xs text-[#9eb4ae] mt-1">Manage pricing, SKUs, stock thresholds, and dynamic tenant categories.</p>
+          <h3 className="text-2xl font-extrabold tracking-[-0.015em] text-slate-900">Products</h3>
+          <p className="mt-1 text-sm text-slate-500">Pricing, stock levels and categories for everything you sell.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" onClick={() => setManageCats(true)} className="border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50 rounded-xl"><Tags className="h-4 w-4 mr-2" /> Manage categories</Button>
           <Dialog open={openCategory} onOpenChange={setOpenCategory}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="border-[#203b42] bg-[#0d2630] text-[#f8f3e7] hover:bg-slate-800 font-semibold rounded-xl">
+              <Button variant="outline" className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">
                 <FolderPlus className="h-4 w-4 mr-2" /> Add Category
               </Button>
             </DialogTrigger>
@@ -853,100 +834,65 @@ function ProductCatalogView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] xl:col-span-1">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-base font-black text-[#0f172a]">Tenant Categories</h4>
-            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">{categories.length}</span>
-          </div>
-          <p className="text-xs text-slate-500 mb-4">Categories are fully dynamic per business workspace (e.g., bookshop, stationery, café).</p>
-          <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile label="Products" value={products.length} hint={`${categories.length} categories`} icon={Package} />
+        <StatTile label="Inventory value" value={moneyWhole(inventoryValue)} hint="at cost price" icon={DollarSign} tone="bg-indigo-50 text-indigo-600" />
+        <StatTile label="Low stock" value={lowCount} hint={lowCount ? "needs restocking" : "all healthy"} icon={AlertTriangle} tone="bg-rose-50 text-rose-600" />
+        <StatTile label="Avg. margin" value={`${(products.length ? products.reduce((s, p) => s + (Number(p.sellingPrice) ? ((Number(p.sellingPrice) - Number(p.costPrice)) / Number(p.sellingPrice)) * 100 : 0), 0) / products.length : 0).toFixed(0)}%`} hint="selling vs cost price" icon={TrendingUp} tone="bg-orange-50 text-orange-600" />
+      </div>
+
+      <DataTable
+        rows={filteredProducts} rowKey={p => p.id} pageSize={10}
+        toolbar={<div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center">
+          <SearchBox value={prodSearch} onChange={setProdSearch} placeholder="Search name, SKU or barcode…" />
+          <Select value={prodCat} onValueChange={setProdCat}>
+            <SelectTrigger className="h-10 w-full rounded-xl border-slate-200 bg-white text-sm lg:w-52"><SelectValue /></SelectTrigger>
+            <SelectContent className="border-slate-200 bg-white text-slate-900"><SelectItem value="all">All categories</SelectItem>{categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent>
+          </Select>
+          <Segmented value={prodStock} onChange={setProdStock} options={[{ value: "all", label: "All" }, { value: "low", label: "Low stock" }, { value: "out", label: "Out of stock" }]} />
+          <span className="text-xs text-slate-500 lg:ml-auto">{filteredProducts.length} of {products.length} products</span>
+        </div>}
+        empty={{ icon: Package, title: products.length ? "No products match" : "No products yet", hint: products.length ? "Try a different search or filter." : "Add your first product to start selling.", action: !products.length ? <Button onClick={() => setOpenNew(true)} className="rounded-xl bg-slate-900 text-white hover:bg-slate-700">Add product</Button> : undefined }}
+        columns={[
+          { key: "name", header: "Product", sortValue: (p: any) => p.name.toLowerCase(), cell: (p: any) => {
+            const cat = categories.find(c => c.id === p.categoryId);
+            return <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">{p.imageUrl ? <img src={p.imageUrl} alt="" className="h-full w-full object-cover" /> : <Tag className="h-4 w-4 text-slate-400" />}</div>
+              <div className="min-w-0"><p className="truncate font-semibold text-slate-900">{p.name}</p>{cat && <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2 w-2 rounded-full" style={{ background: cat.color }} />{cat.name}</p>}</div>
+            </div>; } },
+          { key: "sku", header: "SKU", hideBelow: "lg", sortValue: (p: any) => p.sku, cell: (p: any) => <span className="rounded-md bg-slate-100 px-2 py-1 font-mono text-[11px] text-slate-600">{p.sku}</span> },
+          { key: "price", header: "Price", align: "right", sortValue: (p: any) => Number(p.sellingPrice), cell: (p: any) => {
+            const price = Number(p.sellingPrice), cost = Number(p.costPrice), margin = price ? ((price - cost) / price) * 100 : 0;
+            return <div><p className="font-bold tabular-nums text-slate-900">{moneyWhole(price)}</p><p className="text-[11px] text-slate-400">{margin.toFixed(0)}% margin</p></div>; } },
+          { key: "stock", header: "Stock", hideBelow: "sm", sortValue: (p: any) => p.stockQuantity, cell: (p: any) => {
+            const target = Math.max(p.minStockLevel * 4, 1), pct = Math.min(100, (p.stockQuantity / target) * 100), low = p.stockQuantity <= p.minStockLevel;
+            return <div className="w-28"><p className="text-sm font-semibold tabular-nums text-slate-800">{p.stockQuantity} <span className="text-[11px] font-normal text-slate-400">units</span></p>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${p.stockQuantity <= 0 ? "bg-rose-500" : low ? "bg-amber-500" : "bg-teal-500"}`} style={{ width: `${pct}%` }} /></div></div>; } },
+          { key: "status", header: "Status", cell: (p: any) => p.stockQuantity <= 0 ? <Pill tone="rose" dot>Out of stock</Pill> : p.stockQuantity <= p.minStockLevel ? <Pill tone="amber" dot>Low stock</Pill> : <Pill tone="emerald" dot>In stock</Pill> },
+          { key: "actions", header: "", align: "right", cell: (p: any) => <div className="flex justify-end gap-1">
+            <button type="button" onClick={() => startEditProduct(p)} aria-label={`Edit ${p.name}`} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"><Pencil className="h-4 w-4" /></button>
+            <button type="button" onClick={() => { if (window.confirm(`Delete product "${p.name}"?`)) deleteProductMutation.mutate({ id: p.id }); }} aria-label={`Delete ${p.name}`} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+          </div> },
+        ]}
+      />
+
+      <Dialog open={manageCats} onOpenChange={setManageCats}>
+        <DialogContent className="max-w-lg rounded-2xl border-slate-200 bg-white p-6 text-slate-900 shadow-2xl">
+          <DialogHeader><DialogTitle className="text-xl font-bold">Manage categories</DialogTitle></DialogHeader>
+          <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 pt-2">
+            {categories.length === 0 && <p className="py-6 text-center text-sm text-slate-500">No categories yet.</p>}
             {categories.map(cat => (
-              <div key={cat.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/75 p-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="h-3.5 w-3.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                  <span className="text-xs font-bold text-[#0f172a]">{cat.name}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => { setEditingCategory(cat); setEditCatName(cat.name); setEditCatColor(cat.color); }} className="h-7 px-2 text-xs text-slate-600 hover:bg-slate-200">Edit</Button>
-                  <Button size="sm" variant="ghost" onClick={() => deleteCategoryMutation.mutate({ id: cat.id })} className="h-7 px-2 text-xs text-red-600 hover:bg-red-50">Delete</Button>
-                </div>
+              <div key={cat.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/70 px-3.5 py-2.5">
+                <span className="flex items-center gap-2.5 text-sm font-semibold"><span className="h-3 w-3 rounded-full" style={{ backgroundColor: cat.color }} />{cat.name}</span>
+                <span className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => { setManageCats(false); setEditingCategory(cat); setEditCatName(cat.name); setEditCatColor(cat.color); }} className="h-8 px-2.5 text-xs text-slate-600 hover:bg-slate-200">Edit</Button>
+                  <Button size="sm" variant="ghost" onClick={() => deleteCategoryMutation.mutate({ id: cat.id })} className="h-8 px-2.5 text-xs text-red-600 hover:bg-red-50">Delete</Button>
+                </span>
               </div>
             ))}
           </div>
-        </Card>
-
-        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] xl:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h4 className="text-base font-black text-[#0f172a]">Products</h4>
-            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">{products.length} items</span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
-                  <th className="pb-3 font-semibold">Product</th>
-                  <th className="pb-3 font-semibold">SKU</th>
-                  <th className="pb-3 font-semibold">Price</th>
-                  <th className="pb-3 font-semibold">Stock</th>
-                  <th className="pb-3 font-semibold">Status</th>
-                  <th className="pb-3 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {products.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-4 font-semibold text-[#0f172a] flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
-                        {p.imageUrl ? <img src={p.imageUrl} alt="" className="h-full w-full object-cover" /> : <Tag className="h-4 w-4 text-slate-500" />}
-                      </div>
-                      <span>{p.name}</span>
-                    </td>
-                    <td className="py-4 text-slate-500 font-mono text-xs">{p.sku}</td>
-                    <td className="py-4 font-bold text-[#0f766e]">{money(Number(p.sellingPrice))}</td>
-                    <td className="py-4 font-semibold text-slate-700">{p.stockQuantity}</td>
-                    <td className="py-4">
-                      <Badge variant={p.stockQuantity <= p.minStockLevel ? "destructive" : "secondary"} className="rounded-lg">
-                        {p.stockQuantity <= p.minStockLevel ? "Low Stock" : "In Stock"}
-                      </Badge>
-                    </td>
-                    <td className="py-4 text-right flex items-center justify-end gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditProdName(p.name);
-                          setEditProdSku(p.sku);
-                          setEditProdPrice(p.sellingPrice.toString());
-                          setEditProdStock(p.stockQuantity.toString());
-                          setEditProdCatId(p.categoryId ?? undefined);
-                          setEditProdImageUrl(p.imageUrl ?? "");
-                          setEditingProduct(p);
-                        }}
-                        className="h-8 px-2.5 text-xs text-slate-700 hover:bg-slate-100 font-bold rounded-xl"
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          if (window.confirm(`Are you sure you want to delete product "${p.name}"?`)) {
-                            deleteProductMutation.mutate({ id: p.id });
-                          }
-                        }}
-                        className="h-8 px-2.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 font-bold rounded-xl"
-                      >
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {editingCategory && (
         <Dialog open={!!editingCategory} onOpenChange={open => !open && setEditingCategory(null)}>
@@ -1112,102 +1058,59 @@ function InventoryManagementView() {
     onError: err => toast.error(err.message)
   });
 
+  const [ledgerFilter, setLedgerFilter] = useState<"all" | "in" | "out">("all");
+  const productById = useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
+  const unitsOnHand = products.reduce((s, p) => s + p.stockQuantity, 0);
+  const ledgerRows = useMemo(() => movements.filter(m => ledgerFilter === "all" || (ledgerFilter === "in" ? m.quantity > 0 : m.quantity < 0)), [movements, ledgerFilter]);
+  const typeTone: Record<string, "emerald" | "rose" | "indigo" | "amber" | "sky"> = { purchase: "indigo", stock_in: "emerald", sale: "rose", stock_out: "rose", adjustment: "amber" };
+
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h3 className="text-xl font-bold text-[#0f172a]">Advanced Inventory Management</h3>
-          <p className="text-xs text-slate-500 mt-1">Track low-stock alerts, manage product variants, and inspect audit movements.</p>
+          <h3 className="text-2xl font-extrabold tracking-[-0.015em] text-slate-900">Inventory</h3>
+          <p className="mt-1 text-sm text-slate-500">Stock alerts, adjustments, variants and the full movement ledger.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={() => setOpenAdjust(true)} className="bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold rounded-xl shadow-md">
-            Manual Stock Adjust
-          </Button>
-          <Button onClick={() => setOpenVariant(true)} variant="outline" className="border-slate-300 text-[#0f172a] hover:bg-slate-100 font-bold rounded-xl">
-            Manage Variants
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={() => setOpenAdjust(true)} className="h-10 rounded-xl bg-slate-900 font-semibold text-white hover:bg-slate-700">Manual stock adjust</Button>
+          <Button onClick={() => setOpenVariant(true)} variant="outline" className="h-10 rounded-xl border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50">Manage variants</Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
-        <Card className="bg-white border-slate-200 p-6 rounded-2xl shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
-          <p className="text-xs text-slate-500 font-medium">Low Stock Alerts</p>
-          <h3 className="text-3xl font-extrabold text-amber-600 mt-2">{lowStock.length}</h3>
-          <p className="text-xs text-slate-400 mt-1.5">Items at or below min threshold</p>
-        </Card>
-        <Card className="bg-white border-slate-200 p-6 rounded-2xl shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
-          <p className="text-xs text-slate-500 font-medium">Active Suppliers</p>
-          <h3 className="text-3xl font-extrabold text-[#0f172a] mt-2">{suppliers.length}</h3>
-          <p className="text-xs text-slate-400 mt-1.5">Wholesale partners</p>
-        </Card>
-        <Card className="bg-white border-slate-200 p-6 rounded-2xl shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
-          <p className="text-xs text-slate-500 font-medium">Purchase Orders</p>
-          <h3 className="text-3xl font-extrabold text-[#0f766e] mt-2">{purchases.length}</h3>
-          <p className="text-xs text-slate-400 mt-1.5">Registered POs</p>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile label="Units on hand" value={unitsOnHand.toLocaleString("en-PK")} hint={`across ${products.length} products`} icon={Package} />
+        <StatTile label="Low stock alerts" value={lowStock.length} hint="at or below minimum" icon={AlertTriangle} tone="bg-amber-50 text-amber-600" />
+        <StatTile label="Suppliers" value={suppliers.length} hint="wholesale partners" icon={Truck} tone="bg-indigo-50 text-indigo-600" />
+        <StatTile label="Purchase orders" value={purchases.length} hint="registered" icon={Receipt} tone="bg-sky-50 text-sky-600" />
       </div>
 
       {lowStock.length > 0 && (
-        <Card className="bg-amber-50/60 border-amber-200 p-6 rounded-2xl shadow-sm">
-          <h4 className="font-bold text-amber-900 mb-2">Low Stock Warning Alerts</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50 to-amber-50/40 p-5">
+          <div className="mb-3 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-600" /><h4 className="text-sm font-bold text-amber-900">Needs restocking · {lowStock.length} items</h4></div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {lowStock.map(p => (
-              <div key={p.id} className="bg-white border border-amber-200/70 p-3 rounded-xl flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-slate-900">{p.name}</p>
-                  <p className="text-[11px] text-slate-500">SKU: {p.sku}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs font-black text-amber-700 bg-amber-100 px-2 py-1 rounded-lg">
-                    {p.stockQuantity} left
-                  </span>
-                </div>
+              <div key={p.id} className="flex items-center justify-between rounded-xl border border-amber-200/70 bg-white px-3.5 py-2.5">
+                <div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900">{p.name}</p><p className="text-[11px] text-slate-500">{p.sku} · min {p.minStockLevel}</p></div>
+                <Pill tone={p.stockQuantity <= 0 ? "rose" : "amber"}>{p.stockQuantity <= 0 ? "Out" : `${p.stockQuantity} left`}</Pill>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
-      <Card className="bg-white border-slate-200 p-6 rounded-2xl shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
-        <h3 className="font-bold text-[#0f172a] mb-4 flex items-center gap-2">
-          <Truck className="h-5 w-5 text-[#0f766e]" /> Inventory Audit Ledger & Movements
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
-                <th className="pb-3 font-semibold">Movement Type</th>
-                <th className="pb-3 font-semibold">Product ID</th>
-                <th className="pb-3 font-semibold">Quantity Change</th>
-                <th className="pb-3 font-semibold">Reason / Reference</th>
-                <th className="pb-3 font-semibold">Timestamp</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {movements.map(m => (
-                <tr key={m.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-4">
-                    <Badge className={`rounded-lg capitalize ${m.quantity > 0 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"}`}>
-                      {m.type}
-                    </Badge>
-                  </td>
-                  <td className="py-4 font-mono text-xs font-semibold text-slate-700">#{m.productId}</td>
-                  <td className={`py-4 font-bold ${m.quantity > 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                    {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
-                  </td>
-                  <td className="py-4 text-slate-600 text-xs">{m.reason || "Automatic stock adjustment"}</td>
-                  <td className="py-4 text-slate-400 text-xs">{new Date(m.createdAt).toLocaleString()}</td>
-                </tr>
-              ))}
-              {movements.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">No inventory movements recorded yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <DataTable
+        rows={ledgerRows} rowKey={m => m.id} pageSize={10}
+        toolbar={<><div><h4 className="text-base font-bold text-slate-900">Movement ledger</h4><p className="text-xs text-slate-500">Every stock change, newest first.</p></div>
+          <Segmented value={ledgerFilter} onChange={setLedgerFilter} options={[{ value: "all", label: "All" }, { value: "in", label: "Stock in" }, { value: "out", label: "Stock out" }]} /></>}
+        empty={{ icon: Truck, title: "No stock movements yet", hint: "Sales, purchases and manual adjustments will be logged here automatically." }}
+        columns={[
+          { key: "when", header: "When", sortValue: (m: any) => new Date(m.createdAt).getTime(), cell: (m: any) => <div><p className="text-sm text-slate-800">{relativeTime(m.createdAt)}</p><p className="text-[11px] text-slate-400">{fmtDate(m.createdAt)} · {fmtTime(m.createdAt)}</p></div> },
+          { key: "type", header: "Type", cell: (m: any) => <Pill tone={typeTone[m.type] ?? "slate"}><span className="capitalize">{String(m.type).replace("_", " ")}</span></Pill> },
+          { key: "product", header: "Product", sortValue: (m: any) => productById.get(m.productId)?.name ?? "", cell: (m: any) => { const pr = productById.get(m.productId); return pr ? <div><p className="font-semibold text-slate-900">{pr.name}</p><p className="font-mono text-[11px] text-slate-400">{pr.sku}</p></div> : <span className="text-slate-400">Deleted product #{m.productId}</span>; } },
+          { key: "qty", header: "Change", align: "right", sortValue: (m: any) => m.quantity, cell: (m: any) => <span className={`font-bold tabular-nums ${m.quantity > 0 ? "text-emerald-600" : "text-rose-600"}`}>{m.quantity > 0 ? `+${m.quantity}` : m.quantity}</span> },
+          { key: "reason", header: "Reason", hideBelow: "md", cell: (m: any) => <span className="text-sm text-slate-600">{m.reason || "Automatic adjustment"}</span> },
+        ]}
+      />
 
       <Dialog open={openAdjust} onOpenChange={setOpenAdjust}>
         <DialogContent className="bg-white border-slate-200 text-[#0f172a] rounded-2xl p-6 shadow-2xl">
@@ -1322,517 +1225,6 @@ function InventoryManagementView() {
   );
 }
 
-function CustomerDirectoryView() {
-  const { data: customers = [] } = trpc.customers.list.useQuery();
-  const { data: groups = [] } = trpc.customerGroups.list.useQuery();
-  const [openNew, setOpenNew] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [groupId, setGroupId] = useState<number | null>(null);
-
-  const utils = trpc.useUtils();
-  const createMutation = trpc.customers.create.useMutation({
-    onSuccess: async () => {
-      toast.success("Customer added successfully!");
-      setOpenNew(false);
-      setName("");
-      setEmail("");
-      setPhone("");
-      setGroupId(null);
-      await utils.customers.list.invalidate();
-    },
-    onError: err => toast.error(err.message)
-  });
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-xl font-bold text-[#f8f3e7]">Customer Directory & Loyalty</h3>
-          <p className="text-xs text-[#9eb4ae] mt-1">Track reward points, lifetime spend, and contact details.</p>
-        </div>
-        <Dialog open={openNew} onOpenChange={setOpenNew}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-slate-900/10">
-              <Plus className="h-4 w-4 mr-2" /> Add Customer
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-white border-slate-200 text-[#0f172a] rounded-2xl p-6 shadow-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-[#0f172a]">New Customer</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-3">
-              <div>
-                <label className="text-xs text-slate-500 font-medium">Full Name</label>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Eleanor Vance" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 font-medium">Email Address</label>
-                <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="eleanor@example.com" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 font-medium">Phone Number</label>
-                <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555-0191" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 font-medium">Customer Group / Tier</label>
-                <Select value={groupId ? groupId.toString() : "none"} onValueChange={val => setGroupId(val === "none" ? null : Number(val))}>
-                  <SelectTrigger className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11 w-full">
-                    <SelectValue placeholder="Select group (optional)" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 text-[#0f172a]">
-                    <SelectItem value="none">Standard / None</SelectItem>
-                    {groups.map(g => (
-                      <SelectItem key={g.id} value={g.id.toString()}>{g.name} ({g.discountPercent}% off)</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button 
-                onClick={() => createMutation.mutate({ name, email, phone, groupId })} 
-                disabled={createMutation.isPending}
-                className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4 flex items-center justify-center gap-2"
-              >
-                {createMutation.isPending && <Loader2 className="h-5 w-5 animate-spin" />}
-                {createMutation.isPending ? "Saving Customer..." : "Save Customer"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Card className="bg-[#0d2630]/95 border border-[#203b42] rounded-2xl shadow-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="bg-[#07111F]/80 border-b border-[#203b42] text-[#9eb4ae] text-xs font-bold uppercase tracking-wider">
-                <th className="py-4 px-6">Customer Name</th>
-                <th className="py-4 px-6">Email Address</th>
-                <th className="py-4 px-6">Phone Number</th>
-                <th className="py-4 px-6 text-right">Lifetime Spend</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#203b42]/60">
-              {customers.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-12 text-center text-[#9eb4ae] text-sm">No customers registered yet. Click &quot;Add Customer&quot; above.</td>
-                </tr>
-              ) : (
-                customers.map(c => (
-                  <tr key={c.id} className="hover:bg-[#07111F]/50 transition-colors group">
-                    <td className="py-4 px-6 font-bold text-[#f8f3e7] flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-[#0f766e]/20 text-[#0f766e] flex items-center justify-center font-black text-xs shrink-0 border border-[#0f766e]/30">
-                        {c.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span>{c.name}</span>
-                    </td>
-                    <td className="py-4 px-6 text-[#9eb4ae] text-xs font-mono">{c.email || "-"}</td>
-                    <td className="py-4 px-6 text-[#9eb4ae] text-xs font-mono">{c.phone || "-"}</td>
-                    <td className="py-4 px-6 text-right font-black text-[#f8f3e7]">{money(Number(c.totalSpent))}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function SalesHistoryView() {
-  const { data: recentSales = [] } = trpc.dashboard.recentSales.useQuery();
-  const { data: customers = [] } = trpc.customers.list.useQuery();
-  const [dateRange, setDateRange] = useState<"all" | "today" | "yesterday" | "last3" | "week" | "month" | "custom">("all");
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("all");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
-
-  const reconciliationPdf = trpc.reports.reconciliationPdf.useQuery({ from: customStart ? new Date(customStart).getTime() : undefined, to: customEnd ? new Date(customEnd).getTime() + 86400000 - 1 : undefined }, { enabled: false });
-  const customerStatementPdf = trpc.reports.customerStatementPdf.useQuery({ customerId: Number(selectedCustomerId) || 1 }, { enabled: false });
-
-  const downloadPdf = (payload: { filename: string; mimeType: string; base64: string }) => {
-    const binary = window.atob(payload.base64);
-    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
-    const url = URL.createObjectURL(new Blob([bytes], { type: payload.mimeType }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = payload.filename;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleReconciliationDownload = async () => {
-    const result = await reconciliationPdf.refetch();
-    if (result.data) downloadPdf(result.data);
-    else toast.error("Could not generate the reconciliation report.");
-  };
-
-  const handleStatementDownload = async () => {
-    if (selectedCustomerId === "all") return toast.error("Select a customer to create a statement.");
-    const result = await customerStatementPdf.refetch();
-    if (result.data) downloadPdf(result.data);
-    else toast.error("Could not generate the customer statement.");
-  };
-
-  const filteredSales = useMemo(() => {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const yesterdayStart = todayStart - 86400000;
-    const last3Start = todayStart - 3 * 86400000;
-    const weekStart = todayStart - 7 * 86400000;
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-
-    return recentSales.filter(item => {
-      const saleTime = new Date(item.sale.createdAt).getTime();
-
-      // Date filter
-      if (dateRange === "today" && saleTime < todayStart) return false;
-      if (dateRange === "yesterday" && (saleTime < yesterdayStart || saleTime >= todayStart)) return false;
-      if (dateRange === "last3" && saleTime < last3Start) return false;
-      if (dateRange === "week" && saleTime < weekStart) return false;
-      if (dateRange === "month" && saleTime < monthStart) return false;
-      if (dateRange === "custom") {
-        if (customStart && saleTime < new Date(customStart).getTime()) return false;
-        if (customEnd && saleTime > new Date(customEnd).getTime() + 86400000) return false;
-      }
-
-      // Customer filter
-      if (selectedCustomerId !== "all") {
-        const custIdNum = Number(selectedCustomerId);
-        if (item.customer?.id !== custIdNum) return false;
-      }
-
-      return true;
-    });
-  }, [recentSales, dateRange, selectedCustomerId, customStart, customEnd]);
-
-  const totalFilteredRevenue = useMemo(() => {
-    return filteredSales.reduce((acc, item) => acc + Number(item.sale.total), 0);
-  }, [filteredSales]);
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-xl font-bold text-[#f8f3e7]">Sales History & Analytics</h3>
-          <p className="text-xs text-[#9eb4ae] mt-1">Audit completed transactions with date ranges and customer filters.</p>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button variant="outline" onClick={handleStatementDownload} disabled={customerStatementPdf.isFetching || selectedCustomerId === "all"} className="h-11 rounded-xl border-slate-200 bg-white text-[#0f172a] hover:bg-slate-50">
-            <FileText className="mr-2 h-4 w-4" /> {customerStatementPdf.isFetching ? "Preparing..." : "Customer statement"}
-          </Button>
-          <Button onClick={handleReconciliationDownload} disabled={reconciliationPdf.isFetching} className="h-11 rounded-xl bg-[#0f172a] text-white hover:bg-[#24324a]">
-            <DownloadReportIcon /> {reconciliationPdf.isFetching ? "Preparing..." : "Reconciliation PDF"}
-          </Button>
-          <div className="flex items-center gap-3 bg-[#0d2630]/95 border border-[#203b42] p-3 rounded-2xl shadow-sm">
-            <div>
-              <p className="text-[10px] uppercase text-[#9eb4ae] font-bold">Filtered Revenue</p>
-              <p className="text-lg font-black text-[#0f766e]">{money(totalFilteredRevenue)} ({filteredSales.length} orders)</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Toolbar */}
-      <Card className="bg-[#0d2630]/95 border-[#203b42] p-5 rounded-2xl shadow-xl space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="text-xs text-[#9eb4ae] font-bold mb-1.5 block">Date Range</label>
-            <Select value={dateRange} onValueChange={(val: any) => setDateRange(val)}>
-              <SelectTrigger className="bg-[#07111F] border-[#203b42] text-[#f8f3e7] rounded-xl h-11">
-                <SelectValue placeholder="Select period" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7]">
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="yesterday">Yesterday</SelectItem>
-                <SelectItem value="last3">Last 3 Days</SelectItem>
-                <SelectItem value="week">Past Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-                <SelectItem value="custom">Custom Date Range</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="text-xs text-[#9eb4ae] font-bold mb-1.5 block">Customer Filter</label>
-            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-              <SelectTrigger className="bg-[#07111F] border-[#203b42] text-[#f8f3e7] rounded-xl h-11">
-                <SelectValue placeholder="All customers" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7]">
-                <SelectItem value="all">All Customers & Walk-ins</SelectItem>
-                {customers.map(c => (
-                  <SelectItem key={c.id} value={c.id.toString()}>{c.name} ({c.email || c.phone || "No contact"})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-end">
-            <Button
-              variant="outline"
-              onClick={() => { setDateRange("all"); setSelectedCustomerId("all"); setCustomStart(""); setCustomEnd(""); }}
-              className="w-full border-[#203b42] bg-[#07111F] text-[#c7d8d1] hover:bg-slate-800 h-11 rounded-xl"
-            >
-              Reset Filters
-            </Button>
-          </div>
-        </div>
-
-        {dateRange === "custom" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#203b42]">
-            <div>
-              <label className="text-xs text-[#9eb4ae] font-medium mb-1 block">Start Date</label>
-              <Input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="bg-[#07111F] border-[#203b42] text-[#f8f3e7] rounded-xl h-11" />
-            </div>
-            <div>
-              <label className="text-xs text-[#9eb4ae] font-medium mb-1 block">End Date</label>
-              <Input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="bg-[#07111F] border-[#203b42] text-[#f8f3e7] rounded-xl h-11" />
-            </div>
-          </div>
-        )}
-      </Card>
-
-      {/* Transactions Table */}
-      <Card className="bg-[#0d2630]/95 border border-[#203b42] rounded-2xl shadow-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="bg-[#07111F]/80 border-b border-[#203b42] text-[#9eb4ae] text-xs font-bold uppercase tracking-wider">
-                <th className="py-4 px-6">Order Number</th>
-                <th className="py-4 px-6">Customer</th>
-                <th className="py-4 px-6">Payment Method</th>
-                <th className="py-4 px-6 text-right">Total Amount</th>
-                <th className="py-4 px-6 text-right">Date & Time</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#203b42]/60">
-              {filteredSales.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-[#9eb4ae] text-sm">
-                    No sales found matching the selected filters.
-                  </td>
-                </tr>
-              ) : (
-                filteredSales.map(item => (
-                  <tr key={item.sale.id} className="hover:bg-[#07111F]/50 transition-colors group">
-                    <td className="py-4 px-6 font-mono font-bold text-[#f8f3e7]">{item.sale.saleNumber}</td>
-                    <td className="py-4 px-6 font-semibold text-[#c7d8d1]">{item.customer?.name ?? "Walk-in Customer"}</td>
-                    <td className="py-4 px-6">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase bg-[#0f766e]/20 text-[#0f766e] border border-[#0f766e]/30">
-                        {item.sale.paymentMethod}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-right font-black text-[#f8f3e7]">{money(Number(item.sale.total))}</td>
-                    <td className="py-4 px-6 text-right text-[#9eb4ae] text-xs font-mono">{new Date(item.sale.createdAt).toLocaleString()}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function DownloadReportIcon() {
-  return <span aria-hidden="true" className="mr-2 text-sm font-black">↓</span>;
-}
-
-function ExpenseTrackerView() {
-  const { data: expenses = [] } = trpc.expenses.list.useQuery();
-  const { data: categories = [] } = trpc.catalog.categories.useQuery();
-  const [openNew, setOpenNew] = useState(false);
-  const [category, setCategory] = useState(categories[0]?.name ?? "Rent & Utilities");
-  const [amount, setAmount] = useState("");
-  const [notes, setNotes] = useState("");
-
-  const createMutation = trpc.expenses.create.useMutation({
-    onSuccess: () => {
-      toast.success("Expense recorded successfully!");
-      setOpenNew(false);
-      setAmount("");
-      setNotes("");
-    },
-    onError: err => toast.error(err.message)
-  });
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-xl font-bold text-[#f8f3e7]">Business Expense Tracker</h3>
-          <p className="text-xs text-[#9eb4ae] mt-1">Monitor operational overhead and category expenses.</p>
-        </div>
-        <Dialog open={openNew} onOpenChange={setOpenNew}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-slate-900/10">
-              <Plus className="h-4 w-4 mr-2" /> Add Expense
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-white border-slate-200 text-[#0f172a] rounded-2xl p-6 shadow-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-[#0f172a]">Record Expense</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-3">
-              <div>
-                <label className="text-xs text-slate-500 font-medium">Category (Dynamic Workspace Categories)</label>
-                <select
-                  value={category}
-                  onChange={e => setCategory(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-[#0f172a] mt-1 h-11"
-                >
-                  {categories.length === 0 ? (
-                    <option value="General Overhead">General Overhead</option>
-                  ) : (
-                    categories.map(cat => (
-                      <option key={cat.id} value={cat.name}>{cat.name}</option>
-                    ))
-                  )}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 font-medium">Amount (PKR)</label>
-                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="250.00" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 font-medium">Notes</label>
-                <Input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Monthly utility bill" className="bg-slate-50 border-slate-200 text-[#0f172a] mt-1 rounded-xl h-11" />
-              </div>
-              <Button onClick={() => createMutation.mutate({ category, amount: Number(amount) || 0, notes })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
-                Save Expense
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-[#203b42] text-[#9eb4ae] text-xs uppercase tracking-wider">
-                <th className="pb-3 font-semibold">Category</th>
-                <th className="pb-3 font-semibold">Notes</th>
-                <th className="pb-3 font-semibold">Amount</th>
-                <th className="pb-3 font-semibold">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {expenses.map(e => (
-                <tr key={e.id} className="hover:bg-[#07111F]/40 transition-colors">
-                  <td className="py-4 font-semibold text-[#f8f3e7]">{e.category}</td>
-                  <td className="py-4 text-[#9eb4ae]">{e.notes || "-"}</td>
-                  <td className="py-4 font-bold text-rose-300">{money(Number(e.amount))}</td>
-                  <td className="py-4 text-[#9eb4ae] text-xs">{new Date(e.expenseDate).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function TeamRolesView() {
-  const { data: team = [] } = trpc.team.list.useQuery();
-  const [openInvite, setOpenInvite] = useState(false);
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState<"cashier" | "inventory_manager">("cashier");
-
-  const inviteMutation = trpc.team.invite.useMutation({
-    onSuccess: () => {
-      toast.success("Team member added successfully!");
-      setOpenInvite(false);
-      setEmail("");
-      setName("");
-    },
-    onError: err => toast.error(err.message)
-  });
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-xl font-bold text-[#f8f3e7]">Team & Role Permissions</h3>
-          <p className="text-xs text-[#9eb4ae] mt-1">Manage staff access across Tenant Admin, Cashier, and Inventory Manager roles.</p>
-        </div>
-        <Dialog open={openInvite} onOpenChange={setOpenInvite}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-semibold rounded-xl shadow-lg shadow-slate-900/10">
-              <Plus className="h-4 w-4 mr-2" /> Add Team Member
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-[#0d2630] border-[#203b42] text-[#f8f3e7] rounded-2xl p-6">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-[#f8f3e7]">Assign Team Member</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-3">
-              <div>
-                <label className="text-xs text-[#9eb4ae] font-medium">User Name</label>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Sarah Connor" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
-              </div>
-              <div>
-                <label className="text-xs text-[#9eb4ae] font-medium">Email (Must have signed in once)</label>
-                <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="sarah@example.com" className="bg-[#07111F] border-[#203b42] mt-1 rounded-xl h-11" />
-              </div>
-              <div>
-                <label className="text-xs text-[#9eb4ae] font-medium">Assigned Role</label>
-                <select
-                  value={role}
-                  onChange={e => setRole(e.target.value as any)}
-                  className="w-full bg-[#07111F] border border-[#203b42] rounded-xl px-3 py-2 text-sm text-[#f8f3e7] mt-1"
-                >
-                  <option value="cashier">Cashier</option>
-                  <option value="inventory_manager">Inventory Manager</option>
-                </select>
-              </div>
-              <Button onClick={() => inviteMutation.mutate({ name, email, role })} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl mt-4">
-                Assign Role
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Card className="bg-[#0d2630]/95 border-[#203b42] p-6 rounded-2xl shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-[#203b42] text-[#9eb4ae] text-xs uppercase tracking-wider">
-                <th className="pb-3 font-semibold">Staff Member</th>
-                <th className="pb-3 font-semibold">Email</th>
-                <th className="pb-3 font-semibold">Assigned Role</th>
-                <th className="pb-3 font-semibold">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {team.map(({ membership, user }) => (
-                <tr key={membership.id} className="hover:bg-[#07111F]/40 transition-colors">
-                  <td className="py-4 font-semibold text-[#f8f3e7]">{user.name}</td>
-                  <td className="py-4 text-[#9eb4ae]">{user.email}</td>
-                  <td className="py-4 font-semibold text-[#0f766e] uppercase text-xs">{membership.role.replace("_", " ")}</td>
-                  <td className="py-4">
-                    <Badge className="bg-[#effaf7] text-[#0f766e] border-[#d5eee8] rounded-lg">
-                      {membership.status}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
 function MasterDataView() {
   const { data: categories = [] } = trpc.catalog.categories.useQuery();
   const { data: customerGroups = [] } = trpc.customerGroups.list.useQuery();
@@ -1877,14 +1269,14 @@ function MasterDataView() {
     onError: (err) => toast.error(err.message),
   });
 
-  const [activeTab, setActiveTab] = useState<"categories" | "groups" | "units" | "locations">("categories");
+  const [activeTab, setActiveTab] = useState<"categories" | "groups">("categories");
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h3 className="text-xl font-black text-[#0f172a]">Tenant Master Data</h3>
-          <p className="text-xs text-slate-500 mt-1">Manage store reference data, product categories, and customer groups. Tabbed for future expansions.</p>
+          <h3 className="text-2xl font-extrabold tracking-[-0.015em] text-slate-900">Master data</h3>
+          <p className="mt-1 text-sm text-slate-500">Reference data used across products, customers and pricing.</p>
         </div>
       </div>
 
@@ -1904,24 +1296,10 @@ function MasterDataView() {
         >
           Customer Groups & Tiers ({customerGroups.length})
         </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("units")}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeTab === "units" ? "bg-[#0f172a] text-white shadow-md shadow-slate-900/10" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          Units of Measure (Future)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("locations")}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeTab === "locations" ? "bg-[#0f172a] text-white shadow-md shadow-slate-900/10" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          Store Branches (Future)
-        </button>
       </div>
 
       {activeTab === "categories" && (
-        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] max-w-3xl">
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h4 className="text-base font-black text-[#0f172a]">Product Categories</h4>
@@ -1956,7 +1334,7 @@ function MasterDataView() {
             </Button>
           </div>
 
-          <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {categories.length === 0 ? (
               <div className="text-center py-12 text-slate-400 text-xs">No categories created yet. Add one above.</div>
             ) : (
@@ -1977,7 +1355,7 @@ function MasterDataView() {
       )}
 
       {activeTab === "groups" && (
-        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] max-w-3xl">
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h4 className="text-base font-black text-[#0f172a]">Customer Groups & Types</h4>
@@ -2013,7 +1391,7 @@ function MasterDataView() {
             </Button>
           </div>
 
-          <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {customerGroups.length === 0 ? (
               <div className="text-center py-12 text-slate-400 text-xs">No custom customer groups created yet. Add one above to organize your customers.</div>
             ) : (
@@ -2029,26 +1407,6 @@ function MasterDataView() {
                 </div>
               ))
             )}
-          </div>
-        </Card>
-      )}
-
-      {activeTab === "units" && (
-        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] max-w-3xl">
-          <h4 className="text-base font-black text-[#0f172a]">Units of Measure</h4>
-          <p className="text-xs text-slate-500 mt-1 mb-4">Manage units such as Pieces, Kilograms, Liters, Packs, and Dozens for advanced inventory control.</p>
-          <div className="rounded-2xl bg-slate-50 border border-slate-200 p-8 text-center text-slate-500 text-xs">
-            Units of measure module ready for future configuration.
-          </div>
-        </Card>
-      )}
-
-      {activeTab === "locations" && (
-        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] max-w-3xl">
-          <h4 className="text-base font-black text-[#0f172a]">Store Branches & Warehouses</h4>
-          <p className="text-xs text-slate-500 mt-1 mb-4">Manage multi-location inventory and regional POS terminals.</p>
-          <div className="rounded-2xl bg-slate-50 border border-slate-200 p-8 text-center text-slate-500 text-xs">
-            Multi-branch location module ready for future configuration.
           </div>
         </Card>
       )}
@@ -2097,19 +1455,15 @@ function TenantSettingsView() {
   });
 
   return (
-    <div className="space-y-6 w-full max-w-6xl">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0f766e]">Workspace configuration</p>
-          <h3 className="mt-2 text-3xl font-black tracking-[-0.02em] text-[#0f172a]">Business Settings & Branding.</h3>
-          <p className="mt-1 text-sm text-slate-500">Customize store identity, logos, tax rules, receipt footers, and regional currency.</p>
-        </div>
-        <Badge className="w-fit rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm">Tenant Admin workspace</Badge>
+    <div className="w-full space-y-6">
+      <div>
+        <h3 className="text-2xl font-extrabold tracking-[-0.015em] text-slate-900">Business settings</h3>
+        <p className="mt-1 text-sm text-slate-500">Store identity, branding, tax and receipt preferences.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="rounded-3xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] lg:col-span-2 space-y-6">
-          <h4 className="text-base font-black text-[#0f172a]">Core business profile</h4>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_28px_-12px_rgba(15,23,42,0.08)] lg:col-span-2 space-y-6">
+          <h4 className="text-base font-bold text-slate-900">Business profile</h4>
           <div className="space-y-4">
             <div>
               <label className="text-xs font-bold text-slate-500">Business Name</label>
@@ -2138,8 +1492,8 @@ function TenantSettingsView() {
           </div>
         </Card>
 
-        <Card className="rounded-3xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)] space-y-6">
-          <h4 className="text-base font-black text-[#0f172a]">Store Logo & Branding</h4>
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_28px_-12px_rgba(15,23,42,0.08)] space-y-5">
+          <h4 className="text-base font-bold text-slate-900">Store logo</h4>
           <p className="text-xs text-slate-500 leading-relaxed">Upload a logo image file from your computer or provide an image URL to display in the application header and receipts.</p>
           <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
             {logoUrl ? (

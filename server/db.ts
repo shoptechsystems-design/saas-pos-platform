@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, like, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, like, lte, or, sql } from "drizzle-orm";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { nanoid } from "nanoid";
 import { drizzle } from "drizzle-orm/mysql2";
@@ -156,7 +156,10 @@ export async function getCustomersForTenant(tenantId: number, query?: string) {
   const predicate = query
     ? and(eq(customers.tenantId, tenantId), or(like(customers.name, `%${query}%`), like(customers.email, `%${query}%`), like(customers.phone, `%${query}%`)))
     : eq(customers.tenantId, tenantId);
-  return db.select().from(customers).where(predicate).orderBy(desc(customers.totalSpent));
+  return db.select({
+    ...getTableColumns(customers),
+    orderCount: sql<number>`(SELECT COUNT(*) FROM sales s WHERE s.customerId = customers.id AND s.tenantId = customers.tenantId AND s.status = 'completed')`.mapWith(Number),
+  }).from(customers).where(predicate).orderBy(desc(customers.totalSpent));
 }
 
 export async function getLowStockProducts(tenantId: number) {
@@ -171,7 +174,7 @@ export async function getRecentSales(tenantId: number, limit = 8) {
   return db.select({ sale: sales, customer: customers })
     .from(sales)
     .leftJoin(customers, eq(customers.id, sales.customerId))
-    .where(eq(sales.tenantId, tenantId))
+    .where(and(eq(sales.tenantId, tenantId), eq(sales.status, "completed")))
     .orderBy(desc(sales.createdAt))
     .limit(limit);
 }
