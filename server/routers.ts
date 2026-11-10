@@ -592,10 +592,35 @@ export const appRouter = router({
       const byCategory = await db.select({ name: sql<string>`COALESCE(${categories.name}, 'Uncategorised')`, revenue: sql<string>`SUM(${saleItems.lineTotal})`, units: sql<string>`SUM(${saleItems.quantity})` })
         .from(saleItems).innerJoin(sales, eq(sales.id, saleItems.saleId)).leftJoin(products, eq(products.id, saleItems.productId)).leftJoin(categories, eq(categories.id, products.categoryId))
         .where(inRange).groupBy(sql`COALESCE(${categories.name}, 'Uncategorised')`).orderBy(desc(sql`SUM(${saleItems.lineTotal})`)).limit(10);
-      const byHour = await db.select({ h: sql<number>`HOUR(${sales.createdAt})`.mapWith(Number), total: sql<string>`SUM(${sales.total})`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).where(inRange).groupBy(sql`HOUR(${sales.createdAt})`);
-      const byWeekday = await db.select({ d: sql<number>`DAYOFWEEK(${sales.createdAt})`.mapWith(Number), total: sql<string>`SUM(${sales.total})`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).where(inRange).groupBy(sql`DAYOFWEEK(${sales.createdAt})`);
+      // Aggregate these two chart dimensions in application code. This avoids
+      // TiDB/MySQL only_full_group_by differences around function expressions.
+      const timeRows = await db.select({ createdAt: sales.createdAt, total: sales.total }).from(sales).where(inRange);
+      const byHourMap = new Map<number, { total: number; orders: number }>();
+      const byWeekdayMap = new Map<number, { total: number; orders: number }>();
+      const dailyMap = new Map<string, { total: number; orders: number }>();
+      for (const row of timeRows) {
+        const date = new Date(row.createdAt);
+        const hour = date.getHours();
+        const weekday = date.getDay() === 0 ? 1 : date.getDay() + 1;
+        const day = date.toISOString().slice(0, 10);
+        const value = Number(row.total);
+        const hourBucket = byHourMap.get(hour) ?? { total: 0, orders: 0 };
+        hourBucket.total += value;
+        hourBucket.orders += 1;
+        byHourMap.set(hour, hourBucket);
+        const weekdayBucket = byWeekdayMap.get(weekday) ?? { total: 0, orders: 0 };
+        weekdayBucket.total += value;
+        weekdayBucket.orders += 1;
+        byWeekdayMap.set(weekday, weekdayBucket);
+        const dayBucket = dailyMap.get(day) ?? { total: 0, orders: 0 };
+        dayBucket.total += value;
+        dayBucket.orders += 1;
+        dailyMap.set(day, dayBucket);
+      }
+      const byHour = Array.from(byHourMap, ([h, value]) => ({ h, total: value.total, orders: value.orders })).sort((a, b) => a.h - b.h);
+      const byWeekday = Array.from(byWeekdayMap, ([d, value]) => ({ d, total: value.total, orders: value.orders })).sort((a, b) => a.d - b.d);
+      const daily = Array.from(dailyMap, ([day, value]) => ({ day, total: value.total, orders: value.orders })).sort((a, b) => a.day.localeCompare(b.day));
       const topCustomers = await db.select({ id: customers.id, name: customers.name, total: sql<string>`SUM(${sales.total})`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).innerJoin(customers, eq(customers.id, sales.customerId)).where(inRange).groupBy(customers.id, customers.name).orderBy(desc(sql`SUM(${sales.total})`)).limit(5);
-      const daily = await db.select({ day: sql<string>`DATE(${sales.createdAt})`, total: sql<string>`SUM(${sales.total})`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).where(inRange).groupBy(sql`DATE(${sales.createdAt})`).orderBy(asc(sql`DATE(${sales.createdAt})`));
       const expenseByCategory = await db.select({ name: expenses.category, total: sql<string>`SUM(${expenses.amount})` }).from(expenses).where(and(eq(expenses.tenantId, t), gte(expenses.expenseDate, from), lte(expenses.expenseDate, to))).groupBy(expenses.category).orderBy(desc(sql`SUM(${expenses.amount})`));
       const revenue = Number(agg?.revenue ?? 0), cogs = Number(cg?.cogs ?? 0), expensesTotal = Number(ex?.total ?? 0), orders = agg?.orders ?? 0;
       return {
