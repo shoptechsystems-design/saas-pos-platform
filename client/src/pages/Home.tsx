@@ -1576,6 +1576,33 @@ function SalesHistoryView() {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
+  const reconciliationPdf = trpc.reports.reconciliationPdf.useQuery({ from: customStart ? new Date(customStart).getTime() : undefined, to: customEnd ? new Date(customEnd).getTime() + 86400000 - 1 : undefined }, { enabled: false });
+  const customerStatementPdf = trpc.reports.customerStatementPdf.useQuery({ customerId: Number(selectedCustomerId) || 1 }, { enabled: false });
+
+  const downloadPdf = (payload: { filename: string; mimeType: string; base64: string }) => {
+    const binary = window.atob(payload.base64);
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: payload.mimeType }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = payload.filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleReconciliationDownload = async () => {
+    const result = await reconciliationPdf.refetch();
+    if (result.data) downloadPdf(result.data);
+    else toast.error("Could not generate the reconciliation report.");
+  };
+
+  const handleStatementDownload = async () => {
+    if (selectedCustomerId === "all") return toast.error("Select a customer to create a statement.");
+    const result = await customerStatementPdf.refetch();
+    if (result.data) downloadPdf(result.data);
+    else toast.error("Could not generate the customer statement.");
+  };
+
   const filteredSales = useMemo(() => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -1619,10 +1646,18 @@ function SalesHistoryView() {
           <h3 className="text-xl font-bold text-[#f8f3e7]">Sales History & Analytics</h3>
           <p className="text-xs text-[#9eb4ae] mt-1">Audit completed transactions with date ranges and customer filters.</p>
         </div>
-        <div className="flex items-center gap-3 bg-[#0d2630]/95 border border-[#203b42] p-3 rounded-2xl shadow-sm">
-          <div>
-            <p className="text-[10px] uppercase text-[#9eb4ae] font-bold">Filtered Revenue</p>
-            <p className="text-lg font-black text-[#0f766e]">₨{totalFilteredRevenue.toFixed(2)} ({filteredSales.length} orders)</p>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button variant="outline" onClick={handleStatementDownload} disabled={customerStatementPdf.isFetching || selectedCustomerId === "all"} className="h-11 rounded-xl border-slate-200 bg-white text-[#0f172a] hover:bg-slate-50">
+            <FileText className="mr-2 h-4 w-4" /> {customerStatementPdf.isFetching ? "Preparing..." : "Customer statement"}
+          </Button>
+          <Button onClick={handleReconciliationDownload} disabled={reconciliationPdf.isFetching} className="h-11 rounded-xl bg-[#0f172a] text-white hover:bg-[#24324a]">
+            <DownloadReportIcon /> {reconciliationPdf.isFetching ? "Preparing..." : "Reconciliation PDF"}
+          </Button>
+          <div className="flex items-center gap-3 bg-[#0d2630]/95 border border-[#203b42] p-3 rounded-2xl shadow-sm">
+            <div>
+              <p className="text-[10px] uppercase text-[#9eb4ae] font-bold">Filtered Revenue</p>
+              <p className="text-lg font-black text-[#0f766e]">₨{totalFilteredRevenue.toFixed(2)} ({filteredSales.length} orders)</p>
+            </div>
           </div>
         </div>
       </div>
@@ -1729,6 +1764,10 @@ function SalesHistoryView() {
       </Card>
     </div>
   );
+}
+
+function DownloadReportIcon() {
+  return <span aria-hidden="true" className="mr-2 text-sm font-black">↓</span>;
 }
 
 function ExpenseTrackerView() {

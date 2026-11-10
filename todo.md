@@ -1,41 +1,15 @@
-# OmniPOS SaaS Platform - Professional Redesign TODO
+# OmniPOS SaaS Platform - Release Checklist
 
-- [x] Establish high-end design system with crisp light/dark surfaces, professional typography, and robust color palette
-- [x] Build comprehensive database seeding script for tenants, categories (10+), products (35+), customers (15+), suppliers (10+), sales (50+), purchases (20+), and expenses (20+)
-- [x] Redesign application shell with persistent sidebar, clear tenant context, role indicators, and professional top header
-- [x] Redesign POS Cashier Terminal into a lightning-fast two-panel interface:
-  - [x] Prominent search (name, SKU, barcode) & barcode scanner simulation
-  - [x] Rich category navigation with count badges
-  - [x] Visually appealing product grid with images, prices, and stock indicators
-  - [x] Professional cart panel with order numbers, quantity controls, hold/resume orders, and customer selector
-  - [x] Clear order summary (subtotal, discount, tax, total) with bold visual hierarchy
-  - [x] Polished payment modal supporting cash (with change calculation), card, transfer, and instant receipt generation
-- [x] Redesign Tenant Admin Dashboard with professional KPI cards (sales, orders, average order, profit), revenue charts, low stock alerts, and recent transactions
-- [x] Redesign Product Catalog with advanced table, pagination, search, filters, import/export simulation, and structured creation modal
-- [x] Redesign Inventory Management with stock adjustments, valuation, low stock warnings, and purchase order tracking
-- [x] Redesign Customer Directory with loyalty points, total spending, and customer history
-- [x] Redesign Team & Roles Management with granular module permissions (POS, products, inventory, reports, settings)
-- [x] Redesign Super Admin Panel with platform revenue, tenant management, and account activation/suspension
-- [x] Verify responsive layout across desktop, laptop, and tablet screens
-- [x] Upgrade visual color system to a sophisticated slate/emerald/amber palette with crisp contrast
-- [x] Implement dedicated direct Register & Login screens instead of forcing external portal login
-- [x] Switch currency formatting across all POS terminals, carts, invoices, and reports to PKR (₨)
-- [x] Optimize cashier terminal layout for responsive laptop and tablet viewports
-- [x] Refresh UI from heavy green to a pristine, white-led commercial design system (clean light surfaces, subtle borders, high contrast)
-- [x] Configure `shoptechsystems@gmail.com` with password `SuperAdmin@05` as Super Admin
-- [x] Ensure Super Admin can fully manage organizations (approve, suspend, reactivate tenants)
-- [x] Redesign the public landing page into a stunning commercial SaaS showcase with live feature highlights and instant access CTAs
-- [x] Redesign sidebar into professional grouped navigation (Overview, Commerce, Operations, Workspace, Administration) matching high-end SaaS references
-- [x] Eliminate all unintended green color accents across buttons, modals, and badges, enforcing the professional white/navy/teal/coral design tokens
-- [x] Fix Super Admin login authentication flow so `shoptechsystems@gmail.com` authenticates reliably with `SuperAdmin@05` (hash format, local-only session handling, deterministic startup provisioning)
-- [x] Upgrade dashboard information architecture with professional metrics widgets, activity streams, and structured tables matching high-end SaaS references
-- [x] Verify Super Admin login end-to-end after the managed database endpoint recovers: direct login returns 200, auth.me returns role admin, and admin.platformStats returns platform metrics
-- [x] Replace black-to-green button hover states with crisp, professional navy-to-slate interactions
-- [x] Restyle all dialog and modal boxes from dark green to pristine white surfaces with subtle borders and shadows
-- [x] Implement dynamic tenant-specific category management so each business can create, edit, and use their own custom categories
-- [x] Support custom role naming and permission definitions per tenant workspace
-- [x] Add show/hide password toggle (eye icon) on all login, register, and credential inputs
-- [x] Add tenant category editing (update and delete) procedures and UI so each organization can fully manage their custom categories
-- [x] Connect Expense Tracker category selector to tenant-scoped custom categories from tRPC
-- [x] Refine dialog and input color classes in Customers, Expenses, Products, and Team views to consistently use white-led design system classes
-- [x] Save checkpoint and final delivery
+## Completed in this release
+
+The web portal retains its premium white-led multi-tenant POS, RBAC, PKR pricing, barcode-ready catalog, branded receipts, inventory, customers, sales analytics, master data, and Super Admin organization management.
+
+The mobile release now includes Bluetooth HID/keyboard-wedge barcode lookup, token-based cross-origin auth, native SQLite offline checkout persistence with AsyncStorage web fallback, deterministic idempotent checkout replay, reconnect/app-state/active-interval sync, visible pending/failed status with manual retry, and loyalty-points removal from the checkout experience.
+
+The portal now exposes tenant-scoped customer statement and financial reconciliation PDF procedures. The Sales History view includes customer-statement and reconciliation download actions. PDFs include tenant name, reachable logo, receipt footer, payment breakdowns, expenses, and PKR-safe totals.
+
+Validation completed: web TypeScript, 11 backend Vitest tests, and production build passed; mobile TypeScript, 3 focused queue/auth tests, lint, and Expo web export with 21 static routes passed. The mobile follow-up is pushed to GitHub at commit `d3a0a73`.
+
+## Remaining device validation
+
+Validate the native Android/iOS build with the store’s physical Bluetooth scanner hardware. Generate and verify a real APK only when Android build credentials/tooling are available. Consider OS-level execution while force-closed after device testing; current synchronization is network-aware during active/foreground/app-state operation.

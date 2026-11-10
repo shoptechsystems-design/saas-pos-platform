@@ -109,6 +109,9 @@ temp/
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
 
+# Mobile companion repository is versioned in its own GitHub project
+omnipos-mobile-repo/
+
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json
 .project-config.json

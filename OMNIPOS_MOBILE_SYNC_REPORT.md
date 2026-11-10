@@ -1,68 +1,43 @@
 # OmniPOS Mobile API Synchronization & Security Report
 
-**Author:** Manus AI  
-**Date:** August 13, 2026  
-**Target System:** OmniPOS SaaS Platform (`https://omnipos-hjcb6uyk.manus.space`)  
+**Target system:** OmniPOS SaaS Platform (`https://omnipos-hjcb6uyk.manus.space`)
+**Mobile repository:** `shoptechsystems-design/omnipos-mobile`
 
-## Executive Summary
+## Executive summary
 
-To ensure seamless integration between the OmniPOS web portal and the companion React Native Expo mobile application, a rigorous audit and testing sequence was conducted. The backend architecture utilizes **tRPC 11 over HTTP** with secure session token authentication and strict multi-tenant data isolation. All portal master data (products, categories, customers, inventory levels, branding logos, and PKR currency pricing) are fully synchronized across clients.
+The Expo mobile client shares the OmniPOS tenant-scoped tRPC backend, PKR calculations, authentication, inventory rules, customer history, and receipt branding. This release adds Bluetooth HID barcode scanning, offline SQLite transaction persistence with idempotent replay, visible synchronization status, and branded customer/reconciliation PDFs.
 
----
+## Authentication and tenant isolation
 
-## 1. Architectural Verification & Protocol Clarification
+`auth.login` returns `{ success, user, token }` for native clients. The mobile app stores the token in secure storage and sends `Authorization: Bearer <token>` on subsequent requests. Tenant context is derived from the session membership; mobile input never supplies a tenant ID. Product, customer, checkout, inventory, sales, and report procedures filter by the active tenant.
 
-The OmniPOS backend exposes a type-safe tRPC API router under `/api/trpc` rather than a separate REST API. For mobile consumption, tRPC clients (such as `@trpc/client` or direct HTTP POST requests to `/api/trpc/<procedure>`) map directly to these backend procedures. 
+## Barcode scanning
 
-To support mobile clients where browser cookies cannot be reliably attached across cross-origin requests, the `auth.login` procedure has been upgraded to return the session `token` directly in the response payload alongside the user profile and tenant assignment.
+The Sell screen uses a normal text input, which supports Bluetooth scanners operating in HID/keyboard-wedge mode. A scanner types a barcode and sends Enter; the app performs an exact barcode/SKU lookup and adds the matching product directly to the cart. Manual name/SKU/barcode search remains available.
 
-| Endpoint / Procedure | Method | Authentication | Multi-Tenant Isolation | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `auth.login` | tRPC Mutation | Public | Enforced via User-Tenant Mapping | Authenticates staff/tenant admin and returns session token + user object |
-| `products.list` | tRPC Query | Protected | Enforced via `ctx.user.tenantId` | Retrieves all active products, barcodes, variants, and PKR pricing |
-| `categories.list` | tRPC Query | Protected | Enforced via `ctx.user.tenantId` | Retrieves dynamic tenant categories |
-| `customers.list` | tRPC Query | Protected | Enforced via `ctx.user.tenantId` | Retrieves tenant customer list and loyalty points |
-| `pos.checkout` | tRPC Mutation | Protected | Enforced via `ctx.user.tenantId` | Processes sale, updates inventory, and records transaction history |
-| `branding.get` | tRPC Query | Protected | Enforced via `ctx.user.tenantId` | Returns stored S3 logo URL and business title for receipts |
+## Offline checkout and synchronization
 
----
+Native builds store queued sales in `expo-sqlite` (`omnipos-offline.db`); web preview uses an AsyncStorage fallback. Each queued sale stores a client request ID, cart/payment/customer payload, attempt count, status, and last error. `pos.checkout` accepts `clientRequestId`, derives a deterministic sale number from it, and returns the existing sale on replay so stock and customer totals are not duplicated.
 
-## 2. Data Synchronization & Parity
+The mobile sync runner retries on app foreground, network reconnect, app-state transitions, and a 30-second active interval. A visible banner reports pending count, failed count, the latest error, syncing state, and a manual Retry action. Entries remain available for retry and become `failed` after five attempts.
 
-All records created or modified in the web portal are instantly reflected in mobile API queries because both share the underlying TiDB database via Drizzle ORM. 
+## Report procedures
 
-- **Currency Standard:** All monetary amounts are denominated in Pakistani Rupees (PKR) and formatted consistently (`₨X,XXX.XX`).
-- **Inventory & Barcodes:** Barcode scanner inputs query the exact same SKU index used by the web POS terminal.
-- **Tenant Isolation:** Every query and mutation automatically filters by `tenantId` derived from the authenticated session context (`ctx.user.tenantId`), preventing cross-tenant data leaks.
+- `reports.customerStatementPdf` takes `{ customerId, from?, to? }` and returns `{ filename, mimeType, base64 }`.
+- `reports.reconciliationPdf` takes `{ from?, to? }` and returns a branded PDF plus gross sales, expense, net, and order-count summary.
 
----
+Documents include the tenant name, saved logo when reachable, receipt footer, payment method totals, customer/sale rows, expenses, and PKR values. PDF standard fonts render the rupee symbol as `Rs`; web and mobile UI formatting remains PKR/₨.
 
-## 3. Security & Performance Optimization
+## Verification completed
 
-1. **Token Transport:** Mobile clients attach the session token in the `Authorization: Bearer <token>` header or `x-trpc-source: mobile` context.
-2. **Execution Speed:** Database indexes on `tenantId`, `sku`, and `categoryId` ensure query latency remains under 50ms.
-3. **Automated Testing:** Vitest regression specs (`server/pos.test.ts`, `server/auth.local.test.ts`, `server/mobileSync.test.ts`) validate calculation logic, tax rules, and session contracts.
+- Web TypeScript check: passed.
+- Web Vitest suite: 5 files / 11 tests passed.
+- Web production build: passed.
+- Mobile TypeScript check: passed.
+- Mobile focused Vitest suite: 2 files / 3 tests passed, including enqueue → failure metadata → completion removal.
+- Mobile Expo lint: passed.
+- Mobile Expo web export: passed with 21 static routes.
 
----
+## Remaining device validation
 
-## 4. Instructions for the Second Mobile Build Chat Session
-
-When initiating your second chat session to build and compile the mobile application (`omnipos-mobile-app`), provide the following prompt to the AI agent:
-
-> **Prompt for Mobile Build Session:**
-> 
-> "Please build and compile the OmniPOS React Native Expo mobile application located in `omnipos-mobile-app/`. 
-> 
-> Key requirements:
-> 1. Connect the Expo app to the live OmniPOS backend at `https://omnipos-hjcb6uyk.manus.space/api/trpc`.
-> 2. Implement authentication using the updated `auth.login` endpoint, storing the returned session token securely in `expo-secure-store`.
-> 3. Implement POS Cashier Terminal, Product Catalog with barcode scanner support, Customer selection/creation, and Sales History using PKR currency formatting (`₨`).
-> 4. Ensure all tRPC queries correctly pass the session token in headers for multi-tenant data synchronization."
-
----
-
-## References
-
-- OmniPOS Live Deployment: [https://omnipos-hjcb6uyk.manus.space](https://omnipos-hjcb6uyk.manus.space)
-- tRPC 11 Documentation: [https://trpc.io/docs](https://trpc.io/docs)
-- React Native Expo Documentation: [https://docs.expo.dev](https://docs.expo.dev)
+HID scanning should be validated on the store’s supported Android/iOS hardware. Full OS-level execution while the app is force-closed requires a platform-specific background task and should be enabled only after device testing. Camera barcode scanning remains a separate future enhancement.
