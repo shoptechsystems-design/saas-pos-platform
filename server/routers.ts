@@ -28,6 +28,7 @@ import {
   productVariants,
   purchases,
   purchaseItems,
+  registerShifts,
   saleItems,
   sales,
   suppliers,
@@ -53,6 +54,27 @@ import {
 } from "./db";
 import { storagePut, storageGetSignedUrl } from "./storage";
 import { systemRouter } from "./_core/systemRouter";
+
+
+const salesFilterInput = z.object({
+  search: z.string().trim().max(80).optional(),
+  customerId: z.number().int().optional(),
+  paymentMethod: z.enum(["cash", "card", "transfer"]).optional(),
+  status: z.enum(["completed", "refunded", "all"]).default("completed"),
+  from: z.number().optional(),
+  to: z.number().optional(),
+});
+
+function buildSalesWhere(tenantId: number, input: z.infer<typeof salesFilterInput>) {
+  const conds = [eq(sales.tenantId, tenantId)];
+  if (input.status !== "all") conds.push(eq(sales.status, input.status));
+  if (input.customerId) conds.push(eq(sales.customerId, input.customerId));
+  if (input.paymentMethod) conds.push(eq(sales.paymentMethod, input.paymentMethod));
+  if (input.from) conds.push(gte(sales.createdAt, new Date(input.from)));
+  if (input.to) conds.push(lte(sales.createdAt, new Date(input.to)));
+  if (input.search) conds.push(or(like(sales.saleNumber, `%${input.search}%`), like(customers.name, `%${input.search}%`))!);
+  return and(...conds);
+}
 
 const money = z.coerce.number().finite().nonnegative();
 const tenantName = z.string().trim().min(2).max(160);
@@ -401,27 +423,17 @@ export const appRouter = router({
 
   salesHistory: router({
     list: tenantProcedure
-      .input(z.object({
-        page: z.number().int().min(1).default(1),
-        pageSize: z.number().int().min(5).max(100).default(15),
-        search: z.string().trim().max(80).optional(),
-        customerId: z.number().int().optional(),
-        paymentMethod: z.enum(["cash", "card", "transfer"]).optional(),
-        from: z.number().optional(),
-        to: z.number().optional(),
-      }).default({ page: 1, pageSize: 15 }))
+      .input(salesFilterInput.extend({ page: z.number().int().min(1).default(1), pageSize: z.number().int().min(5).max(100).default(15) }).default({ page: 1, pageSize: 15, status: "completed" }))
       .query(async ({ ctx, input }) => {
         const db = await getDb();
-        if (!db) return { rows: [], total: 0, revenue: 0, avgOrder: 0 };
-        const conds = [eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed")];
-        if (input.customerId) conds.push(eq(sales.customerId, input.customerId));
-        if (input.paymentMethod) conds.push(eq(sales.paymentMethod, input.paymentMethod));
-        if (input.from) conds.push(gte(sales.createdAt, new Date(input.from)));
-        if (input.to) conds.push(lte(sales.createdAt, new Date(input.to)));
-        if (input.search) conds.push(or(like(sales.saleNumber, `%${input.search}%`), like(customers.name, `%${input.search}%`))!);
-        const where = and(...conds);
-        const [agg] = await db.select({ total: sql<number>`COUNT(*)`.mapWith(Number), revenue: sql<string>`COALESCE(SUM(${sales.total}), 0)` })
-          .from(sales).leftJoin(customers, eq(customers.id, sales.customerId)).where(where);
+        if (!db) return { rows: [], total: 0, revenue: 0, avgOrder: 0, refundedCount: 0 };
+        const where = buildSalesWhere(ctx.tenant.id, input);
+        const [agg] = await db.select({
+            total: sql<number>`COUNT(*)`.mapWith(Number),
+            revenue: sql<string>`COALESCE(SUM(CASE WHEN ${sales.status} = 'completed' THEN ${sales.total} ELSE 0 END), 0)`,
+            completed: sql<number>`COALESCE(SUM(CASE WHEN ${sales.status} = 'completed' THEN 1 ELSE 0 END), 0)`.mapWith(Number),
+            refunded: sql<number>`COALESCE(SUM(CASE WHEN ${sales.status} = 'refunded' THEN 1 ELSE 0 END), 0)`.mapWith(Number),
+          }).from(sales).leftJoin(customers, eq(customers.id, sales.customerId)).where(where);
         const rows = await db.select({
             sale: sales,
             customer: { id: customers.id, name: customers.name },
@@ -430,9 +442,45 @@ export const appRouter = router({
           .from(sales).leftJoin(customers, eq(customers.id, sales.customerId)).where(where)
           .orderBy(desc(sales.createdAt)).limit(input.pageSize).offset((input.page - 1) * input.pageSize);
         const revenue = Number(agg?.revenue ?? 0);
-        const total = agg?.total ?? 0;
-        return { rows, total, revenue, avgOrder: total ? revenue / total : 0 };
+        const completed = agg?.completed ?? 0;
+        return { rows, total: agg?.total ?? 0, revenue, avgOrder: completed ? revenue / completed : 0, refundedCount: agg?.refunded ?? 0 };
       }),
+    exportRows: tenantProcedure.input(salesFilterInput).query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      return db.select({ saleNumber: sales.saleNumber, status: sales.status, createdAt: sales.createdAt, customer: customers.name, paymentMethod: sales.paymentMethod, subtotal: sales.subtotal, discount: sales.discount, tax: sales.tax, total: sales.total })
+        .from(sales).leftJoin(customers, eq(customers.id, sales.customerId)).where(buildSalesWhere(ctx.tenant.id, input)).orderBy(desc(sales.createdAt)).limit(5000);
+    }),
+    detail: tenantProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const [row] = await db.select({ sale: sales, customer: { id: customers.id, name: customers.name, phone: customers.phone, email: customers.email }, cashier: { name: users.name } })
+        .from(sales).leftJoin(customers, eq(customers.id, sales.customerId)).leftJoin(users, eq(users.id, sales.createdByUserId))
+        .where(and(eq(sales.id, input.id), eq(sales.tenantId, ctx.tenant.id))).limit(1);
+      if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Sale not found." });
+      const items = await db.select().from(saleItems).where(and(eq(saleItems.saleId, input.id), eq(saleItems.tenantId, ctx.tenant.id)));
+      return { ...row, items };
+    }),
+    refund: tenantAdminProcedure.input(z.object({ id: z.number().int().positive(), reason: z.string().trim().min(3).max(200) })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      return db.transaction(async tx => {
+        const [sale] = await tx.select().from(sales).where(and(eq(sales.id, input.id), eq(sales.tenantId, ctx.tenant.id))).limit(1);
+        if (!sale) throw new TRPCError({ code: "NOT_FOUND", message: "Sale not found." });
+        if (sale.status !== "completed") throw new TRPCError({ code: "BAD_REQUEST", message: "Only completed sales can be refunded." });
+        const items = await tx.select().from(saleItems).where(and(eq(saleItems.saleId, sale.id), eq(saleItems.tenantId, ctx.tenant.id)));
+        await tx.update(sales).set({ status: "refunded" }).where(eq(sales.id, sale.id));
+        for (const item of items) {
+          await tx.update(products).set({ stockQuantity: sql`${products.stockQuantity} + ${item.quantity}` }).where(and(eq(products.id, item.productId), eq(products.tenantId, ctx.tenant.id)));
+          await tx.insert(inventoryMovements).values({ tenantId: ctx.tenant.id, productId: item.productId, type: "adjustment", quantity: item.quantity, reason: `Refund ${sale.saleNumber}`, referenceId: sale.id, createdByUserId: ctx.user.id });
+        }
+        if (sale.customerId) {
+          await tx.update(customers).set({ totalSpent: sql`GREATEST(${customers.totalSpent} - ${sale.total}, 0)` }).where(and(eq(customers.id, sale.customerId), eq(customers.tenantId, ctx.tenant.id)));
+        }
+        await tx.insert(auditLogs).values({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "refunded", entity: "sale", entityId: sale.id, metadata: JSON.stringify({ saleNumber: sale.saleNumber, total: sale.total, reason: input.reason }) });
+        return { success: true as const, saleNumber: sale.saleNumber, total: sale.total };
+      });
+    }),
   }),
 
   customerGroups: router({
@@ -531,6 +579,37 @@ export const appRouter = router({
   }),
 
   reports: router({
+    overview: tenantAdminProcedure.input(z.object({ from: z.number(), to: z.number() })).query(async ({ ctx, input }) => {
+      const db = await getDb();
+      const empty = { revenue: 0, orders: 0, avgOrder: 0, tax: 0, discounts: 0, cogs: 0, grossProfit: 0, expenses: 0, netProfit: 0, refunds: { count: 0, total: 0 }, byCategory: [], byHour: [], byWeekday: [], topCustomers: [], daily: [], expenseByCategory: [] };
+      if (!db) return empty;
+      const from = new Date(input.from), to = new Date(input.to), t = ctx.tenant.id;
+      const inRange = and(eq(sales.tenantId, t), eq(sales.status, "completed"), gte(sales.createdAt, from), lte(sales.createdAt, to));
+      const [agg] = await db.select({ revenue: sql<string>`COALESCE(SUM(${sales.total}),0)`, orders: sql<number>`COUNT(*)`.mapWith(Number), tax: sql<string>`COALESCE(SUM(${sales.tax}),0)`, discounts: sql<string>`COALESCE(SUM(${sales.discount}),0)` }).from(sales).where(inRange);
+      const [ref] = await db.select({ total: sql<string>`COALESCE(SUM(${sales.total}),0)`, count: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).where(and(eq(sales.tenantId, t), eq(sales.status, "refunded"), gte(sales.createdAt, from), lte(sales.createdAt, to)));
+      const [cg] = await db.select({ cogs: sql<string>`COALESCE(SUM(${saleItems.quantity} * ${products.costPrice}),0)` }).from(saleItems).innerJoin(sales, eq(sales.id, saleItems.saleId)).innerJoin(products, eq(products.id, saleItems.productId)).where(inRange);
+      const [ex] = await db.select({ total: sql<string>`COALESCE(SUM(${expenses.amount}),0)` }).from(expenses).where(and(eq(expenses.tenantId, t), gte(expenses.expenseDate, from), lte(expenses.expenseDate, to)));
+      const byCategory = await db.select({ name: sql<string>`COALESCE(${categories.name}, 'Uncategorised')`, revenue: sql<string>`SUM(${saleItems.lineTotal})`, units: sql<string>`SUM(${saleItems.quantity})` })
+        .from(saleItems).innerJoin(sales, eq(sales.id, saleItems.saleId)).leftJoin(products, eq(products.id, saleItems.productId)).leftJoin(categories, eq(categories.id, products.categoryId))
+        .where(inRange).groupBy(sql`COALESCE(${categories.name}, 'Uncategorised')`).orderBy(desc(sql`SUM(${saleItems.lineTotal})`)).limit(10);
+      const byHour = await db.select({ h: sql<number>`HOUR(${sales.createdAt})`.mapWith(Number), total: sql<string>`SUM(${sales.total})`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).where(inRange).groupBy(sql`HOUR(${sales.createdAt})`);
+      const byWeekday = await db.select({ d: sql<number>`DAYOFWEEK(${sales.createdAt})`.mapWith(Number), total: sql<string>`SUM(${sales.total})`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).where(inRange).groupBy(sql`DAYOFWEEK(${sales.createdAt})`);
+      const topCustomers = await db.select({ id: customers.id, name: customers.name, total: sql<string>`SUM(${sales.total})`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).innerJoin(customers, eq(customers.id, sales.customerId)).where(inRange).groupBy(customers.id, customers.name).orderBy(desc(sql`SUM(${sales.total})`)).limit(5);
+      const daily = await db.select({ day: sql<string>`DATE(${sales.createdAt})`, total: sql<string>`SUM(${sales.total})`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).where(inRange).groupBy(sql`DATE(${sales.createdAt})`).orderBy(asc(sql`DATE(${sales.createdAt})`));
+      const expenseByCategory = await db.select({ name: expenses.category, total: sql<string>`SUM(${expenses.amount})` }).from(expenses).where(and(eq(expenses.tenantId, t), gte(expenses.expenseDate, from), lte(expenses.expenseDate, to))).groupBy(expenses.category).orderBy(desc(sql`SUM(${expenses.amount})`));
+      const revenue = Number(agg?.revenue ?? 0), cogs = Number(cg?.cogs ?? 0), expensesTotal = Number(ex?.total ?? 0), orders = agg?.orders ?? 0;
+      return {
+        revenue, orders, avgOrder: orders ? revenue / orders : 0, tax: Number(agg?.tax ?? 0), discounts: Number(agg?.discounts ?? 0),
+        cogs, grossProfit: revenue - Number(agg?.tax ?? 0) - cogs, expenses: expensesTotal, netProfit: revenue - Number(agg?.tax ?? 0) - cogs - expensesTotal,
+        refunds: { count: ref?.count ?? 0, total: Number(ref?.total ?? 0) },
+        byCategory: byCategory.map(r => ({ name: r.name, revenue: Number(r.revenue), units: Number(r.units) })),
+        byHour: byHour.map(r => ({ hour: r.h, total: Number(r.total), orders: r.orders })),
+        byWeekday: byWeekday.map(r => ({ day: r.d, total: Number(r.total), orders: r.orders })),
+        topCustomers: topCustomers.map(r => ({ id: r.id, name: r.name, total: Number(r.total), orders: r.orders })),
+        daily: daily.map(r => ({ day: String(r.day), total: Number(r.total), orders: r.orders })),
+        expenseByCategory: expenseByCategory.map(r => ({ name: r.name, total: Number(r.total) })),
+      };
+    }),
     customerStatementPdf: tenantProcedure
       .input(z.object({ customerId: z.number().int().positive(), from: z.number().int().optional(), to: z.number().int().optional() }))
       .query(async ({ ctx, input }) => {
@@ -643,7 +722,37 @@ export const appRouter = router({
     list: inventoryProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) return [];
-      return db.select({ purchase: purchases, supplier: suppliers }).from(purchases).leftJoin(suppliers, eq(suppliers.id, purchases.supplierId)).where(eq(purchases.tenantId, ctx.tenant.id)).orderBy(desc(purchases.createdAt));
+      return db.select({ purchase: purchases, supplier: suppliers, itemCount: sql<number>`(SELECT COALESCE(SUM(${purchaseItems.quantity}), 0) FROM ${purchaseItems} WHERE ${purchaseItems.purchaseId} = ${purchases.id})`.mapWith(Number) }).from(purchases).leftJoin(suppliers, eq(suppliers.id, purchases.supplierId)).where(eq(purchases.tenantId, ctx.tenant.id)).orderBy(desc(purchases.createdAt)).limit(300);
+    }),
+    items: inventoryProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      return db.select({ item: purchaseItems, product: { name: products.name, sku: products.sku } }).from(purchaseItems).leftJoin(products, eq(products.id, purchaseItems.productId)).where(and(eq(purchaseItems.purchaseId, input.id), eq(purchaseItems.tenantId, ctx.tenant.id)));
+    }),
+    receive: inventoryProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      return db.transaction(async tx => {
+        const [po] = await tx.select().from(purchases).where(and(eq(purchases.id, input.id), eq(purchases.tenantId, ctx.tenant.id))).limit(1);
+        if (!po) throw new TRPCError({ code: "NOT_FOUND", message: "Purchase order not found." });
+        if (po.status !== "ordered" && po.status !== "draft") throw new TRPCError({ code: "BAD_REQUEST", message: `This order is already ${po.status}.` });
+        const items = await tx.select().from(purchaseItems).where(and(eq(purchaseItems.purchaseId, po.id), eq(purchaseItems.tenantId, ctx.tenant.id)));
+        for (const item of items) {
+          await tx.update(products).set({ stockQuantity: sql`${products.stockQuantity} + ${item.quantity}`, costPrice: item.unitCost }).where(and(eq(products.id, item.productId), eq(products.tenantId, ctx.tenant.id)));
+          await tx.insert(inventoryMovements).values({ tenantId: ctx.tenant.id, productId: item.productId, type: "purchase", quantity: item.quantity, reason: `Received ${po.purchaseNumber}`, referenceId: po.id, createdByUserId: ctx.user.id });
+        }
+        await tx.update(purchases).set({ status: "received" }).where(eq(purchases.id, po.id));
+        await tx.insert(auditLogs).values({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "received", entity: "purchase", entityId: po.id, metadata: JSON.stringify({ purchaseNumber: po.purchaseNumber, items: items.length }) });
+        return { success: true as const, units: items.reduce((n, i) => n + i.quantity, 0) };
+      });
+    }),
+    cancel: inventoryProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const [po] = await db.select().from(purchases).where(and(eq(purchases.id, input.id), eq(purchases.tenantId, ctx.tenant.id))).limit(1);
+      if (!po || (po.status !== "ordered" && po.status !== "draft")) throw new TRPCError({ code: "BAD_REQUEST", message: "Only open orders can be cancelled." });
+      await db.update(purchases).set({ status: "cancelled" }).where(eq(purchases.id, po.id));
+      return { success: true as const };
     }),
     create: inventoryProcedure.input(z.object({ supplierId: z.number().int().positive().nullable().optional(), notes: z.string().max(500).nullable().optional(), items: z.array(z.object({ productId: z.number().int().positive(), quantity: z.number().int().positive(), unitCost: money })).min(1) })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -688,6 +797,70 @@ export const appRouter = router({
       if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "This user must sign in once before they can be added." });
       await db.insert(tenantMemberships).values({ tenantId: ctx.tenant.id, userId: user.id, role: input.role, status: "active" });
       return { success: true } as const;
+    }),
+  }),
+
+  activity: router({
+    list: tenantAdminProcedure.input(z.object({ page: z.number().int().min(1).default(1), pageSize: z.number().int().min(5).max(100).default(20), entity: z.string().max(40).optional() }).default({ page: 1, pageSize: 20 })).query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return { rows: [], total: 0 };
+      const where = input.entity ? and(eq(auditLogs.tenantId, ctx.tenant.id), eq(auditLogs.entity, input.entity)) : eq(auditLogs.tenantId, ctx.tenant.id);
+      const [{ total }] = await db.select({ total: sql<number>`COUNT(*)`.mapWith(Number) }).from(auditLogs).where(where);
+      const rows = await db.select({ log: auditLogs, user: { name: users.name } }).from(auditLogs).leftJoin(users, eq(users.id, auditLogs.userId)).where(where).orderBy(desc(auditLogs.createdAt)).limit(input.pageSize).offset((input.page - 1) * input.pageSize);
+      return { rows, total };
+    }),
+  }),
+
+  shifts: router({
+    current: tenantProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return null;
+      const [shift] = await db.select().from(registerShifts).where(and(eq(registerShifts.tenantId, ctx.tenant.id), eq(registerShifts.status, "open"))).orderBy(desc(registerShifts.openedAt)).limit(1);
+      if (!shift) return null;
+      const [c] = await db.select({ cash: sql<string>`COALESCE(SUM(${sales.total}),0)`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).where(and(eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed"), eq(sales.paymentMethod, "cash"), gte(sales.createdAt, shift.openedAt)));
+      const [all] = await db.select({ total: sql<string>`COALESCE(SUM(${sales.total}),0)`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).where(and(eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed"), gte(sales.createdAt, shift.openedAt)));
+      const cashSales = Number(c?.cash ?? 0);
+      return { shift, cashSales, expectedCash: Number(shift.openingCash) + cashSales, totalSales: Number(all?.total ?? 0), orders: all?.orders ?? 0 };
+    }),
+    open: cashierProcedure.input(z.object({ openingCash: money })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const [open] = await db.select({ id: registerShifts.id }).from(registerShifts).where(and(eq(registerShifts.tenantId, ctx.tenant.id), eq(registerShifts.status, "open"))).limit(1);
+      if (open) throw new TRPCError({ code: "CONFLICT", message: "A shift is already open." });
+      await db.insert(registerShifts).values({ tenantId: ctx.tenant.id, openedByUserId: ctx.user.id, openingCash: input.openingCash.toFixed(2) });
+      await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "opened", entity: "shift", metadata: { openingCash: input.openingCash } });
+      return { success: true as const };
+    }),
+    close: cashierProcedure.input(z.object({ countedCash: money, notes: z.string().max(300).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const [shift] = await db.select().from(registerShifts).where(and(eq(registerShifts.tenantId, ctx.tenant.id), eq(registerShifts.status, "open"))).orderBy(desc(registerShifts.openedAt)).limit(1);
+      if (!shift) throw new TRPCError({ code: "BAD_REQUEST", message: "There is no open shift." });
+      const [c] = await db.select({ cash: sql<string>`COALESCE(SUM(${sales.total}),0)` }).from(sales).where(and(eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed"), eq(sales.paymentMethod, "cash"), gte(sales.createdAt, shift.openedAt)));
+      const expected = Number(shift.openingCash) + Number(c?.cash ?? 0);
+      const variance = input.countedCash - expected;
+      await db.update(registerShifts).set({ status: "closed", closedAt: new Date(), closedByUserId: ctx.user.id, expectedCash: expected.toFixed(2), countedCash: input.countedCash.toFixed(2), variance: variance.toFixed(2), notes: input.notes ?? null }).where(eq(registerShifts.id, shift.id));
+      await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "closed", entity: "shift", entityId: shift.id, metadata: { expected, counted: input.countedCash, variance } });
+      return { expected, counted: input.countedCash, variance };
+    }),
+    list: tenantProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      return db.select({ shift: registerShifts, opener: { name: users.name } }).from(registerShifts).leftJoin(users, eq(users.id, registerShifts.openedByUserId)).where(eq(registerShifts.tenantId, ctx.tenant.id)).orderBy(desc(registerShifts.openedAt)).limit(60);
+    }),
+  }),
+
+  search: router({
+    global: tenantProcedure.input(z.object({ q: z.string().trim().min(2).max(60) })).query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) return { products: [], customers: [], sales: [] };
+      const like_ = `%${input.q}%`;
+      const [prods, custs, sls] = await Promise.all([
+        db.select({ id: products.id, name: products.name, sku: products.sku, price: products.sellingPrice, stock: products.stockQuantity }).from(products).where(and(eq(products.tenantId, ctx.tenant.id), or(like(products.name, like_), like(products.sku, like_), like(products.barcode, like_)))).limit(6),
+        db.select({ id: customers.id, name: customers.name, email: customers.email, phone: customers.phone }).from(customers).where(and(eq(customers.tenantId, ctx.tenant.id), or(like(customers.name, like_), like(customers.email, like_), like(customers.phone, like_)))).limit(5),
+        db.select({ id: sales.id, saleNumber: sales.saleNumber, total: sales.total, createdAt: sales.createdAt }).from(sales).where(and(eq(sales.tenantId, ctx.tenant.id), like(sales.saleNumber, like_))).orderBy(desc(sales.createdAt)).limit(5),
+      ]);
+      return { products: prods, customers: custs, sales: sls };
     }),
   }),
 

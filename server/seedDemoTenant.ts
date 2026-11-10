@@ -10,7 +10,7 @@
 import "dotenv/config";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "./db";
-import { categories, customers, expenses, inventoryMovements, products, saleItems, sales, suppliers, tenantMemberships, users } from "../drizzle/schema";
+import { auditLogs, categories, customers, expenses, inventoryMovements, products, purchaseItems, purchases, registerShifts, saleItems, sales, suppliers, tenantMemberships, users } from "../drizzle/schema";
 import { sql } from "drizzle-orm";
 
 // Deterministic PRNG so repeated runs look the same.
@@ -91,6 +91,40 @@ async function seedMovements(db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   return rows.length;
 }
 
+async function seedExtras(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, tenantId: number, userId: number) {
+  let added = 0;
+  const hasPO = await db.select({ id: purchases.id }).from(purchases).where(eq(purchases.tenantId, tenantId)).limit(1);
+  if (!hasPO.length) {
+    const prods = await db.select().from(products).where(eq(products.tenantId, tenantId)).limit(30);
+    const sups = await db.select().from(suppliers).where(eq(suppliers.tenantId, tenantId));
+    const statuses = ["received", "received", "received", "ordered", "ordered", "cancelled"] as const;
+    for (let i = 0; i < statuses.length; i++) {
+      const lines = Array.from({ length: int(2, 4) }, () => { const p = pick(prods); return { p, qty: int(20, 60) }; });
+      const total = lines.reduce((n, l) => n + l.qty * Number(l.p.costPrice), 0);
+      const when = new Date(Date.now() - (statuses.length - i) * 6 * 86400000);
+      const r = await db.insert(purchases).values({ tenantId, supplierId: sups.length ? pick(sups).id : null, purchaseNumber: `PO-${(1000 + i).toString(36).toUpperCase()}`, status: statuses[i], total: money(total), notes: i % 2 ? "Weekly top-up" : null, createdByUserId: userId, createdAt: when }).$returningId();
+      await db.insert(purchaseItems).values(lines.map(l => ({ tenantId, purchaseId: r[0].id, productId: l.p.id, quantity: l.qty, unitCost: l.p.costPrice, lineTotal: money(l.qty * Number(l.p.costPrice)) })));
+      added++;
+    }
+  }
+  const hasShift = await db.select({ id: registerShifts.id }).from(registerShifts).where(eq(registerShifts.tenantId, tenantId)).limit(3);
+  if (hasShift.length < 3) {
+    for (let d = 6; d >= 1; d--) {
+      const day = new Date(); day.setDate(day.getDate() - d);
+      const open = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9, 0), close = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 22, int(0, 30));
+      const expected = 10000 + int(60000, 140000), variance = pick([0, 0, 0, -200, 150, -500]);
+      await db.insert(registerShifts).values({ tenantId, status: "closed", openedByUserId: userId, closedByUserId: userId, openingCash: "10000.00", expectedCash: money(expected), countedCash: money(expected + variance), variance: money(variance), notes: variance ? "Minor till difference" : null, openedAt: open, closedAt: close });
+      added++;
+    }
+  }
+  const hasAudit = await db.select({ id: auditLogs.id }).from(auditLogs).where(eq(auditLogs.tenantId, tenantId)).limit(5);
+  if (hasAudit.length < 5) {
+    const recent = await db.select().from(sales).where(eq(sales.tenantId, tenantId)).orderBy(sql`${sales.createdAt} DESC`).limit(40);
+    for (const sl of recent) { await db.insert(auditLogs).values({ tenantId, userId, action: "completed", entity: "sale", entityId: sl.id, metadata: JSON.stringify({ saleNumber: sl.saleNumber, total: sl.total }), createdAt: sl.createdAt }); added++; }
+  }
+  return added;
+}
+
 async function main() {
   const email = process.argv[2];
   const force = process.argv.includes("--force");
@@ -109,9 +143,9 @@ async function main() {
 
   const existing = await db.select({ id: products.id }).from(products).where(eq(products.tenantId, tenantId)).limit(1);
   if (existing.length && !force) {
-    const added = await seedMovements(db, tenantId, user.id);
+    const added = (await seedMovements(db, tenantId, user.id)) + (await seedExtras(db, tenantId, user.id));
     console.log(added
-      ? `Workspace ${tenantId} already had products; added ${added} inventory movements.`
+      ? `Workspace ${tenantId} already had products; added ${added} demo records (movements, purchase orders, shifts, activity).`
       : `Workspace ${tenantId} already has products. Re-run with --force to add demo data anyway.`);
     process.exit(0);
   }
@@ -209,7 +243,7 @@ async function main() {
     }
   }
 
-  const moves = await seedMovements(db, tenantId, user.id);
+  const moves = (await seedMovements(db, tenantId, user.id)) + (await seedExtras(db, tenantId, user.id));
   console.log(`Seeded workspace ${tenantId} for ${email}: ${prods.length} products, ${custs.length} customers, ${saleSeq - 1000} sales, ${moves} inventory movements.`);
   process.exit(0);
 }

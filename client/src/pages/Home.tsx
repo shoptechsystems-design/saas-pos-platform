@@ -42,10 +42,22 @@ import {
   HelpCircle,
   Bell,
   Pencil,
-  Tags
+  Tags,
+  Download,
+  Menu,
+  PieChart,
+  History,
+  Keyboard
 } from "lucide-react";
 import { toast } from "sonner";
 import { money, moneyWhole } from "@/lib/format";
+import { downloadCsv } from "@/lib/csv";
+import PurchaseOrders from "@/components/PurchaseOrders";
+import CommandPalette, { SearchTrigger } from "@/components/CommandPalette";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import ReportsView from "./Reports";
+import POSView from "./POS";
+import ActivityView from "./Activity";
 import { DataTable, Pill, SearchBox, Segmented, StatTile, fmtDate, fmtTime, relativeTime } from "@/components/data/kit";
 import Landing from "./Landing";
 import AuthScreen from "./Auth";
@@ -55,10 +67,34 @@ import SalesView from "./Sales";
 import ExpensesView from "./Expenses";
 import TeamView from "./Team";
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
+  useEffect(() => {
+    const m = window.matchMedia(query);
+    const on = () => setMatches(m.matches);
+    on();
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, [query]);
+  return matches;
+}
+
 export default function Home() {
   const { user, loading, logout, refresh } = useAuth();
   const [activeTab, setActiveTab] = useState(user?.role === "admin" ? "superadmin" : "pos");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNav, setMobileNav] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const collapsed = isDesktop && sidebarCollapsed;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPaletteOpen(o => !o); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const [publicView, setPublicView] = useState<"home" | "auth">("home");
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [authBootstrapTimedOut, setAuthBootstrapTimedOut] = useState(false);
@@ -74,6 +110,7 @@ export default function Home() {
 
   const { data: tenantCtx } = trpc.tenant.context.useQuery(undefined, { enabled: !!user && user?.role !== "admin" });
   const { data: tenantSettings } = trpc.tenant.settings.useQuery(undefined, { enabled: !!user && user?.role !== "admin" });
+  const { data: lowStockAlerts = [] } = trpc.dashboard.lowStock.useQuery(undefined, { enabled: !!user && user?.role !== "admin", refetchInterval: 60000 });
 
   if (loading && !authBootstrapTimedOut) {
     return (
@@ -110,7 +147,7 @@ export default function Home() {
   const navGroups = user.role === "admin" ? [
     { label: "Platform Administration", items: [{ id: "superadmin", label: "Super Admin Console", icon: Store }] }
   ] : [
-    { label: "Overview", items: [{ id: "dashboard", label: "Dashboard", icon: BarChart3 }] },
+    { label: "Overview", items: [{ id: "dashboard", label: "Dashboard", icon: BarChart3 }, { id: "reports", label: "Reports", icon: PieChart, adminOnly: true }] },
     { label: "Commerce", items: [
       { id: "pos", label: "POS Terminal", icon: ShoppingBag },
       { id: "products", label: "Products", icon: Package },
@@ -123,16 +160,19 @@ export default function Home() {
     ] },
     { label: "Workspace", items: [
       { id: "masterdata", label: "Master Data", icon: Database },
-      { id: "team", label: "Team & Roles", icon: ShieldCheck },
+      { id: "team", label: "Team & Roles", icon: ShieldCheck, adminOnly: true },
+      { id: "activity", label: "Activity Log", icon: History, adminOnly: true },
       { id: "settings", label: "Business Settings", icon: Settings },
     ] },
-  ];
+  ].map(g => ({ ...g, items: g.items.filter((i: any) => !i.adminOnly || user.role === "admin" || tenantCtx?.membership.role === "tenant_admin") }));
+  const flatPages = navGroups.flatMap(g => g.items);
 
   return (
-    <div className="omnipos-app flex h-screen w-full overflow-hidden bg-[#f8fafc] text-[#0f172a]">
+    <div className="omnipos-app flex h-dvh w-full overflow-hidden bg-[#f8fafc] text-[#0f172a]">
       {/* Grouped premium sidebar */}
-      <aside className={`omnipos-sidebar h-screen shrink-0 border-r border-white/5 bg-[#0b1220] text-slate-300 flex flex-col transition-[width] duration-300 max-[767px]:w-[84px] ${sidebarCollapsed ? "w-[84px]" : "w-[280px]"}`}>
-        <div className={`flex h-[88px] items-center border-b border-white/10 ${sidebarCollapsed ? "justify-center px-3" : "gap-3 px-5"}`}>
+      {mobileNav && <div className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden" onClick={() => setMobileNav(false)} aria-hidden="true" />}
+      <aside className={`omnipos-sidebar fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] max-w-[85vw] shrink-0 flex-col border-r border-white/5 bg-[#0b1220] text-slate-300 transition-transform duration-300 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:transition-[width] ${mobileNav ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "lg:w-[84px]" : "lg:w-[280px]"}`}>
+        <div className={`flex h-[88px] items-center border-b border-white/10 ${collapsed ? "justify-center px-3" : "gap-3 px-5"}`}>
           {tenantSettings?.logoUrl ? (
             <img src={tenantSettings.logoUrl.startsWith('/') ? tenantSettings.logoUrl : tenantSettings.logoUrl} alt="Store logo" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl object-cover shadow-[0_8px_18px_rgba(15,23,42,0.16)] border border-slate-200 bg-white" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
           ) : (
@@ -140,13 +180,13 @@ export default function Home() {
               {tenantSettings?.name ? tenantSettings.name.charAt(0).toUpperCase() : "OP"}
             </div>
           )}
-          {!sidebarCollapsed && <div className="min-w-0 max-[767px]:hidden"><p className="truncate text-[15px] font-bold tracking-[-0.01em] text-white">{businessName}</p><div className="mt-1 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#2dd4bf]" /><span className="truncate text-[11px] font-semibold text-[#2dd4bf]">{currentRole}</span></div></div>}
+          {!collapsed && <div className="min-w-0"><p className="truncate text-[15px] font-bold tracking-[-0.01em] text-white">{businessName}</p><div className="mt-1 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#2dd4bf]" /><span className="truncate text-[11px] font-semibold text-[#2dd4bf]">{currentRole}</span></div></div>}
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-6">
           {navGroups.map(group => (
             <div key={group.label} className="mb-7 last:mb-0">
-              {!sidebarCollapsed && <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 max-[767px]:hidden">{group.label}</p>}
+              {!collapsed && <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{group.label}</p>}
               <div className="space-y-1.5">
                 {group.items.map(item => {
                   const Icon = item.icon;
@@ -154,14 +194,14 @@ export default function Home() {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => setActiveTab(item.id)}
+                      onClick={() => { setActiveTab(item.id); setMobileNav(false); }}
                       aria-label={item.label}
-                      className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-[13px] font-bold transition-all duration-200 max-[767px]:justify-center ${sidebarCollapsed ? "justify-center" : ""} ${active ? "bg-white/10 text-white ring-1 ring-white/10" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}
+                      className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-[13px] font-bold transition-all duration-200 ${collapsed ? "justify-center" : ""} ${active ? "bg-white/10 text-white ring-1 ring-white/10" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}
                     >
                       {active && <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-[#2dd4bf]" />}
                       <Icon className={`h-[18px] w-[18px] shrink-0 transition-colors ${active ? "text-[#2dd4bf]" : "text-slate-500 group-hover:text-[#2dd4bf]"}`} />
-                      {!sidebarCollapsed && <span className="truncate max-[767px]:hidden">{item.label}</span>}
-                      {!sidebarCollapsed && item.id === "superadmin" && <span className={`ml-auto rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wider max-[767px]:hidden ${active ? "bg-white/10 text-white/80" : "bg-[#fff1ec] text-[#c2412d]"}`}>Admin</span>}
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                      {!collapsed && item.id === "superadmin" && <span className={`ml-auto rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wider ${active ? "bg-white/10 text-white/80" : "bg-[#fff1ec] text-[#c2412d]"}`}>Admin</span>}
                     </button>
                   );
                 })}
@@ -171,56 +211,73 @@ export default function Home() {
         </div>
 
         <div className="border-t border-white/10 p-3">
-          <div className={`flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-2.5 ${sidebarCollapsed ? "flex-col justify-center" : ""}`}>
+          <div className={`flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-2.5 ${collapsed ? "flex-col justify-center" : ""}`}>
             <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0f766e] text-xs font-black text-white"><span>{user.name?.charAt(0).toUpperCase()}</span><span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0b1220] bg-[#2dd4bf]" /></div>
-            {!sidebarCollapsed && <div className="min-w-0 flex-1 max-[767px]:hidden"><p className="truncate text-xs font-bold text-white">{user.name}</p><p className="truncate text-[10px] font-medium text-slate-400">{user.email}</p></div>}
+            {!collapsed && <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-white">{user.name}</p><p className="truncate text-[10px] font-medium text-slate-400">{user.email}</p></div>}
             <button onClick={logout} aria-label="Sign out" title="Sign out" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-500/10 hover:text-red-300"><LogOut className="h-4 w-4" /></button>
           </div>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex h-screen min-w-0 flex-1 flex-col">
-        <header className="z-40 flex h-20 shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="h-9 w-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-            </button>
-            <div>
-              <h2 className="text-lg font-bold text-[#0f172a] tracking-tight">
-                {({ pos: "POS Terminal", dashboard: "Dashboard", products: "Products", inventory: "Inventory & purchase orders", customers: "Customers", sales: "Sales history", expenses: "Expenses", masterdata: "Master data", team: "Team & roles", settings: "Business settings", superadmin: "Super admin console" } as Record<string, string>)[activeTab] ?? activeTab}
+      <div className="flex h-dvh min-w-0 flex-1 flex-col">
+        <header className="z-30 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-3 backdrop-blur sm:h-20 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <button onClick={() => setMobileNav(true)} aria-label="Open menu" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 lg:hidden"><Menu className="h-5 w-5" /></button>
+            <button onClick={() => setSidebarCollapsed(c => !c)} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 lg:flex"><SlidersHorizontal className="h-4 w-4" /></button>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-bold tracking-tight text-[#0f172a] sm:text-lg">
+                {({ pos: "POS Terminal", dashboard: "Dashboard", reports: "Reports", products: "Products", inventory: "Inventory & purchase orders", customers: "Customers", sales: "Sales history", expenses: "Expenses", masterdata: "Master data", team: "Team & roles", activity: "Activity log", settings: "Business settings", superadmin: "Super admin console" } as Record<string, string>)[activeTab] ?? activeTab}
               </h2>
-              <p className="text-xs text-slate-500">{businessName}</p>
+              <p className="hidden truncate text-xs text-slate-500 sm:block">{businessName}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Global search products, orders..."
-                className="pl-9 bg-white border-slate-200 w-64 text-xs text-[#0f172a] shadow-sm"
-              />
-            </div>
-            <Button variant="outline" size="icon" className="border-slate-200 bg-white text-slate-500 hover:bg-slate-50">
-              <Bell className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" className="border-slate-200 bg-white text-slate-500 hover:bg-slate-50">
-              <HelpCircle className="h-4 w-4" />
-            </Button>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {user.role !== "admin" && <>
+              <SearchTrigger onClick={() => setPaletteOpen(true)} />
+              <button onClick={() => setPaletteOpen(true)} aria-label="Search" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 md:hidden"><Search className="h-4 w-4" /></button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button aria-label={`Notifications${lowStockAlerts.length ? `, ${lowStockAlerts.length} alerts` : ""}`} className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50">
+                    <Bell className="h-4 w-4" />
+                    {lowStockAlerts.length > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{lowStockAlerts.length > 9 ? "9+" : lowStockAlerts.length}</span>}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 rounded-2xl border-slate-200 bg-white p-0 text-slate-900 shadow-xl">
+                  <div className="border-b border-slate-100 px-4 py-3"><p className="text-sm font-bold">Notifications</p><p className="text-xs text-slate-500">{lowStockAlerts.length ? `${lowStockAlerts.length} products need restocking` : "You're all caught up"}</p></div>
+                  <ul className="max-h-72 divide-y divide-slate-100 overflow-y-auto">
+                    {lowStockAlerts.slice(0, 8).map(p => <li key={p.id}><button onClick={() => setActiveTab("inventory")} className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition hover:bg-slate-50"><span className="min-w-0"><span className="block truncate text-sm font-semibold">{p.name}</span><span className="text-[11px] text-slate-400">{p.sku}</span></span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${p.stockQuantity <= 0 ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}`}>{p.stockQuantity <= 0 ? "Out" : `${p.stockQuantity} left`}</span></button></li>)}
+                  </ul>
+                  {lowStockAlerts.length > 0 && <button onClick={() => setActiveTab("inventory")} className="w-full border-t border-slate-100 py-2.5 text-center text-xs font-semibold text-teal-700 hover:bg-slate-50">Open inventory</button>}
+                </PopoverContent>
+              </Popover>
+            </>}
+            <button onClick={() => setHelpOpen(true)} aria-label="Help and shortcuts" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50"><HelpCircle className="h-4 w-4" /></button>
           </div>
         </header>
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} pages={flatPages} onNavigate={setActiveTab} />
+        <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
+          <DialogContent className="max-w-md rounded-2xl border-slate-200 bg-white p-6 text-slate-900">
+            <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Keyboard className="h-5 w-5 text-teal-600" /> Shortcuts & tips</DialogTitle></DialogHeader>
+            <ul className="space-y-3 pt-1 text-sm">
+              {[["⌘K / Ctrl+K", "Search products, customers and orders, or jump to any page"], ["/", "Focus the product search on the POS terminal"], ["Enter", "In POS search: add the matching product (works with barcode scanners)"], ["Esc", "Close any dialog or panel"]].map(([k, d]) => (
+                <li key={k} className="flex items-start gap-3"><kbd className="shrink-0 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold text-slate-600">{k}</kbd><span className="text-slate-600">{d}</span></li>
+              ))}
+            </ul>
+            <p className="border-t border-slate-100 pt-4 text-xs text-slate-500">Tip: open a shift on the POS terminal before selling so your cash drawer reconciles at close.</p>
+          </DialogContent>
+        </Dialog>
 
         <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8"><div className="mx-auto w-full max-w-[1600px]">
           {user.role === "admin" ? (
             <SuperAdminView />
           ) : (
             <>
-              {activeTab === "pos" && <POSTerminalView setActiveTab={setActiveTab} />}
+              {activeTab === "pos" && <POSView setActiveTab={setActiveTab} />}
               {activeTab === "dashboard" && <DashboardView setActiveTab={setActiveTab} />}
+              {activeTab === "reports" && <ReportsView />}
+              {activeTab === "activity" && <ActivityView />}
               {activeTab === "products" && <ProductCatalogView />}
               {activeTab === "inventory" && <InventoryManagementView />}
               {activeTab === "customers" && <CustomersView />}
@@ -233,359 +290,6 @@ export default function Home() {
           )}
         </div></main>
       </div>
-    </div>
-  );
-}
-
-function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
-  const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<number | undefined>();
-  const [cart, setCart] = useState<Array<{ product: any; quantity: number }>>([]);
-  const [discount, setDiscount] = useState("0");
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "transfer" | "other">("cash");
-  const [amountReceived, setAmountReceived] = useState("");
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
-  const [checkoutResult, setCheckoutResult] = useState<any>(null);
-  const [heldOrders, setHeldOrders] = useState<Array<{ id: string; cart: any[]; customerId: number | null; time: string }>>([]);
-
-  const { data: categories = [] } = trpc.catalog.categories.useQuery();
-  const { data: products = [] } = trpc.catalog.products.useQuery({ query: search, categoryId: selectedCategory });
-  const { data: customers = [] } = trpc.customers.list.useQuery();
-  const { data: tenantSettings } = trpc.tenant.settings.useQuery();
-
-  const checkoutMutation = trpc.pos.checkout.useMutation({
-    onSuccess: (res) => {
-      setCheckoutResult(res);
-      setPaymentModalOpen(false);
-      setCart([]);
-      setAmountReceived("");
-      toast.success(`Sale completed successfully! (${res.saleNumber})`);
-    },
-    onError: err => toast.error(err.message)
-  });
-
-  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + Number(item.product.discountPrice ?? item.product.sellingPrice) * item.quantity, 0), [cart]);
-  const discountVal = Number(discount) || 0;
-  const taxable = Math.max(0, subtotal - discountVal);
-  const tax = taxable * 0.18;
-  const total = taxable + tax;
-  const receivedNum = Number(amountReceived) || 0;
-  const changeDue = Math.max(0, receivedNum - total);
-
-  const addToCart = (product: any) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
-      if (existing) {
-        if (existing.quantity >= product.stockQuantity) {
-          toast.error("Cannot exceed available stock.");
-          return prev;
-        }
-        return prev.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
-      }
-      if (product.stockQuantity <= 0) {
-        toast.error("Product is out of stock.");
-        return prev;
-      }
-      return [...prev, { product, quantity: 1 }];
-    });
-  };
-
-  const updateQuantity = (productId: number, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.product.id === productId) {
-        const next = item.quantity + delta;
-        if (next <= 0) return null;
-        if (next > item.product.stockQuantity) {
-          toast.error("Exceeds stock limit.");
-          return item;
-        }
-        return { ...item, quantity: next };
-      }
-      return item;
-    }).filter(Boolean) as any);
-  };
-
-  const holdCurrentOrder = () => {
-    if (cart.length === 0) return;
-    const newHold = {
-      id: `HOLD-${Date.now().toString(36).toUpperCase()}`,
-      cart,
-      customerId: selectedCustomerId,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setHeldOrders(prev => [...prev, newHold]);
-    setCart([]);
-    setSelectedCustomerId(null);
-    toast.success("Order placed on hold.");
-  };
-
-  const resumeOrder = (holdId: string) => {
-    const found = heldOrders.find(h => h.id === holdId);
-    if (!found) return;
-    setCart(found.cart);
-    setSelectedCustomerId(found.customerId);
-    setHeldOrders(prev => prev.filter(h => h.id !== holdId));
-    toast.success(`Resumed order ${holdId}`);
-  };
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 xl:gap-8 h-full min-h-0">
-      {/* Left / Main Product Grid Area */}
-      <div className="lg:col-span-7 flex flex-col gap-4 min-w-0">
-        <div className="flex flex-col md:flex-row gap-3 items-center">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-[#9eb4ae]" />
-            <Input
-              placeholder="Search by name, SKU, or barcode (e.g. COF-ETH-01)..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-10 bg-[#0d2630] border-[#203b42] text-[#f8f3e7] h-11 rounded-xl shadow-sm"
-            />
-          </div>
-          {heldOrders.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto w-full md:w-auto">
-              {heldOrders.map(hold => (
-                <Button key={hold.id} variant="outline" size="sm" onClick={() => resumeOrder(hold.id)} className="border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 shrink-0">
-                  <Clock className="h-3.5 w-3.5 mr-1.5" /> Resume {hold.id} ({hold.cart.reduce((s, i) => s + i.quantity, 0)})
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <Button
-            variant={selectedCategory === undefined ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedCategory(undefined)}
-            className={selectedCategory === undefined ? "bg-[#0f172a] text-[#f8f3e7] rounded-xl" : "border-[#203b42] bg-[#0d2630] text-[#c7d8d1] rounded-xl hover:bg-slate-800"}
-          >
-            All Categories
-          </Button>
-          {categories.map(cat => (
-            <Button
-              key={cat.id}
-              variant={selectedCategory === cat.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory(cat.id)}
-              className={selectedCategory === cat.id ? "bg-[#0f172a] text-[#f8f3e7] rounded-xl" : "border-[#203b42] bg-[#0d2630] text-[#c7d8d1] rounded-xl hover:bg-slate-800"}
-            >
-              {cat.name}
-            </Button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:h-[calc(100vh-260px)] max-h-[680px] overflow-y-auto pr-1 pb-1 auto-rows-max content-start">
-          {products.map(product => (
-            <Card
-              key={product.id}
-              onClick={() => addToCart(product)}
-              className="bg-[#0d2630]/95 border-[#203b42] hover:border-[#f9735b]/40 cursor-pointer transition-all p-3.5 flex flex-col justify-between group shadow-lg rounded-2xl min-h-[220px]"
-            >
-              <div>
-                <div className="h-32 rounded-xl bg-[#07111F] mb-3 flex items-center justify-center overflow-hidden border border-[#203b42]/80">
-                  {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
-                  ) : (
-                    <Tag className="h-8 w-8 text-slate-600" />
-                  )}
-                </div>
-                <h4 className="font-semibold text-sm text-[#eef3ea] line-clamp-1">{product.name}</h4>
-                <p className="text-xs text-[#9eb4ae] mt-0.5">SKU: {product.sku}</p>
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="font-bold text-[#0f766e]">{money(Number(product.sellingPrice))}</span>
-                <Badge variant={product.stockQuantity <= product.minStockLevel ? "destructive" : "secondary"} className="text-[10px] rounded-lg">
-                  Stock: {product.stockQuantity}
-                </Badge>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Right Cart & Checkout Area */}
-      <div className="lg:col-span-5 flex flex-col bg-[#0d2630]/95 border border-[#203b42] rounded-2xl p-4 sm:p-5 lg:p-6 shadow-2xl justify-between min-h-[520px] lg:min-h-0">
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between pb-4 border-b border-[#203b42]">
-            <div>
-              <h3 className="font-bold text-[#f8f3e7] flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4 text-[#0f766e]" /> Current Order
-              </h3>
-              <p className="text-xs text-[#9eb4ae] mt-0.5">Order #{Date.now().toString(36).toUpperCase()}</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={holdCurrentOrder} disabled={cart.length === 0} className="border-slate-700 bg-slate-800 text-xs text-[#c7d8d1] hover:bg-slate-700">
-                Hold
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setCart([])} className="text-[#9eb4ae] hover:text-red-400 text-xs">
-                Clear
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex-1 max-h-[min(300px,34vh)] overflow-y-auto py-4 space-y-3">
-            {cart.length === 0 ? (
-              <div className="text-center py-16 text-[#78938f] text-sm flex flex-col items-center gap-2">
-                <ShoppingBag className="h-8 w-8 text-slate-700" />
-                <p>Cart is empty. Click products to add.</p>
-              </div>
-            ) : (
-              cart.map(item => (
-                <div key={item.product.id} className="flex items-center justify-between bg-[#07111F] p-3.5 rounded-xl border border-[#203b42]/80 shadow-sm">
-                  <div className="flex-1 min-w-0 pr-3">
-                    <p className="text-sm font-semibold text-[#d6e2db] truncate">{item.product.name}</p>
-                    <p className="text-xs text-[#0f766e] mt-1">{money(Number(item.product.sellingPrice))} each</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => updateQuantity(item.product.id, -1)} className="h-7 w-7 rounded-lg bg-slate-800 flex items-center justify-center text-[#c7d8d1] hover:bg-slate-700 font-bold">-</button>
-                    <span className="text-sm font-bold w-6 text-center">{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.product.id, 1)} className="h-7 w-7 rounded-lg bg-slate-800 flex items-center justify-center text-[#c7d8d1] hover:bg-slate-700 font-bold">+</button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="border-t border-[#203b42] pt-4 space-y-3 mt-auto">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-[#9eb4ae]">Customer</span>
-              <div className="flex items-center gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <select
-                      value={selectedCustomerId ?? ""}
-                      onChange={e => {
-                        if (e.target.value === "NEW_CUSTOMER") {
-                          setActiveTab("customers");
-                          return;
-                        }
-                        setSelectedCustomerId(e.target.value ? Number(e.target.value) : null);
-                      }}
-                      className="bg-[#07111F] border border-[#203b42] rounded-xl px-3 py-1.5 text-xs text-[#f8f3e7]"
-                    >
-                      <option value="">Walk-in Customer</option>
-                      {customers.map(c => (
-                        <option key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ""}</option>
-                      ))}
-                      <option value="NEW_CUSTOMER">+ Add New Customer...</option>
-                    </select>
-                  </div>
-              </div>
-            </div>
-
-            <div className="space-y-1.5 pt-3 border-t border-[#203b42] text-sm">
-              <div className="flex justify-between text-[#9eb4ae]"><span>Subtotal</span><span>{money(subtotal)}</span></div>
-              <div className="flex justify-between text-[#9eb4ae]"><span>Tax (18%)</span><span>{money(tax)}</span></div>
-              <div className="flex justify-between font-extrabold text-xl text-[#f8f3e7] pt-2 border-t border-[#203b42]">
-                <span>TOTAL</span>
-                <span className="text-[#0f766e]">{money(total)}</span>
-              </div>
-            </div>
-
-            <Button
-              onClick={() => setPaymentModalOpen(true)}
-              disabled={cart.length === 0}
-              className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl text-base mt-2"
-            >
-              Pay {money(total)}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Payment Modal */}
-      <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
-        <DialogContent className="bg-white border-slate-200 text-[#0f172a] max-w-md rounded-2xl p-6 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0f172a] flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-[#0f766e]" /> Complete Payment
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-5 pt-3">
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center shadow-sm">
-              <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Amount Due</p>
-              <h3 className="text-3xl font-black text-[#0f172a] mt-1">{money(total)}</h3>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs text-slate-500 font-bold">Payment Method</label>
-              <div className="grid grid-cols-4 gap-2">
-                {(["cash", "card", "transfer", "other"] as const).map(m => (
-                  <Button
-                    key={m}
-                    variant={paymentMethod === m ? "default" : "outline"}
-                    onClick={() => setPaymentMethod(m)}
-                    className={paymentMethod === m ? "bg-[#0f172a] text-white capitalize rounded-xl font-bold h-11" : "border-slate-200 bg-slate-50 text-slate-700 capitalize hover:bg-slate-100 rounded-xl font-medium h-11"}
-                  >
-                    {m}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {paymentMethod === "cash" && (
-              <div className="space-y-2">
-                <label className="text-xs text-slate-500 font-bold">Cash Received (PKR)</label>
-                <Input
-                  type="number"
-                  value={amountReceived}
-                  onChange={e => setAmountReceived(e.target.value)}
-                  placeholder="0.00"
-                  className="bg-slate-50 border-slate-200 h-12 text-lg font-bold text-[#0f172a] rounded-xl"
-                />
-                <div className="flex justify-between text-sm pt-1">
-                  <span className="text-slate-500 font-medium">Change Due:</span>
-                  <span className="font-bold text-[#0f766e]">{money(changeDue)}</span>
-                </div>
-              </div>
-            )}
-
-            <Button
-              onClick={() => checkoutMutation.mutate({ items: cart.map(i => ({ productId: i.product.id, quantity: i.quantity })), discount: 0, paymentMethod, amountReceived: receivedNum || total, customerId: selectedCustomerId })}
-              disabled={checkoutMutation.isPending}
-              className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl"
-            >
-              Confirm & Print Receipt
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Receipt Dialog */}
-      <Dialog open={!!checkoutResult} onOpenChange={() => setCheckoutResult(null)}>
-        <DialogContent className="bg-white border-slate-200 text-[#0f172a] max-w-sm rounded-2xl shadow-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#0f172a] font-bold text-lg">
-              <Printer className="h-5 w-5 text-[#0f766e]" /> Receipt Generated
-            </DialogTitle>
-          </DialogHeader>
-          {checkoutResult && (
-            <div className="space-y-4 font-mono text-xs bg-slate-50 p-5 rounded-2xl border border-slate-200 text-slate-800">
-              <div className="text-center pb-3 border-b border-slate-200 flex flex-col items-center gap-2">
-                {tenantSettings?.logoUrl && (
-                  <img src={tenantSettings.logoUrl} alt="Store Logo" className="h-12 max-w-[120px] object-contain rounded-lg shadow-sm" />
-                )}
-                <p className="font-bold text-sm text-[#0f172a]">{tenantSettings?.name || "OmniPOS Store"}</p>
-                <p className="text-slate-500 text-xs">{checkoutResult.saleNumber}</p>
-                <p className="text-[10px] text-slate-400">{new Date().toLocaleString()}</p>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-slate-600"><span>Subtotal</span><span>{money(checkoutResult.subtotal)}</span></div>
-                <div className="flex justify-between text-slate-600"><span>Tax (18%)</span><span>{money(checkoutResult.tax)}</span></div>
-                <div className="flex justify-between font-bold text-sm pt-2 border-t border-slate-200 text-[#0f172a]"><span>TOTAL</span><span>{money(checkoutResult.total)}</span></div>
-                <div className="flex justify-between text-[#0f766e] pt-1 font-semibold"><span>Change Returned</span><span>{money(checkoutResult.change)}</span></div>
-              </div>
-              <div className="text-center pt-3 border-t border-slate-200 text-[11px] text-slate-500 leading-relaxed font-sans">
-                {checkoutResult.footer}
-              </div>
-              <Button onClick={() => setCheckoutResult(null)} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-sans font-bold mt-4 rounded-xl h-11 shadow-sm">
-                Done & Next Sale
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -717,6 +421,7 @@ function ProductCatalogView() {
           <p className="mt-1 text-sm text-slate-500">Pricing, stock levels and categories for everything you sell.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" onClick={() => downloadCsv("products", ["Name", "SKU", "Barcode", "Category", "Cost", "Price", "Stock", "Min stock"], filteredProducts.map(p => [p.name, p.sku, p.barcode, categories.find(c => c.id === p.categoryId)?.name, p.costPrice, p.sellingPrice, p.stockQuantity, p.minStockLevel]))} className="border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50 rounded-xl"><Download className="h-4 w-4 mr-2" /> Export CSV</Button>
           <Button variant="outline" onClick={() => setManageCats(true)} className="border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50 rounded-xl"><Tags className="h-4 w-4 mr-2" /> Manage categories</Button>
           <Dialog open={openCategory} onOpenChange={setOpenCategory}>
             <DialogTrigger asChild>
@@ -834,7 +539,7 @@ function ProductCatalogView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="stat-grid">
         <StatTile label="Products" value={products.length} hint={`${categories.length} categories`} icon={Package} />
         <StatTile label="Inventory value" value={moneyWhole(inventoryValue)} hint="at cost price" icon={DollarSign} tone="bg-indigo-50 text-indigo-600" />
         <StatTile label="Low stock" value={lowCount} hint={lowCount ? "needs restocking" : "all healthy"} icon={AlertTriangle} tone="bg-rose-50 text-rose-600" />
@@ -1077,7 +782,7 @@ function InventoryManagementView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="stat-grid">
         <StatTile label="Units on hand" value={unitsOnHand.toLocaleString("en-PK")} hint={`across ${products.length} products`} icon={Package} />
         <StatTile label="Low stock alerts" value={lowStock.length} hint="at or below minimum" icon={AlertTriangle} tone="bg-amber-50 text-amber-600" />
         <StatTile label="Suppliers" value={suppliers.length} hint="wholesale partners" icon={Truck} tone="bg-indigo-50 text-indigo-600" />
@@ -1097,6 +802,8 @@ function InventoryManagementView() {
           </div>
         </div>
       )}
+
+      <PurchaseOrders />
 
       <DataTable
         rows={ledgerRows} rowKey={m => m.id} pageSize={10}
@@ -1566,7 +1273,7 @@ function SuperAdminView() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0f766e]">Platform administration</p><h3 className="mt-2 text-3xl font-black tracking-[-0.02em] text-[#0f172a]">Organization control center.</h3><p className="mt-1 text-sm text-slate-500">Monitor every workspace, keep access decisions clear, and protect tenant boundaries.</p></div><Badge className="w-fit rounded-full border border-[#d5eee8] bg-[#effaf7] text-[#0f766e]">Super Admin access</Badge></div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="stat-grid">
         {[{ label: "Total businesses", value: stats?.tenants ?? 0, helper: "Registered workspaces", icon: Store, accent: "text-[#0f172a]" }, { label: "Active businesses", value: stats?.activeTenants ?? activeCount, helper: `${activeRate}% of organizations`, icon: CheckCircle, accent: "text-[#0f766e]" }, { label: "Platform users", value: stats?.users ?? 0, helper: "Across all workspaces", icon: Users, accent: "text-[#f9735b]" }, { label: "Gross revenue", value: money(Number(stats?.revenue ?? 0)), helper: "Completed transactions", icon: TrendingUp, accent: "text-[#0f766e]" }].map(({ label, value, helper, icon: Icon, accent }) => <Card key={label} className="rounded-2xl border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="flex items-start justify-between"><div><p className="text-xs font-bold text-slate-500">{label}</p><p className={`mt-3 text-2xl font-black tracking-tight ${accent}`}>{value}</p></div><div className="rounded-xl bg-slate-50 p-2.5"><Icon className="h-4 w-4 text-slate-500" /></div></div><p className="mt-4 text-[11px] font-medium text-slate-400">{helper}</p></Card>)}
       </div>
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.8fr_1.2fr]">

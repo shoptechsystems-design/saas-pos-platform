@@ -17,13 +17,13 @@ export function PageHeader({ title, description, actions }: { title: string; des
 
 export function StatTile({ label, value, hint, icon: Icon, tone = "bg-teal-50 text-teal-600" }: { label: string; value: ReactNode; hint?: ReactNode; icon: LucideIcon; tone?: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_28px_-12px_rgba(15,23,42,0.08)]">
-      <div className="flex items-start justify-between">
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_28px_-12px_rgba(15,23,42,0.08)] sm:p-5">
+      <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-semibold text-slate-500">{label}</p>
-        <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tone}`}><Icon className="h-4 w-4" /></span>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl sm:h-9 sm:w-9 ${tone}`}><Icon className="h-4 w-4" /></span>
       </div>
-      <p className="mt-3 text-2xl font-extrabold leading-none tracking-tight text-slate-900">{value}</p>
-      {hint && <p className="mt-2.5 text-[11px] font-medium text-slate-400">{hint}</p>}
+      <p className="mt-2.5 truncate text-xl font-extrabold leading-none tracking-tight text-slate-900 sm:mt-3 sm:text-2xl">{value}</p>
+      {hint && <p className="mt-2 text-[11px] font-medium leading-snug text-slate-400 sm:mt-2.5">{hint}</p>}
     </div>
   );
 }

@@ -43,6 +43,13 @@
       "when": 1786546290287,
       "tag": "0005_striped_red_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1794336952565,
+      "tag": "0006_strong_rhino",
+      "breakpoints": true
     }
   ]
 }

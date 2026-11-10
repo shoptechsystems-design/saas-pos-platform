@@ -161,16 +161,16 @@ export default function DashboardView({ setActiveTab }: { setActiveTab: (tab: st
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="stat-grid">
         {stats.isLoading
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[132px]" />)
           : kpis.map(k => (
-              <Panel key={k.label} className="!p-5">
+              <Panel key={k.label} className="min-w-0 !p-4 sm:!p-5">
                 <div className="flex items-start justify-between">
                   <p className="text-xs font-semibold text-slate-500">{k.label}</p>
                   <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${k.tone}`}><k.icon className="h-4 w-4" /></span>
                 </div>
-                <p className="mt-3 text-[26px] font-extrabold leading-none tracking-tight text-slate-900">{k.value}</p>
+                <p className="mt-3 truncate text-xl font-extrabold leading-none tracking-tight text-slate-900 sm:text-[26px]">{k.value}</p>
                 <div className="mt-3">{k.foot}</div>
               </Panel>
             ))}
@@ -194,7 +194,7 @@ export default function DashboardView({ setActiveTab }: { setActiveTab: (tab: st
           ) : (
             <div className="mt-4 h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={series} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                <AreaChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.35} />
@@ -203,7 +203,7 @@ export default function DashboardView({ setActiveTab }: { setActiveTab: (tab: st
                   </defs>
                   <CartesianGrid vertical={false} stroke="#e2e8f0" strokeDasharray="3 3" />
                   <XAxis dataKey="key" tickFormatter={(k: string) => new Date(k + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })} tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} interval={range === 7 ? 0 : range === 14 ? 1 : 4} />
-                  <YAxis tickFormatter={compact} tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={48} />
+                  <YAxis tickFormatter={compact} tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={52} />
                   <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#14b8a6", strokeOpacity: 0.3 }} />
                   <Area type="monotone" dataKey="total" stroke="#0d9488" strokeWidth={2.5} fill="url(#rev)" activeDot={{ r: 5, fill: "#0d9488", stroke: "#fff", strokeWidth: 2 }} />
                 </AreaChart>

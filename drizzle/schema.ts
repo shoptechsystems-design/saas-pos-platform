@@ -321,3 +321,23 @@ export type Customer = typeof customers.$inferSelect;
 export type Sale = typeof sales.$inferSelect;
 export type SaleItem = typeof saleItems.$inferSelect;
 export type TenantMembership = typeof tenantMemberships.$inferSelect;
+
+export const registerShifts = mysqlTable("register_shifts", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  status: mysqlEnum("status", ["open", "closed"]).default("open").notNull(),
+  openedByUserId: int("openedByUserId").notNull(),
+  closedByUserId: int("closedByUserId"),
+  openingCash: decimal("openingCash", { precision: 12, scale: 2 }).default("0").notNull(),
+  expectedCash: decimal("expectedCash", { precision: 12, scale: 2 }),
+  countedCash: decimal("countedCash", { precision: 12, scale: 2 }),
+  variance: decimal("variance", { precision: 12, scale: 2 }),
+  notes: text("notes"),
+  openedAt: timestamp("openedAt").defaultNow().notNull(),
+  closedAt: timestamp("closedAt"),
+}, table => ({
+  tenantStatusIdx: index("shifts_tenant_status_idx").on(table.tenantId, table.status),
+  tenantOpenedIdx: index("shifts_tenant_opened_idx").on(table.tenantId, table.openedAt),
+}));
+
+export type RegisterShift = typeof registerShifts.$inferSelect;

@@ -369,3 +369,9 @@
 @media (prefers-reduced-motion: reduce) {
   .lp-float, .lp-float-slow, .lp-aurora, .lp-aurora-2 { animation: none; }
 }
+
+/* Responsive stat-tile grid: 2 columns on phones (odd last tile spans), 4 on wide screens */
+.stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.stat-grid > :last-child:nth-child(odd) { grid-column: span 2; }
+@media (min-width: 640px) { .stat-grid { gap: 1rem; } .stat-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .stat-grid.cols-3 > :last-child:nth-child(odd) { grid-column: auto; } }
+@media (min-width: 1280px) { .stat-grid:not(.cols-3) { grid-template-columns: repeat(4, minmax(0, 1fr)); } .stat-grid:not(.cols-3) > :last-child:nth-child(odd) { grid-column: auto; } }

@@ -6,11 +6,14 @@ import { moneyWhole } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import SaleDrawer from "@/components/SaleDrawer";
+import { downloadCsv } from "@/lib/csv";
 import { DataTable, Initials, PageHeader, Pill, SearchBox, Segmented, StatTile, fmtDate, fmtTime, type Column } from "@/components/data/kit";
 
 type Row = RouterOutputs["salesHistory"]["list"]["rows"][number];
 type Range = "all" | "today" | "7d" | "30d" | "custom";
 type Method = "all" | "cash" | "card" | "transfer";
+type Status = "completed" | "refunded" | "all";
 
 const METHOD: Record<string, { label: string; icon: LucideIcon; tone: "teal" | "indigo" | "amber" }> = {
   cash: { label: "Cash", icon: Banknote, tone: "teal" },
@@ -29,6 +32,10 @@ export default function SalesView() {
   const [search, setSearch] = useState("");
   const [range, setRange] = useState<Range>("30d");
   const [method, setMethod] = useState<Method>("all");
+  const [status, setStatus] = useState<Status>("completed");
+  const [openId, setOpenId] = useState<number | null>(null);
+  const utils = trpc.useUtils();
+  const [exporting, setExporting] = useState(false);
   const [customer, setCustomer] = useState("all");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -46,10 +53,10 @@ export default function SalesView() {
     return { from: undefined, to: undefined };
   }, [range, start, end]);
 
-  useEffect(() => setPage(1), [debounced, range, method, customer, start, end]);
+  useEffect(() => setPage(1), [debounced, range, method, status, customer, start, end]);
 
   const q = trpc.salesHistory.list.useQuery(
-    { page, pageSize: 12, search: debounced || undefined, paymentMethod: method === "all" ? undefined : method, customerId: customer === "all" ? undefined : Number(customer), from: bounds.from, to: bounds.to },
+    { page, pageSize: 12, search: debounced || undefined, paymentMethod: method === "all" ? undefined : method, status, customerId: customer === "all" ? undefined : Number(customer), from: bounds.from, to: bounds.to },
     { placeholderData: prev => prev },
   );
 
@@ -69,9 +76,18 @@ export default function SalesView() {
     const r = await statement.refetch(); r.data ? download(r.data) : toast.error("Could not generate the customer statement.");
   };
 
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const rows = await utils.salesHistory.exportRows.fetch({ search: debounced || undefined, paymentMethod: method === "all" ? undefined : method, status, customerId: customer === "all" ? undefined : Number(customer), from: bounds.from, to: bounds.to });
+      downloadCsv("sales", ["Order", "Status", "Date", "Customer", "Payment", "Subtotal", "Discount", "Tax", "Total"], rows.map(r => [r.saleNumber, r.status, r.createdAt, r.customer ?? "Walk-in", r.paymentMethod, r.subtotal, r.discount, r.tax, r.total]));
+      toast.success(`Exported ${rows.length.toLocaleString()} sales.`);
+    } catch { toast.error("Export failed."); } finally { setExporting(false); }
+  };
+
   const data = q.data;
-  const reset = () => { setSearch(""); setRange("30d"); setMethod("all"); setCustomer("all"); setStart(""); setEnd(""); };
-  const filtered = !!search || method !== "all" || customer !== "all" || range !== "30d";
+  const reset = () => { setSearch(""); setRange("30d"); setMethod("all"); setStatus("completed"); setCustomer("all"); setStart(""); setEnd(""); };
+  const filtered = !!search || method !== "all" || status !== "completed" || customer !== "all" || range !== "30d";
 
   const columns: Column<Row>[] = [
     { key: "order", header: "Order", cell: r => <span className="font-mono text-xs font-semibold text-slate-900">{r.sale.saleNumber}</span> },
@@ -80,7 +96,7 @@ export default function SalesView() {
       : <div className="flex items-center gap-2.5"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-400"><ShoppingBag className="h-3.5 w-3.5" /></span><span className="text-slate-500">Walk-in</span></div> },
     { key: "items", header: "Items", align: "right", hideBelow: "md", cell: r => <span className="tabular-nums text-slate-600">{r.itemCount}</span> },
     { key: "payment", header: "Payment", cell: r => { const m = METHOD[r.sale.paymentMethod]; const I = m?.icon ?? CreditCard; return <Pill tone={m?.tone ?? "slate"}><I className="h-3 w-3" />{m?.label ?? r.sale.paymentMethod}</Pill>; } },
-    { key: "total", header: "Total", align: "right", cell: r => <div><p className="font-bold tabular-nums text-slate-900">{moneyWhole(r.sale.total)}</p>{Number(r.sale.tax) > 0 && <p className="text-[11px] text-slate-400">incl. {moneyWhole(r.sale.tax)} tax</p>}</div> },
+    { key: "total", header: "Total", align: "right", cell: r => <div><p className={`font-bold tabular-nums ${r.sale.status === "refunded" ? "text-slate-400 line-through" : "text-slate-900"}`}>{moneyWhole(r.sale.total)}</p>{r.sale.status === "refunded" && <p className="text-[11px] font-semibold text-rose-600">Refunded</p>}{Number(r.sale.tax) > 0 && <p className="text-[11px] text-slate-400">incl. {moneyWhole(r.sale.tax)} tax</p>}</div> },
     { key: "date", header: "Date", align: "right", hideBelow: "sm", cell: r => <div><p className="text-sm text-slate-700">{fmtDate(r.sale.createdAt)}</p><p className="text-[11px] text-slate-400">{fmtTime(r.sale.createdAt)}</p></div> },
   ];
 
@@ -89,23 +105,25 @@ export default function SalesView() {
   return (
     <div className="space-y-6">
       <PageHeader title="Sales history" description="Every completed transaction, filterable and exportable." actions={<>
+        <Button variant="outline" onClick={exportCsv} disabled={exporting} className="h-10 rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50"><Download className="mr-2 h-4 w-4" />{exporting ? "Exporting…" : "Export CSV"}</Button>
         <Button variant="outline" onClick={getStatement} disabled={statement.isFetching || customer === "all"} className="h-10 rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50"><FileText className="mr-2 h-4 w-4" />{statement.isFetching ? "Preparing…" : "Customer statement"}</Button>
         <Button onClick={getRecon} disabled={recon.isFetching} className="h-10 rounded-xl bg-slate-900 text-white hover:bg-slate-700"><Download className="mr-2 h-4 w-4" />{recon.isFetching ? "Preparing…" : "Reconciliation PDF"}</Button>
       </>} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="stat-grid cols-3">
         <StatTile label="Revenue" value={data ? moneyWhole(data.revenue) : "…"} hint={filtered ? "for the current filters" : "last 30 days"} icon={Wallet} />
         <StatTile label="Orders" value={data ? data.total.toLocaleString("en-PK") : "…"} hint="completed sales" icon={Receipt} tone="bg-indigo-50 text-indigo-600" />
         <StatTile label="Avg. order value" value={data ? moneyWhole(data.avgOrder) : "…"} hint="revenue ÷ orders" icon={TrendingUp} tone="bg-orange-50 text-orange-600" />
       </div>
 
       <DataTable
-        columns={columns} rows={data?.rows ?? []} rowKey={r => r.sale.id} loading={q.isLoading}
+        columns={columns} rows={data?.rows ?? []} rowKey={r => r.sale.id} loading={q.isLoading} onRowClick={r => setOpenId(r.sale.id)}
         server={{ page, pageSize: 12, total: data?.total ?? 0, onPageChange: setPage }}
         toolbar={<>
           <div className="flex w-full flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
             <SearchBox value={search} onChange={setSearch} placeholder="Search order # or customer…" />
             <Segmented value={range} onChange={setRange} options={[{ value: "today", label: "Today" }, { value: "7d", label: "7D" }, { value: "30d", label: "30D" }, { value: "all", label: "All" }, { value: "custom", label: "Custom" }]} />
+            <Segmented value={status} onChange={setStatus} options={[{ value: "completed", label: "Completed" }, { value: "refunded", label: "Refunded" }, { value: "all", label: "All" }]} />
             <Segmented value={method} onChange={setMethod} options={[{ value: "all", label: "Any payment" }, { value: "cash", label: "Cash" }, { value: "card", label: "Card" }, { value: "transfer", label: "Transfer" }]} />
             <Select value={customer} onValueChange={setCustomer}>
               <SelectTrigger className={`${sel} w-full lg:w-56`}><SelectValue placeholder="All customers" /></SelectTrigger>
@@ -117,6 +135,7 @@ export default function SalesView() {
         </>}
         empty={{ icon: Receipt, title: "No sales match these filters", hint: "Try widening the date range or clearing the search." }}
       />
+      <SaleDrawer saleId={openId} onClose={() => setOpenId(null)} />
     </div>
   );
 }

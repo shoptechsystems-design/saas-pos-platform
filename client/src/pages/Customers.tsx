@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Loader2, Mail, Phone, Plus, TrendingUp, UserPlus, Users, Wallet, Repeat } from "lucide-react";
+import { Download, Loader2, Mail, Phone, Plus, TrendingUp, UserPlus, Users, Wallet, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { moneyWhole } from "@/lib/format";
+import { downloadCsv } from "@/lib/csv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -76,7 +77,8 @@ export default function CustomersView() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Customers" description="Your customer directory, lifetime value and buying activity." actions={
+      <PageHeader title="Customers" description="Your customer directory, lifetime value and buying activity." actions={<>
+        <Button variant="outline" onClick={() => downloadCsv("customers", ["Name", "Email", "Phone", "Orders", "Lifetime spend", "Last purchase", "Joined"], filtered.map(c => [c.name, c.email, c.phone, c.orderCount, c.totalSpent, c.lastPurchaseAt, c.createdAt]))} className="h-10 rounded-xl border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="h-10 rounded-xl bg-slate-900 px-4 font-semibold text-white hover:bg-slate-700"><Plus className="mr-2 h-4 w-4" /> Add customer</Button></DialogTrigger>
           <DialogContent className="rounded-2xl border-slate-200 bg-white p-6 text-slate-900 shadow-2xl">
@@ -97,9 +99,9 @@ export default function CustomersView() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>} />
+        </Dialog></>} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="stat-grid">
         <StatTile label="Total customers" value={customers.length.toLocaleString("en-PK")} hint={`${stats.active} bought in the last 30 days`} icon={Users} />
         <StatTile label="Lifetime revenue" value={moneyWhole(stats.spend)} hint={`${stats.orders.toLocaleString("en-PK")} orders from customers`} icon={Wallet} tone="bg-indigo-50 text-indigo-600" />
         <StatTile label="Avg. lifetime value" value={moneyWhole(stats.avg)} hint="per customer" icon={TrendingUp} tone="bg-orange-50 text-orange-600" />

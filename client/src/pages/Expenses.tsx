@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, Layers, Loader2, Plus, Receipt, TrendingDown, Wallet } from "lucide-react";
+import { CalendarDays, Download, Layers, Loader2, Plus, Receipt, TrendingDown, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { moneyWhole } from "@/lib/format";
+import { downloadCsv } from "@/lib/csv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -68,7 +69,8 @@ export default function ExpensesView() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Expenses" description="Track operating costs and see where the money goes." actions={
+      <PageHeader title="Expenses" description="Track operating costs and see where the money goes." actions={<>
+        <Button variant="outline" onClick={() => downloadCsv("expenses", ["Date", "Category", "Notes", "Amount"], filtered.map(e => [e.expenseDate, e.category, e.notes, e.amount]))} className="h-10 rounded-xl border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="h-10 rounded-xl bg-slate-900 px-4 font-semibold text-white hover:bg-slate-700"><Plus className="mr-2 h-4 w-4" /> Add expense</Button></DialogTrigger>
           <DialogContent className="rounded-2xl border-slate-200 bg-white p-6 text-slate-900 shadow-2xl">
@@ -89,9 +91,9 @@ export default function ExpensesView() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>} />
+        </Dialog></>} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="stat-grid">
         <StatTile label="This month" value={moneyWhole(stats.month)} hint={delta === null ? "no prior month to compare" : `${delta >= 0 ? "▲" : "▼"} ${Math.abs(delta).toFixed(0)}% vs last month`} icon={Wallet} tone="bg-rose-50 text-rose-600" />
         <StatTile label="Last month" value={moneyWhole(stats.last)} hint="total spend" icon={CalendarDays} tone="bg-indigo-50 text-indigo-600" />
         <StatTile label="Top category" value={stats.top ? stats.top[0] : "—"} hint={stats.top ? `${moneyWhole(stats.top[1])} this month` : "no spend this month"} icon={Layers} tone="bg-orange-50 text-orange-600" />

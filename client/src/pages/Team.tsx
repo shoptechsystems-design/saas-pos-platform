@@ -76,7 +76,7 @@ export default function TeamView() {
           </DialogContent>
         </Dialog>} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="stat-grid cols-3">
         <StatTile label="Team members" value={team.length} hint="with access to this workspace" icon={Users} />
         <StatTile label="Administrators" value={admins} hint="full access" icon={ShieldCheck} tone="bg-indigo-50 text-indigo-600" />
         <StatTile label="Staff" value={team.length - admins} hint="cashiers & inventory managers" icon={UserCog} tone="bg-orange-50 text-orange-600" />
