@@ -362,3 +362,14 @@
 [data-radix-portal] [class*="border-emerald"] {
   border-color: #cbd5e1 !important;
 }
+
+/* Landing page motion */
+@keyframes lp-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -12px; } }
+@keyframes lp-drift { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(40px, 30px, 0); } }
+.lp-float { animation: lp-float 6s ease-in-out infinite; }
+.lp-float-slow { animation: lp-float 8s ease-in-out infinite 1s; }
+.lp-aurora { animation: lp-drift 16s ease-in-out infinite; }
+.lp-aurora-2 { animation: lp-drift 20s ease-in-out infinite reverse; }
+@media (prefers-reduced-motion: reduce) {
+  .lp-float, .lp-float-slow, .lp-aurora, .lp-aurora-2 { animation: none; }
+}

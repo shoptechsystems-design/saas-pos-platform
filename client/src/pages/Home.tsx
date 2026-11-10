@@ -43,6 +43,9 @@ import {
   Bell
 } from "lucide-react";
 import { toast } from "sonner";
+import { money } from "@/lib/format";
+import Landing from "./Landing";
+import AuthScreen from "./Auth";
 
 export default function Home() {
   const { user, loading, logout, refresh } = useAuth();
@@ -79,7 +82,7 @@ export default function Home() {
 
   if (!user) {
     return publicView === "home"
-      ? <PublicHome onLogin={() => { setAuthMode("login"); setPublicView("auth"); }} onRegister={() => { setAuthMode("register"); setPublicView("auth"); }} />
+      ? <Landing onLogin={() => { setAuthMode("login"); setPublicView("auth"); }} onRegister={() => { setAuthMode("register"); setPublicView("auth"); }} />
       : <AuthScreen initialMode={authMode} onBack={() => setPublicView("home")} onAuthenticated={refresh} />;
   }
 
@@ -120,22 +123,22 @@ export default function Home() {
   return (
     <div className="omnipos-app min-h-screen bg-[#f8fafc] text-[#0f172a] flex">
       {/* Grouped premium sidebar */}
-      <aside className={`omnipos-sidebar shrink-0 border-r border-slate-200 bg-white flex flex-col transition-[width] duration-300 max-[767px]:w-[84px] ${sidebarCollapsed ? "w-[84px]" : "w-[280px]"}`}>
-        <div className={`flex h-[88px] items-center border-b border-slate-100 ${sidebarCollapsed ? "justify-center px-3" : "gap-3 px-5"}`}>
+      <aside className={`omnipos-sidebar shrink-0 border-r border-white/5 bg-[#0b1220] text-slate-300 flex flex-col transition-[width] duration-300 max-[767px]:w-[84px] ${sidebarCollapsed ? "w-[84px]" : "w-[280px]"}`}>
+        <div className={`flex h-[88px] items-center border-b border-white/10 ${sidebarCollapsed ? "justify-center px-3" : "gap-3 px-5"}`}>
           {tenantSettings?.logoUrl ? (
             <img src={tenantSettings.logoUrl.startsWith('/') ? tenantSettings.logoUrl : tenantSettings.logoUrl} alt="Store logo" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl object-cover shadow-[0_8px_18px_rgba(15,23,42,0.16)] border border-slate-200 bg-white" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
           ) : (
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0f172a] text-white font-black text-sm shadow-[0_8px_18px_rgba(15,23,42,0.16)]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#14b8a6] to-[#0f766e] text-white font-black text-sm shadow-[0_8px_24px_rgba(20,184,166,0.35)]">
               {tenantSettings?.name ? tenantSettings.name.charAt(0).toUpperCase() : "OP"}
             </div>
           )}
-          {!sidebarCollapsed && <div className="min-w-0 max-[767px]:hidden"><p className="truncate text-[15px] font-black tracking-[-0.02em] text-[#0f172a]">{businessName}</p><div className="mt-1 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#0f766e]" /><span className="truncate text-[11px] font-bold text-[#0f766e]">{currentRole}</span></div></div>}
+          {!sidebarCollapsed && <div className="min-w-0 max-[767px]:hidden"><p className="truncate text-[15px] font-bold tracking-[-0.01em] text-white">{businessName}</p><div className="mt-1 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#2dd4bf]" /><span className="truncate text-[11px] font-semibold text-[#2dd4bf]">{currentRole}</span></div></div>}
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-6">
           {navGroups.map(group => (
             <div key={group.label} className="mb-7 last:mb-0">
-              {!sidebarCollapsed && <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 max-[767px]:hidden">{group.label}</p>}
+              {!sidebarCollapsed && <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 max-[767px]:hidden">{group.label}</p>}
               <div className="space-y-1.5">
                 {group.items.map(item => {
                   const Icon = item.icon;
@@ -145,10 +148,10 @@ export default function Home() {
                       key={item.id}
                       onClick={() => setActiveTab(item.id)}
                       aria-label={item.label}
-                      className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-[13px] font-bold transition-all duration-200 max-[767px]:justify-center ${sidebarCollapsed ? "justify-center" : ""} ${active ? "bg-[#0f172a] text-white shadow-[0_10px_20px_rgba(15,23,42,0.14)]" : "text-slate-500 hover:bg-slate-50 hover:text-[#0f172a]"}`}
+                      className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-[13px] font-bold transition-all duration-200 max-[767px]:justify-center ${sidebarCollapsed ? "justify-center" : ""} ${active ? "bg-white/10 text-white ring-1 ring-white/10" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}
                     >
-                      {active && <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-[#f9735b]" />}
-                      <Icon className={`h-[18px] w-[18px] shrink-0 transition-colors ${active ? "text-[#f9735b]" : "text-slate-400 group-hover:text-[#0f766e]"}`} />
+                      {active && <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-[#2dd4bf]" />}
+                      <Icon className={`h-[18px] w-[18px] shrink-0 transition-colors ${active ? "text-[#2dd4bf]" : "text-slate-500 group-hover:text-[#2dd4bf]"}`} />
                       {!sidebarCollapsed && <span className="truncate max-[767px]:hidden">{item.label}</span>}
                       {!sidebarCollapsed && item.id === "superadmin" && <span className={`ml-auto rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wider max-[767px]:hidden ${active ? "bg-white/10 text-white/80" : "bg-[#fff1ec] text-[#c2412d]"}`}>Admin</span>}
                     </button>
@@ -159,13 +162,13 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="border-t border-slate-100 p-3">
-          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className={`mb-2 flex h-9 w-full items-center gap-2 rounded-xl px-3 text-[11px] font-black text-slate-400 transition hover:bg-slate-50 hover:text-[#0f172a] ${sidebarCollapsed ? "justify-center px-0" : ""}`} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}><SlidersHorizontal className={`h-4 w-4 transition-transform ${sidebarCollapsed ? "rotate-180" : ""}`} />{!sidebarCollapsed && <span className="max-[767px]:hidden">Collapse</span>}</button>
-          <div className={`flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-2.5 ${sidebarCollapsed ? "justify-center" : ""}`}>
-            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0f766e] text-xs font-black text-white"><span>{user.name?.charAt(0).toUpperCase()}</span><span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-slate-50 bg-[#f9735b]" /></div>
-            {!sidebarCollapsed && <div className="min-w-0 flex-1 max-[767px]:hidden"><p className="truncate text-xs font-black text-[#0f172a]">{user.name}</p><p className="truncate text-[10px] font-medium text-slate-500">{user.email}</p></div>}
+        <div className="border-t border-white/10 p-3">
+          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className={`mb-2 flex h-9 w-full items-center gap-2 rounded-xl px-3 text-[11px] font-bold text-slate-500 transition hover:bg-white/5 hover:text-white ${sidebarCollapsed ? "justify-center px-0" : ""}`} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}><SlidersHorizontal className={`h-4 w-4 transition-transform ${sidebarCollapsed ? "rotate-180" : ""}`} />{!sidebarCollapsed && <span className="max-[767px]:hidden">Collapse</span>}</button>
+          <div className={`flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-2.5 ${sidebarCollapsed ? "justify-center" : ""}`}>
+            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0f766e] text-xs font-black text-white"><span>{user.name?.charAt(0).toUpperCase()}</span><span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0b1220] bg-[#2dd4bf]" /></div>
+            {!sidebarCollapsed && <div className="min-w-0 flex-1 max-[767px]:hidden"><p className="truncate text-xs font-bold text-white">{user.name}</p><p className="truncate text-[10px] font-medium text-slate-400">{user.email}</p></div>}
           </div>
-          <Button variant="ghost" onClick={logout} className={`mt-2 h-10 w-full justify-start gap-2 rounded-xl text-slate-500 hover:bg-[#fff1ec] hover:text-[#c2412d] ${sidebarCollapsed ? "justify-center px-0" : "px-3"}`}><LogOut className="h-4 w-4" />{!sidebarCollapsed && <span className="text-xs font-bold max-[767px]:hidden">Sign Out</span>}</Button>
+          <Button variant="ghost" onClick={logout} className={`mt-2 h-10 w-full justify-start gap-2 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-300 ${sidebarCollapsed ? "justify-center px-0" : "px-3"}`}><LogOut className="h-4 w-4" />{!sidebarCollapsed && <span className="text-xs font-bold max-[767px]:hidden">Sign Out</span>}</Button>
         </div>
       </aside>
 
@@ -223,136 +226,6 @@ export default function Home() {
           )}
         </main>
       </div>
-    </div>
-  );
-}
-
-function PublicHome({ onLogin, onRegister }: { onLogin: () => void; onRegister: () => void }) {
-  return (
-    <div className="min-h-screen bg-[#f7f8fa] text-[#0f172a] selection:bg-[#0f172a] selection:text-white">
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
-        <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f172a] text-sm font-black text-white shadow-lg">OP</div><div><p className="font-black tracking-tight">OmniPOS</p><p className="hidden text-[11px] text-slate-500 sm:block">The commerce operating system</p></div></div>
-        <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-500 md:flex"><a href="#features" className="transition hover:text-slate-950">Platform</a><a href="#workflow" className="transition hover:text-slate-950">Workflow</a><a href="#security" className="transition hover:text-slate-950">Security</a></nav>
-        <div className="flex items-center gap-2 sm:gap-3"><button onClick={onLogin} className="hidden rounded-xl px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-white hover:text-slate-950 sm:inline-flex">Sign in</button><button onClick={onRegister} className="rounded-xl bg-[#0f172a] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-[#1e293b]">Start free</button></div>
-      </header>
-      <main>
-        <section className="mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-12 sm:px-8 lg:grid-cols-[0.94fr_1.06fr] lg:items-center lg:gap-20 lg:pb-28 lg:pt-20">
-          <div><div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]"><span className="h-2 w-2 rounded-full bg-[#f9735b]" /> Made for ambitious operators</div><h1 className="max-w-2xl text-5xl font-black leading-[0.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl">The calm operating system for your shop.</h1><p className="mt-7 max-w-xl text-lg leading-8 text-slate-500">OmniPOS brings checkout, inventory, customer relationships, and decisions into one beautifully clear workspace built for daily momentum.</p><div className="mt-9 flex flex-col gap-3 sm:flex-row"><button onClick={onRegister} className="inline-flex h-13 items-center justify-center gap-2 rounded-2xl bg-[#0f172a] px-6 text-sm font-black text-white shadow-xl shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-[#1e293b]">Create your workspace <ChevronRight className="h-4 w-4" /></button><button onClick={onLogin} className="inline-flex h-13 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">Sign in to demo</button></div><div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold text-slate-500"><span className="inline-flex items-center gap-2"><CheckCircle className="h-4 w-4 text-[#0f766e]" /> PKR-ready checkout</span><span className="inline-flex items-center gap-2"><CheckCircle className="h-4 w-4 text-[#0f766e]" /> Multi-tenant by design</span></div></div>
-          <div className="relative"><div className="absolute -inset-5 rounded-[2.5rem] bg-gradient-to-br from-[#dff4ef] via-transparent to-[#ffe5df] blur-2xl" /><div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-3 shadow-[0_30px_80px_-28px_rgba(15,23,42,0.35)] sm:p-5"><div className="flex items-center justify-between border-b border-slate-100 pb-4"><div className="flex items-center gap-2"><div className="h-7 w-7 rounded-lg bg-[#0f172a] text-center text-[10px] font-black leading-7 text-white">OP</div><span className="text-xs font-black">Operations overview</span></div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-500">Live workspace</span></div><div className="grid gap-3 py-4 sm:grid-cols-[1.15fr_0.85fr]"><div className="rounded-2xl bg-[#f7f8fa] p-4"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-500">Today at a glance</p><p className="mt-1 text-2xl font-black tracking-tight">Make every sale count</p></div><BarChart3 className="h-5 w-5 text-[#0f766e]" /></div><div className="mt-5 h-28 rounded-xl bg-white p-3"><div className="flex h-full items-end gap-2"><span className="h-8 flex-1 rounded-t-md bg-[#d5eee8]" /><span className="h-14 flex-1 rounded-t-md bg-[#b9e4db]" /><span className="h-11 flex-1 rounded-t-md bg-[#8bcfc3]" /><span className="h-20 flex-1 rounded-t-md bg-[#0f766e]" /><span className="h-16 flex-1 rounded-t-md bg-[#f9735b]" /><span className="h-24 flex-1 rounded-t-md bg-[#0f172a]" /></div></div></div><div className="space-y-3"><div className="rounded-2xl bg-[#0f172a] p-4 text-white"><div className="flex items-center justify-between"><ShoppingBag className="h-5 w-5 text-[#f9735b]" /><span className="text-[10px] font-bold text-slate-400">POS terminal</span></div><p className="mt-6 text-lg font-black">Fast, focused checkout</p><p className="mt-1 text-xs leading-5 text-slate-400">Search products, build the order, finish confidently.</p></div><div className="rounded-2xl border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><Package className="h-5 w-5 text-[#0f766e]" /><span className="text-[10px] font-bold text-slate-400">Inventory</span></div><p className="mt-4 text-sm font-black">Always know what moves</p><div className="mt-3 h-2 rounded-full bg-slate-100"><div className="h-2 w-3/4 rounded-full bg-[#0f766e]" /></div></div></div></div></div></div>
-        </section>
-        <section id="features" className="border-y border-slate-200 bg-white"><div className="mx-auto grid max-w-7xl gap-px bg-slate-200 px-5 sm:px-8 md:grid-cols-3"><div className="bg-white px-1 py-9 md:px-4"><Zap className="h-5 w-5 text-[#f9735b]" /><h3 className="mt-5 text-lg font-black">Checkout without friction</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">A cashier experience shaped around speed, search, smart carts, and clean receipts.</p></div><div className="bg-white px-1 py-9 md:px-8"><ShieldCheck className="h-5 w-5 text-[#0f766e]" /><h3 className="mt-5 text-lg font-black">Every business stays separate</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">Tenants, roles, products, customers, and reports live inside secure business boundaries.</p></div><div className="bg-white px-1 py-9 md:px-8"><Receipt className="h-5 w-5 text-[#0f172a]" /><h3 className="mt-5 text-lg font-black">The complete picture</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">Turn daily transactions into a clear view of revenue, stock, loyalty, and operations.</p></div></div></section>
-        <section id="workflow" className="mx-auto grid max-w-7xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:py-28"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-[#0f766e]">One connected workflow</p><h2 className="mt-4 max-w-md text-4xl font-black leading-tight tracking-tight">From first scan to next decision.</h2><p className="mt-5 max-w-md leading-7 text-slate-500">Give every role the right view without giving them the whole maze. OmniPOS keeps the operation clear for owners, cashiers, and inventory teams.</p></div><div className="grid gap-4 sm:grid-cols-2"><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><span className="text-sm font-black text-[#f9735b]">01</span><h3 className="mt-10 text-xl font-black">Sell</h3><p className="mt-2 text-sm leading-6 text-slate-500">Search by name, SKU, or barcode. Apply discounts. Collect cash, card, or transfer.</p></div><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><span className="text-sm font-black text-[#0f766e]">02</span><h3 className="mt-10 text-xl font-black">Replenish</h3><p className="mt-2 text-sm leading-6 text-slate-500">Catch low stock early, adjust inventory, and create purchase orders before momentum slows.</p></div><div id="security" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:col-span-2"><span className="text-sm font-black text-[#0f172a]">03</span><h3 className="mt-10 text-xl font-black">Understand</h3><p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">See the health of your business in one view with reporting that respects tenant boundaries and role permissions.</p></div></div></section>
-        <section className="mx-5 mb-16 overflow-hidden rounded-[2rem] bg-[#0f172a] px-6 py-12 text-white sm:mx-8 sm:px-12 lg:mx-auto lg:max-w-7xl lg:py-16"><div className="flex flex-col justify-between gap-8 md:flex-row md:items-end"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-[#f9735b]">Ready when you are</p><h2 className="mt-4 max-w-xl text-4xl font-black leading-tight tracking-tight">Make your next shift feel lighter.</h2></div><button onClick={onRegister} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-[#0f172a] transition hover:bg-[#fff1ec]">Create workspace <ChevronRight className="h-4 w-4" /></button></div></section>
-      </main>
-      <footer className="mx-auto flex max-w-7xl flex-col gap-3 px-5 pb-8 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-8"><p>© 2026 OmniPOS. Commerce operations, clarified.</p><p>Secure multi-tenant POS for modern businesses.</p></footer>
-    </div>
-  );
-}
-
-function AuthScreen({ initialMode = "login", onBack, onAuthenticated }: { initialMode?: "login" | "register"; onBack?: () => void; onAuthenticated: () => Promise<unknown> }) {
-  const authUtils = trpc.useUtils();
-  const [mode, setMode] = useState<"login" | "register">(initialMode);
-  const [name, setName] = useState("");
-  const [businessName, setBusinessName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: async result => {
-      authUtils.auth.me.setData(undefined, result.user);
-      toast.success("Welcome back to OmniPOS.");
-      await onAuthenticated();
-    },
-    onError: error => toast.error(error.message),
-  });
-  const registerMutation = trpc.auth.register.useMutation({
-    onSuccess: async result => {
-      authUtils.auth.me.setData(undefined, result.user);
-      toast.success("Workspace created. Welcome to OmniPOS.");
-      await onAuthenticated();
-    },
-    onError: error => toast.error(error.message),
-  });
-
-  const isPending = loginMutation.isPending || registerMutation.isPending;
-  const submit = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (mode === "register") {
-      if (password !== confirmPassword) {
-        toast.error("Passwords do not match.");
-        return;
-      }
-      registerMutation.mutate({ name, businessName, email, password });
-      return;
-    }
-    loginMutation.mutate({ email, password });
-  };
-
-  return (
-    <div className="min-h-screen bg-[#102c36] text-[#F8F3E7] grid lg:grid-cols-[1.1fr_0.9fr] selection:bg-[#0f172a] selection:text-[#07111F]">
-      <section className="hidden lg:flex relative overflow-hidden p-14 flex-col justify-between bg-[radial-gradient(circle_at_12%_10%,rgba(15,118,110,0.18),transparent_34%),linear-gradient(145deg,#0a1f2a_0%,#07111f_55%,#1e293b_100%)] border-r border-[#1d3b3f]">
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-slate-400/20" />
-        <div className="absolute right-16 top-24 h-36 w-36 rounded-full border border-amber-300/20" />
-        <div className="relative flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-[#0f172a] text-[#07111F] flex items-center justify-center font-black shadow-xl shadow-slate-900/20">OP</div>
-          <div><p className="font-black tracking-tight text-lg">OmniPOS</p><p className="text-xs text-slate-300/70">Commerce operations, clarified.</p></div>
-        </div>
-        <div className="relative max-w-xl">
-          <Badge className="bg-amber-300/10 text-amber-200 border-amber-300/20 rounded-full px-3 py-1 mb-6">Built for modern retail teams</Badge>
-          <h1 className="text-5xl font-black leading-[1.04] tracking-tight">Sell with confidence. Run the whole business from one calm workspace.</h1>
-          <p className="mt-6 text-base leading-7 text-[#b6c8c5] max-w-lg">A focused POS terminal, live inventory, customer loyalty, and clean financial reporting designed for fast-moving shops and cafés.</p>
-          <div className="mt-9 grid grid-cols-3 gap-3 max-w-lg">
-            <div className="rounded-2xl border border-[#24454a] bg-[#0d2630]/70 p-4"><Zap className="h-5 w-5 text-amber-300" /><p className="mt-3 text-xs text-[#b6c8c5]">Fast checkout</p></div>
-            <div className="rounded-2xl border border-[#24454a] bg-[#0d2630]/70 p-4"><ShieldCheck className="h-5 w-5 text-[#0f766e]" /><p className="mt-3 text-xs text-[#b6c8c5]">Tenant-safe</p></div>
-            <div className="rounded-2xl border border-[#24454a] bg-[#0d2630]/70 p-4"><BarChart3 className="h-5 w-5 text-rose-300" /><p className="mt-3 text-xs text-[#b6c8c5]">Actionable data</p></div>
-          </div>
-        </div>
-        <p className="relative text-xs text-[#78938f]">Secure workspace access for admins, cashiers, and inventory managers.</p>
-      </section>
-
-      <section className="flex items-center justify-center p-6 sm:p-10 bg-[#f6f2e8] text-[#12312f]">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-3 mb-10"><div className="h-10 w-10 rounded-xl bg-[#0f172a] text-[#f8f3e7] flex items-center justify-center font-black">OP</div><span className="font-black text-xl">OmniPOS</span></div>
-          {onBack && <button type="button" onClick={onBack} className="mb-6 inline-flex items-center gap-2 text-xs font-black text-[#5b706b] transition hover:text-[#0f172a]">← Back to overview</button>}
-          <div className="mb-8"><p className="text-sm font-bold uppercase tracking-[0.18em] text-[#0f766e]">{mode === "login" ? "Welcome back" : "Start your workspace"}</p><h2 className="mt-2 text-3xl font-black tracking-tight">{mode === "login" ? "Sign in to OmniPOS" : "Create your business account"}</h2><p className="mt-2 text-sm text-[#5b706b]">{mode === "login" ? "Use your OmniPOS email and password to continue." : "Set up your PKR-ready POS workspace in a few steps."}</p></div>
-          <div className="grid grid-cols-2 rounded-2xl bg-[#e8e7dc] p-1 mb-7">
-            <button type="button" onClick={() => setMode("login")} className={`rounded-xl py-2.5 text-sm font-bold transition ${mode === "login" ? "bg-white text-[#12312f] shadow-sm" : "text-[#71827d]"}`}>Sign in</button>
-            <button type="button" onClick={() => setMode("register")} className={`rounded-xl py-2.5 text-sm font-bold transition ${mode === "register" ? "bg-white text-[#12312f] shadow-sm" : "text-[#71827d]"}`}>Register</button>
-          </div>
-          <form onSubmit={submit} className="space-y-4">
-            {mode === "register" && <>
-              <div><label className="text-xs font-bold text-[#35524c]">Your name</label><Input value={name} onChange={event => setName(event.target.value)} required placeholder="Ayesha Khan" className="mt-1 h-12 rounded-xl border-[#c8d4cc] bg-white text-[#12312f] placeholder:text-[#9aa9a3]" /></div>
-              <div><label className="text-xs font-bold text-[#35524c]">Business name</label><Input value={businessName} onChange={event => setBusinessName(event.target.value)} required placeholder="Khan Mart & Café" className="mt-1 h-12 rounded-xl border-[#c8d4cc] bg-white text-[#12312f] placeholder:text-[#9aa9a3]" /></div>
-            </>}
-            <div><label className="text-xs font-bold text-[#35524c]">Email address</label><Input type="email" value={email} onChange={event => setEmail(event.target.value)} required placeholder="you@business.com" className="mt-1 h-12 rounded-xl border-[#c8d4cc] bg-white text-[#12312f] placeholder:text-[#9aa9a3]" /></div>
-            <div>
-              <label className="text-xs font-bold text-[#35524c]">Password</label>
-              <div className="relative mt-1">
-                <Input type={showPassword ? "text" : "password"} value={password} onChange={event => setPassword(event.target.value)} required minLength={mode === "register" ? 8 : 1} placeholder={mode === "register" ? "At least 8 characters" : "Enter your password"} className="h-12 rounded-xl border-[#c8d4cc] bg-white pr-11 text-[#12312f] placeholder:text-[#9aa9a3]" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#12312f]">
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            {mode === "register" && (
-              <div>
-                <label className="text-xs font-bold text-[#35524c]">Confirm password</label>
-                <div className="relative mt-1">
-                  <Input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} required minLength={8} placeholder="Repeat password" className="h-12 rounded-xl border-[#c8d4cc] bg-white pr-11 text-[#12312f] placeholder:text-[#9aa9a3]" />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#12312f]">
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-            )}
-            <Button type="submit" disabled={isPending} className="w-full h-12 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-black shadow-lg shadow-slate-900/10">{isPending ? "Please wait..." : mode === "login" ? "Sign in to workspace" : "Create PKR workspace"}</Button>
-          </form>
-          <div className="mt-7 flex items-start gap-3 rounded-2xl border border-[#cbd7ce] bg-[#eef1e8] p-4"><ShieldCheck className="h-5 w-5 mt-0.5 text-[#0f766e] shrink-0" /><p className="text-xs leading-5 text-[#5b706b]">Direct OmniPOS accounts use secure server-side password hashing and an httpOnly session. No external Manus sign-in is required for this workspace.</p></div>
-        </div>
-      </section>
     </div>
   );
 }
@@ -496,7 +369,7 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
           ))}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:h-[calc(100vh-260px)] max-h-[680px] overflow-y-auto pr-1 pb-1">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:h-[calc(100vh-260px)] max-h-[680px] overflow-y-auto pr-1 pb-1 auto-rows-max content-start">
           {products.map(product => (
             <Card
               key={product.id}
@@ -515,7 +388,7 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
                 <p className="text-xs text-[#9eb4ae] mt-0.5">SKU: {product.sku}</p>
               </div>
               <div className="mt-4 flex items-center justify-between">
-                <span className="font-bold text-[#0f766e]">₨{Number(product.sellingPrice).toFixed(2)}</span>
+                <span className="font-bold text-[#0f766e]">{money(Number(product.sellingPrice))}</span>
                 <Badge variant={product.stockQuantity <= product.minStockLevel ? "destructive" : "secondary"} className="text-[10px] rounded-lg">
                   Stock: {product.stockQuantity}
                 </Badge>
@@ -556,7 +429,7 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
                 <div key={item.product.id} className="flex items-center justify-between bg-[#07111F] p-3.5 rounded-xl border border-[#203b42]/80 shadow-sm">
                   <div className="flex-1 min-w-0 pr-3">
                     <p className="text-sm font-semibold text-[#d6e2db] truncate">{item.product.name}</p>
-                    <p className="text-xs text-[#0f766e] mt-1">₨{Number(item.product.sellingPrice).toFixed(2)} each</p>
+                    <p className="text-xs text-[#0f766e] mt-1">{money(Number(item.product.sellingPrice))} each</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => updateQuantity(item.product.id, -1)} className="h-7 w-7 rounded-lg bg-slate-800 flex items-center justify-center text-[#c7d8d1] hover:bg-slate-700 font-bold">-</button>
@@ -595,11 +468,11 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
             </div>
 
             <div className="space-y-1.5 pt-3 border-t border-[#203b42] text-sm">
-              <div className="flex justify-between text-[#9eb4ae]"><span>Subtotal</span><span>₨{subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between text-[#9eb4ae]"><span>Tax (18%)</span><span>₨{tax.toFixed(2)}</span></div>
+              <div className="flex justify-between text-[#9eb4ae]"><span>Subtotal</span><span>{money(subtotal)}</span></div>
+              <div className="flex justify-between text-[#9eb4ae]"><span>Tax (18%)</span><span>{money(tax)}</span></div>
               <div className="flex justify-between font-extrabold text-xl text-[#f8f3e7] pt-2 border-t border-[#203b42]">
                 <span>TOTAL</span>
-                <span className="text-[#0f766e]">₨{total.toFixed(2)}</span>
+                <span className="text-[#0f766e]">{money(total)}</span>
               </div>
             </div>
 
@@ -608,7 +481,7 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
               disabled={cart.length === 0}
               className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-[#f8f3e7] font-bold h-12 shadow-lg shadow-slate-900/10 rounded-xl text-base mt-2"
             >
-              Pay ₨{total.toFixed(2)}
+              Pay {money(total)}
             </Button>
           </div>
         </div>
@@ -625,7 +498,7 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
           <div className="space-y-5 pt-3">
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center shadow-sm">
               <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Amount Due</p>
-              <h3 className="text-3xl font-black text-[#0f172a] mt-1">₨{total.toFixed(2)}</h3>
+              <h3 className="text-3xl font-black text-[#0f172a] mt-1">{money(total)}</h3>
             </div>
 
             <div className="space-y-2">
@@ -656,7 +529,7 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
                 />
                 <div className="flex justify-between text-sm pt-1">
                   <span className="text-slate-500 font-medium">Change Due:</span>
-                  <span className="font-bold text-[#0f766e]">₨{changeDue.toFixed(2)}</span>
+                  <span className="font-bold text-[#0f766e]">{money(changeDue)}</span>
                 </div>
               </div>
             )}
@@ -691,10 +564,10 @@ function POSTerminalView({ setActiveTab }: { setActiveTab: (tab: string) => void
                 <p className="text-[10px] text-slate-400">{new Date().toLocaleString()}</p>
               </div>
               <div className="space-y-1.5">
-                <div className="flex justify-between text-slate-600"><span>Subtotal</span><span>₨{checkoutResult.subtotal}</span></div>
-                <div className="flex justify-between text-slate-600"><span>Tax (18%)</span><span>₨{checkoutResult.tax}</span></div>
-                <div className="flex justify-between font-bold text-sm pt-2 border-t border-slate-200 text-[#0f172a]"><span>TOTAL</span><span>₨{checkoutResult.total}</span></div>
-                <div className="flex justify-between text-[#0f766e] pt-1 font-semibold"><span>Change Returned</span><span>₨{checkoutResult.change}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Subtotal</span><span>{money(checkoutResult.subtotal)}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Tax (18%)</span><span>{money(checkoutResult.tax)}</span></div>
+                <div className="flex justify-between font-bold text-sm pt-2 border-t border-slate-200 text-[#0f172a]"><span>TOTAL</span><span>{money(checkoutResult.total)}</span></div>
+                <div className="flex justify-between text-[#0f766e] pt-1 font-semibold"><span>Change Returned</span><span>{money(checkoutResult.change)}</span></div>
               </div>
               <div className="text-center pt-3 border-t border-slate-200 text-[11px] text-slate-500 leading-relaxed font-sans">
                 {checkoutResult.footer}
@@ -724,16 +597,16 @@ function TenantDashboardView() {
   const healthPercent = activeProducts ? Math.max(0, Math.min(100, ((activeProducts - lowStockCount) / activeProducts) * 100)) : 0;
 
   const metricCards = [
-    { label: "Today's sales", value: `₨${todaySales.toFixed(2)}`, helper: `${todayOrders} orders completed`, accent: "text-[#0f766e]", icon: Receipt },
-    { label: "Month-to-date revenue", value: `₨${monthSales.toFixed(2)}`, helper: "Current billing period", accent: "text-[#0f172a]", icon: TrendingUp },
-    { label: "Average order value", value: `₨${averageOrder.toFixed(2)}`, helper: "Based on today's sales", accent: "text-[#f9735b]", icon: ShoppingBag },
+    { label: "Today's sales", value: money(todaySales), helper: `${todayOrders} orders completed`, accent: "text-[#0f766e]", icon: Receipt },
+    { label: "Month-to-date revenue", value: money(monthSales), helper: "Current billing period", accent: "text-[#0f172a]", icon: TrendingUp },
+    { label: "Average order value", value: money(averageOrder), helper: "Based on today's sales", accent: "text-[#f9735b]", icon: ShoppingBag },
     { label: "Customer directory", value: registeredCustomers.toString(), helper: `${lowStockCount} low-stock alerts`, accent: "text-[#0f766e]", icon: Users },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0f766e]">Business overview</p><h3 className="mt-2 text-3xl font-black tracking-[-0.04em] text-[#0f172a]">Good morning, Aura Coffee.</h3><p className="mt-1 text-sm text-slate-500">Here’s what is happening across your workspace today.</p></div>
+        <div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0f766e]">Business overview</p><h3 className="mt-2 text-3xl font-black tracking-[-0.02em] text-[#0f172a]">Good morning, Aura Coffee.</h3><p className="mt-1 text-sm text-slate-500">Here’s what is happening across your workspace today.</p></div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500">PKR • Live data</div>
       </div>
 
@@ -742,13 +615,13 @@ function TenantDashboardView() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.45fr_0.85fr]">
-        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="flex items-start justify-between"><div><p className="text-xs font-bold text-slate-500">Revenue pulse</p><h4 className="mt-1 text-xl font-black tracking-tight text-[#0f172a]">Keep your operation in view.</h4></div><Badge className="rounded-full border border-[#d5eee8] bg-[#effaf7] text-[#0f766e]">Today</Badge></div><div className="mt-8 grid h-40 grid-cols-7 items-end gap-3 rounded-2xl bg-[#f8fafc] p-4">{[0.34,0.52,0.43,0.68,0.58,0.78, Math.max(0.12, Math.min(0.95, todaySales / Math.max(monthSales / 24, 1) / 10))].map((height, index) => <div key={index} className="group flex h-full flex-col justify-end gap-2"><div className={`w-full rounded-t-lg transition ${index === 6 ? "bg-[#0f172a]" : index === 4 ? "bg-[#f9735b]" : "bg-[#b9e4db]"}`} style={{ height: `${Math.round(height * 100)}%` }} /><span className="text-center text-[9px] font-bold text-slate-400">{["M","T","W","T","F","S","S"][index]}</span></div>)}</div><div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4"><div><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Month-to-date</p><p className="mt-1 text-lg font-black text-[#0f172a]">₨{monthSales.toFixed(2)}</p></div><div className="text-right"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Orders today</p><p className="mt-1 text-lg font-black text-[#0f766e]">{todayOrders}</p></div></div></Card>
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="flex items-start justify-between"><div><p className="text-xs font-bold text-slate-500">Revenue pulse</p><h4 className="mt-1 text-xl font-black tracking-tight text-[#0f172a]">Keep your operation in view.</h4></div><Badge className="rounded-full border border-[#d5eee8] bg-[#effaf7] text-[#0f766e]">Today</Badge></div><div className="mt-8 grid h-40 grid-cols-7 items-end gap-3 rounded-2xl bg-[#f8fafc] p-4">{[0.34,0.52,0.43,0.68,0.58,0.78, Math.max(0.12, Math.min(0.95, todaySales / Math.max(monthSales / 24, 1) / 10))].map((height, index) => <div key={index} className="group flex h-full flex-col justify-end gap-2"><div className={`w-full rounded-t-lg transition ${index === 6 ? "bg-[#0f172a]" : index === 4 ? "bg-[#f9735b]" : "bg-[#b9e4db]"}`} style={{ height: `${Math.round(height * 100)}%` }} /><span className="text-center text-[9px] font-bold text-slate-400">{["M","T","W","T","F","S","S"][index]}</span></div>)}</div><div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4"><div><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Month-to-date</p><p className="mt-1 text-lg font-black text-[#0f172a]">{money(monthSales)}</p></div><div className="text-right"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Orders today</p><p className="mt-1 text-lg font-black text-[#0f766e]">{todayOrders}</p></div></div></Card>
         <Card className="rounded-2xl border-slate-200 bg-[#0f172a] p-6 text-white shadow-[0_18px_35px_rgba(15,23,42,0.18)]"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">Operational health</p><h4 className="mt-1 text-xl font-black">Inventory readiness</h4></div><Package className="h-5 w-5 text-[#f9735b]" /></div><p className="mt-10 text-4xl font-black">{Math.round(healthPercent)}<span className="text-xl text-slate-400">%</span></p><p className="mt-1 text-xs text-slate-400">products above minimum stock</p><div className="mt-7 h-2 rounded-full bg-white/10"><div className="h-2 rounded-full bg-[#f9735b]" style={{ width: `${healthPercent}%` }} /></div><div className="mt-7 space-y-3 text-xs"><div className="flex items-center justify-between"><span className="text-slate-400">Active products</span><span className="font-black">{activeProducts}</span></div><div className="flex items-center justify-between"><span className="text-slate-400">Low-stock alerts</span><span className="font-black text-[#f9735b]">{lowStockCount}</span></div><div className="flex items-center justify-between"><span className="text-slate-400">Customers tracked</span><span className="font-black">{registeredCustomers}</span></div></div></Card>
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-bold text-slate-500">Needs attention</p><h4 className="mt-1 text-lg font-black text-[#0f172a]">Low-stock alerts</h4></div><AlertTriangle className="h-5 w-5 text-[#f9735b]" /></div><div className="space-y-2">{lowStock.length === 0 ? <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">All inventory levels are optimal.</p> : lowStock.slice(0, 5).map(p => <div key={p.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 p-3"><div><p className="text-sm font-bold text-[#0f172a]">{p.name}</p><p className="mt-0.5 text-[11px] text-slate-500">SKU: {p.sku}</p></div><Badge className="rounded-full border border-[#ffd9d2] bg-[#fff1ec] text-[#c2412d]">{p.stockQuantity} left</Badge></div>)}</div></Card>
-        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-bold text-slate-500">Latest activity</p><h4 className="mt-1 text-lg font-black text-[#0f172a]">Recent transactions</h4></div><Receipt className="h-5 w-5 text-[#0f766e]" /></div><div className="space-y-2">{recentSales.length === 0 ? <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No sales recorded today.</p> : recentSales.slice(0, 5).map(item => <div key={item.sale.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-3"><div><p className="text-sm font-bold text-[#0f172a]">{item.sale.saleNumber}</p><p className="mt-0.5 text-[11px] text-slate-500">{item.customer?.name ?? "Walk-in Customer"} • {item.sale.paymentMethod.toUpperCase()}</p></div><span className="text-sm font-black text-[#0f766e]">₨{Number(item.sale.total).toFixed(2)}</span></div>)}</div></Card>
+        <Card className="rounded-2xl border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-bold text-slate-500">Latest activity</p><h4 className="mt-1 text-lg font-black text-[#0f172a]">Recent transactions</h4></div><Receipt className="h-5 w-5 text-[#0f766e]" /></div><div className="space-y-2">{recentSales.length === 0 ? <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No sales recorded today.</p> : recentSales.slice(0, 5).map(item => <div key={item.sale.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-3"><div><p className="text-sm font-bold text-[#0f172a]">{item.sale.saleNumber}</p><p className="mt-0.5 text-[11px] text-slate-500">{item.customer?.name ?? "Walk-in Customer"} • {item.sale.paymentMethod.toUpperCase()}</p></div><span className="text-sm font-black text-[#0f766e]">{money(Number(item.sale.total))}</span></div>)}</div></Card>
       </div>
     </div>
   );
@@ -1030,7 +903,7 @@ function ProductCatalogView() {
                       <span>{p.name}</span>
                     </td>
                     <td className="py-4 text-slate-500 font-mono text-xs">{p.sku}</td>
-                    <td className="py-4 font-bold text-[#0f766e]">₨{Number(p.sellingPrice).toFixed(2)}</td>
+                    <td className="py-4 font-bold text-[#0f766e]">{money(Number(p.sellingPrice))}</td>
                     <td className="py-4 font-semibold text-slate-700">{p.stockQuantity}</td>
                     <td className="py-4">
                       <Badge variant={p.stockQuantity <= p.minStockLevel ? "destructive" : "secondary"} className="rounded-lg">
@@ -1404,7 +1277,7 @@ function InventoryManagementView() {
                     <div key={v.id} className="flex items-center justify-between bg-slate-50 border border-slate-200 p-3 rounded-xl">
                       <div>
                         <p className="text-xs font-bold text-slate-900">{v.name}</p>
-                        <p className="text-[11px] text-slate-500">SKU: {v.sku} | Stock: {v.stockQuantity} | +₨{v.additionalPrice}</p>
+                        <p className="text-[11px] text-slate-500">SKU: {v.sku} | Stock: {v.stockQuantity} | +{money(v.additionalPrice)}</p>
                       </div>
                       <Button size="sm" variant="ghost" onClick={() => deleteVariantMutation.mutate({ id: v.id })} className="text-xs text-red-600 hover:bg-red-50">Delete</Button>
                     </div>
@@ -1556,7 +1429,7 @@ function CustomerDirectoryView() {
                     </td>
                     <td className="py-4 px-6 text-[#9eb4ae] text-xs font-mono">{c.email || "-"}</td>
                     <td className="py-4 px-6 text-[#9eb4ae] text-xs font-mono">{c.phone || "-"}</td>
-                    <td className="py-4 px-6 text-right font-black text-[#f8f3e7]">₨{Number(c.totalSpent).toFixed(2)}</td>
+                    <td className="py-4 px-6 text-right font-black text-[#f8f3e7]">{money(Number(c.totalSpent))}</td>
                   </tr>
                 ))
               )}
@@ -1656,7 +1529,7 @@ function SalesHistoryView() {
           <div className="flex items-center gap-3 bg-[#0d2630]/95 border border-[#203b42] p-3 rounded-2xl shadow-sm">
             <div>
               <p className="text-[10px] uppercase text-[#9eb4ae] font-bold">Filtered Revenue</p>
-              <p className="text-lg font-black text-[#0f766e]">₨{totalFilteredRevenue.toFixed(2)} ({filteredSales.length} orders)</p>
+              <p className="text-lg font-black text-[#0f766e]">{money(totalFilteredRevenue)} ({filteredSales.length} orders)</p>
             </div>
           </div>
         </div>
@@ -1753,7 +1626,7 @@ function SalesHistoryView() {
                         {item.sale.paymentMethod}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right font-black text-[#f8f3e7]">₨{Number(item.sale.total).toFixed(2)}</td>
+                    <td className="py-4 px-6 text-right font-black text-[#f8f3e7]">{money(Number(item.sale.total))}</td>
                     <td className="py-4 px-6 text-right text-[#9eb4ae] text-xs font-mono">{new Date(item.sale.createdAt).toLocaleString()}</td>
                   </tr>
                 ))
@@ -1854,7 +1727,7 @@ function ExpenseTrackerView() {
                 <tr key={e.id} className="hover:bg-[#07111F]/40 transition-colors">
                   <td className="py-4 font-semibold text-[#f8f3e7]">{e.category}</td>
                   <td className="py-4 text-[#9eb4ae]">{e.notes || "-"}</td>
-                  <td className="py-4 font-bold text-rose-300">₨{Number(e.amount).toFixed(2)}</td>
+                  <td className="py-4 font-bold text-rose-300">{money(Number(e.amount))}</td>
                   <td className="py-4 text-[#9eb4ae] text-xs">{new Date(e.expenseDate).toLocaleDateString()}</td>
                 </tr>
               ))}
@@ -2228,7 +2101,7 @@ function TenantSettingsView() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0f766e]">Workspace configuration</p>
-          <h3 className="mt-2 text-3xl font-black tracking-[-0.04em] text-[#0f172a]">Business Settings & Branding.</h3>
+          <h3 className="mt-2 text-3xl font-black tracking-[-0.02em] text-[#0f172a]">Business Settings & Branding.</h3>
           <p className="mt-1 text-sm text-slate-500">Customize store identity, logos, tax rules, receipt footers, and regional currency.</p>
         </div>
         <Badge className="w-fit rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm">Tenant Admin workspace</Badge>
@@ -2338,9 +2211,9 @@ function SuperAdminView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0f766e]">Platform administration</p><h3 className="mt-2 text-3xl font-black tracking-[-0.04em] text-[#0f172a]">Organization control center.</h3><p className="mt-1 text-sm text-slate-500">Monitor every workspace, keep access decisions clear, and protect tenant boundaries.</p></div><Badge className="w-fit rounded-full border border-[#d5eee8] bg-[#effaf7] text-[#0f766e]">Super Admin access</Badge></div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0f766e]">Platform administration</p><h3 className="mt-2 text-3xl font-black tracking-[-0.02em] text-[#0f172a]">Organization control center.</h3><p className="mt-1 text-sm text-slate-500">Monitor every workspace, keep access decisions clear, and protect tenant boundaries.</p></div><Badge className="w-fit rounded-full border border-[#d5eee8] bg-[#effaf7] text-[#0f766e]">Super Admin access</Badge></div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[{ label: "Total businesses", value: stats?.tenants ?? 0, helper: "Registered workspaces", icon: Store, accent: "text-[#0f172a]" }, { label: "Active businesses", value: stats?.activeTenants ?? activeCount, helper: `${activeRate}% of organizations`, icon: CheckCircle, accent: "text-[#0f766e]" }, { label: "Platform users", value: stats?.users ?? 0, helper: "Across all workspaces", icon: Users, accent: "text-[#f9735b]" }, { label: "Gross revenue", value: `₨${Number(stats?.revenue ?? 0).toFixed(2)}`, helper: "Completed transactions", icon: TrendingUp, accent: "text-[#0f766e]" }].map(({ label, value, helper, icon: Icon, accent }) => <Card key={label} className="rounded-2xl border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="flex items-start justify-between"><div><p className="text-xs font-bold text-slate-500">{label}</p><p className={`mt-3 text-2xl font-black tracking-tight ${accent}`}>{value}</p></div><div className="rounded-xl bg-slate-50 p-2.5"><Icon className="h-4 w-4 text-slate-500" /></div></div><p className="mt-4 text-[11px] font-medium text-slate-400">{helper}</p></Card>)}
+        {[{ label: "Total businesses", value: stats?.tenants ?? 0, helper: "Registered workspaces", icon: Store, accent: "text-[#0f172a]" }, { label: "Active businesses", value: stats?.activeTenants ?? activeCount, helper: `${activeRate}% of organizations`, icon: CheckCircle, accent: "text-[#0f766e]" }, { label: "Platform users", value: stats?.users ?? 0, helper: "Across all workspaces", icon: Users, accent: "text-[#f9735b]" }, { label: "Gross revenue", value: money(Number(stats?.revenue ?? 0)), helper: "Completed transactions", icon: TrendingUp, accent: "text-[#0f766e]" }].map(({ label, value, helper, icon: Icon, accent }) => <Card key={label} className="rounded-2xl border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"><div className="flex items-start justify-between"><div><p className="text-xs font-bold text-slate-500">{label}</p><p className={`mt-3 text-2xl font-black tracking-tight ${accent}`}>{value}</p></div><div className="rounded-xl bg-slate-50 p-2.5"><Icon className="h-4 w-4 text-slate-500" /></div></div><p className="mt-4 text-[11px] font-medium text-slate-400">{helper}</p></Card>)}
       </div>
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.8fr_1.2fr]">
         <Card className="rounded-2xl border-slate-200 bg-[#0f172a] p-6 text-white shadow-[0_18px_35px_rgba(15,23,42,0.18)]"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">Workspace health</p><h4 className="mt-1 text-xl font-black">Access distribution</h4></div><ShieldCheck className="h-5 w-5 text-[#f9735b]" /></div><p className="mt-9 text-4xl font-black">{activeRate}<span className="text-xl text-slate-400">%</span></p><p className="mt-1 text-xs text-slate-400">of organizations currently active</p><div className="mt-6 h-2 rounded-full bg-white/10"><div className="h-2 rounded-full bg-[#f9735b]" style={{ width: `${activeRate}%` }} /></div><div className="mt-7 space-y-3 text-xs"><div className="flex items-center justify-between"><span className="text-slate-400">Active</span><span className="font-black text-[#b9e4db]">{activeCount}</span></div><div className="flex items-center justify-between"><span className="text-slate-400">Suspended</span><span className="font-black text-[#f9735b]">{suspendedCount}</span></div><div className="flex items-center justify-between"><span className="text-slate-400">Pending approval</span><span className="font-black">{pendingCount}</span></div></div></Card>
