@@ -1,6 +1,8 @@
 # OmniPOS Mobile Application - API & Integration Contract
 
-Base URL: `https://omnipos-hjcb6uyk.manus.space/api/trpc`
+> **Preferred for mobile: the REST API in `MOBILE_API_CONTRACT.md` (`/api/v1`).** The tRPC contract below remains valid for the web portal.
+
+Base URL (tRPC): `https://omnipos-hjcb6uyk.manus.space/api/trpc`
 
 ## Authentication
 
