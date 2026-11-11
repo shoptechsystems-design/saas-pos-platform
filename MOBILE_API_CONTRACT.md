@@ -1,5 +1,7 @@
 # OmniPOS REST API v1 (mobile)
 
+The phone app that consumes this API lives in [`mobile/`](mobile/README.md) (Ionic React + Capacitor).
+
 Base URL: `https://<your-host>/api/v1` · Machine-readable spec: `GET /api/v1/openapi.json` · Health: `GET /api/v1/health`
 
 Every endpoint calls the **same server procedures as the portal**, so data, validation, role checks and tenant isolation are identical. The tenant always comes from the token; never send a tenant ID.

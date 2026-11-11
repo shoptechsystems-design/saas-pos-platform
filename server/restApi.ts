@@ -182,6 +182,17 @@ function sendError(res: Response, err: unknown) {
 export function registerRestApi(app: Express) {
   const api = Router();
 
+  // Mobile/web-preview clients call from another origin. Auth is a Bearer token (never cookies for
+  // these calls), so allowing any origin without credentials exposes nothing extra.
+  api.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept");
+    res.setHeader("Access-Control-Max-Age", "86400");
+    if (req.method === "OPTIONS") return res.sendStatus(204);
+    next();
+  });
+
   api.get("/health", (_req, res) => res.json({ data: { status: "ok", version: "v1", time: new Date().toISOString() } }));
 
   for (const route of routes) {

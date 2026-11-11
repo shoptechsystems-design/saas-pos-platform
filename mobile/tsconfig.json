@@ -1,0 +1,19 @@
+{
+  "include": ["src/**/*", "env.d.ts"],
+  "exclude": ["node_modules", "dist", "android", "ios"],
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "target": "ES2022",
+    "strict": true,
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "types": ["vite/client"],
+    "paths": { "~/*": ["./src/*"] }
+  }
+}

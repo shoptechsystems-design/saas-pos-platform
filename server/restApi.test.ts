@@ -19,6 +19,13 @@ describe("REST API v1", () => {
   });
   afterAll(() => new Promise<void>(r => server.close(() => r())));
 
+  it("answers CORS preflight for mobile/web clients", async () => {
+    const res = await fetch(`${base}/pos/checkout`, { method: "OPTIONS", headers: { Origin: "https://localhost", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "authorization,content-type" } });
+    expect(res.status).toBe(204);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+    expect(res.headers.get("access-control-allow-headers")).toContain("Authorization");
+  });
+
   it("serves health", async () => {
     const res = await fetch(`${base}/health`);
     expect(res.status).toBe(200);

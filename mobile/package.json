@@ -1,0 +1,51 @@
+{
+  "name": "omnipos-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "OmniPOS phone app: Ionic React + Capacitor (Android and iOS). Uses the portal's REST API (/api/v1).",
+  "scripts": {
+    "dev": "vite --host --port 5196 --strictPort",
+    "build": "tsc --noEmit && vite build",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "sync": "vite build && cap sync",
+    "assets": "capacitor-assets generate --iconBackgroundColor '#0F172A' --splashBackgroundColor '#FFFFFF'",
+    "android:open": "cap open android",
+    "android:apk": "bash scripts/android.sh apk",
+    "android:aab": "bash scripts/android.sh aab",
+    "android:run": "pnpm sync && cap run android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/keyboard": "^8.0.6",
+    "@capacitor/network": "^8.0.0",
+    "@capacitor/share": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
+    "@fontsource/inter": "^5.2.0",
+    "@ionic/react": "^9.0.10",
+    "@ionic/react-router": "^9.0.10",
+    "@tanstack/react-query": "5.90.2",
+    "ionicons": "^8.1.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-router": "^6.30.6",
+    "react-router-dom": "^6.30.6"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^8.6.0",
+    "@types/node": "^24.7.0",
+    "@types/react": "^19.2.1",
+    "@types/react-dom": "^19.2.1",
+    "@vitejs/plugin-react": "^5.0.4",
+    "typescript": "5.9.3",
+    "vite": "^7.1.7",
+    "vitest": "^2.1.9"
+  }
+}
