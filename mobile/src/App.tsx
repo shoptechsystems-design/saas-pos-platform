@@ -1,6 +1,6 @@
 import { IonApp, IonIcon, IonLabel, IonRouterOutlet, IonTabBar, IonTabButton, IonTabs, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
-import { cartOutline, cubeOutline, ellipsisHorizontalCircleOutline, homeOutline, receiptOutline } from "ionicons/icons";
+import { cart, cube, cubeOutline, grid, gridOutline, home, homeOutline, receipt, receiptOutline } from "ionicons/icons";
 import { useEffect, type ReactElement } from "react";
 import { Navigate, Route, useLocation } from "react-router-dom";
 import "@ionic/react/css/core.css";
@@ -64,11 +64,11 @@ function Shell() {
         <Route path="/" element={<Navigate to="/home" replace />} />
       </IonRouterOutlet>
       <IonTabBar slot="bottom" style={flow ? { display: "none" } : undefined}>
-        <IonTabButton tab="home" href="/home"><IonIcon icon={homeOutline} /><IonLabel>Home</IonLabel></IonTabButton>
-        <IonTabButton tab="sell" href="/sell" style={s.role && !s.can.sell ? { display: "none" } : undefined}><IonIcon icon={cartOutline} /><IonLabel>Sell</IonLabel></IonTabButton>
-        <IonTabButton tab="orders" href="/orders"><IonIcon icon={receiptOutline} /><IonLabel>Orders</IonLabel></IonTabButton>
-        <IonTabButton tab="inventory" href="/inventory"><IonIcon icon={cubeOutline} /><IonLabel>Inventory</IonLabel></IonTabButton>
-        <IonTabButton tab="more" href="/more"><IonIcon icon={ellipsisHorizontalCircleOutline} /><IonLabel>More{queue ? ` (${queue})` : ""}</IonLabel></IonTabButton>
+        <IonTabButton tab="home" href="/home"><IonIcon className="ico-off" icon={homeOutline} /><IonIcon className="ico-on" icon={home} /><IonLabel>Home</IonLabel></IonTabButton>
+        <IonTabButton tab="orders" href="/orders"><IonIcon className="ico-off" icon={receiptOutline} /><IonIcon className="ico-on" icon={receipt} /><IonLabel>Orders</IonLabel></IonTabButton>
+        <IonTabButton className="tab-sell" tab="sell" href="/sell" style={s.role && !s.can.sell ? { display: "none" } : undefined}><IonIcon icon={cart} /><IonLabel>Sell</IonLabel></IonTabButton>
+        <IonTabButton tab="inventory" href="/inventory"><IonIcon className="ico-off" icon={cubeOutline} /><IonIcon className="ico-on" icon={cube} /><IonLabel>Inventory</IonLabel></IonTabButton>
+        <IonTabButton tab="more" href="/more"><IonIcon className="ico-off" icon={gridOutline} /><IonIcon className="ico-on" icon={grid} /><IonLabel>More{queue ? ` (${queue})` : ""}</IonLabel></IonTabButton>
       </IonTabBar>
     </IonTabs>
   );

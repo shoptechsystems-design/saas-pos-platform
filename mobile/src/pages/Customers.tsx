@@ -1,7 +1,7 @@
 import { IonIcon } from "@ionic/react";
 import { addOutline, callOutline, downloadOutline, mailOutline, peopleOutline, pricetagsOutline, trashOutline } from "ionicons/icons";
 import { useEffect, useState } from "react";
-import { Async, Empty, Field, Pill, Row, Screen, SearchBox, Seg, Sheet, Card, useNotify } from "~/components/ui";
+import { Async, Empty, Field, Pill, Row, Screen, SearchBox, Seg, Sheet, Card, useNotify, Avatar } from "~/components/ui";
 import { dateOnly, initials, money } from "~/lib/format";
 import { savePdf, tap } from "~/lib/native";
 import { useCustomers, useGroups, useAct } from "~/lib/queries";
@@ -122,7 +122,7 @@ export default function Customers() {
         <SearchBox value={search} onChange={setSearch} placeholder="Search name, phone or email" />
         <Async q={customers} empty={d => d.length ? null : <Empty icon={peopleOutline} title={q ? "No matches" : "No customers yet"} hint={q ? "Try a different name or phone number." : "Add customers to track their purchases and print statements."} action={canAdd && !q ? <button className="btn btn-primary" onClick={() => setAdding(true)}>Add customer</button> : undefined} />}>
           {d => <Card pad={false} className="divide">{d.map(c => (
-            <Row key={c.id} onClick={() => setSelected(c)} title={c.name} sub={`${c.phone || "No phone"} · ${c.orderCount} order${c.orderCount === 1 ? "" : "s"}`}
+            <Row key={c.id} lead={<Avatar name={c.name} />} onClick={() => setSelected(c)} title={c.name} sub={`${c.phone || "No phone"} · ${c.orderCount} order${c.orderCount === 1 ? "" : "s"}`}
               right={<div className="right"><div className="bold mono small">{money(c.totalSpent, s.tenant?.currency)}</div></div>} icon={undefined} />
           ))}</Card>}
         </Async>

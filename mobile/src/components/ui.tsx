@@ -1,20 +1,22 @@
-import { IonContent, IonHeader, IonModal, IonPage, IonRefresher, IonRefresherContent, IonSpinner, IonTitle, IonToolbar, useIonAlert, useIonToast } from "@ionic/react";
+import { IonContent, IonHeader, IonModal, IonPage, IonRefresher, IonRefresherContent, IonSpinner, IonToolbar, useIonAlert, useIonToast } from "@ionic/react";
 import { alertCircleOutline, chevronBack, closeOutline, searchOutline } from "ionicons/icons";
 import { IonIcon } from "@ionic/react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "~/lib/rest";
+import { KaryanoMark } from "~/components/Logo";
 import { success, tap, warn } from "~/lib/native";
+import { initials, tint } from "~/lib/format";
 
-export function Screen({ title, back, right, children, onRefresh, bare }: { title: string; back?: boolean | string; right?: ReactNode; children: ReactNode; onRefresh?: () => Promise<unknown> | unknown; bare?: boolean }) {
+export function Screen({ title, subtitle, brand, back, right, children, onRefresh, bare }: { title: string; subtitle?: string; brand?: boolean; back?: boolean | string; right?: ReactNode; children: ReactNode; onRefresh?: () => Promise<unknown> | unknown; bare?: boolean }) {
   const nav = useNavigate();
   return (
     <IonPage>
       <IonHeader className="ion-no-border">
         <IonToolbar>
-          <div className="row" style={{ padding: "0 12px" }}>
-            {back ? <button className="icon-btn" aria-label="Back" onClick={() => (typeof back === "string" ? nav(back) : nav(-1))}><IonIcon icon={chevronBack} /></button> : null}
-            <IonTitle style={{ padding: back ? "0 4px" : "0 4px", flex: 1, textAlign: "left" }}>{title}</IonTitle>
+          <div className="hdr">
+            {back ? <button className="icon-btn" aria-label="Back" onClick={() => (typeof back === "string" ? nav(back) : nav(-1))}><IonIcon icon={chevronBack} /></button> : brand ? <KaryanoMark size={36} /> : null}
+            <div className="hdr-title"><h1 className="hdr-h1">{title}</h1>{subtitle && <div className="hdr-sub">{subtitle}</div>}</div>
             {right}
           </div>
         </IonToolbar>
@@ -45,7 +47,20 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
 
 export const Card = ({ children, pad = true, className = "" }: { children: ReactNode; pad?: boolean; className?: string }) => <div className={`card ${pad ? "card-pad" : ""} ${className}`}>{children}</div>;
 export const Pill = ({ tone = "", children }: { tone?: "ok" | "warn" | "bad" | "info" | "teal" | ""; children: ReactNode }) => <span className={`pill ${tone}`}>{children}</span>;
-export const Loading = ({ label }: { label?: string }) => <div className="empty"><IonSpinner name="crescent" color="primary" />{label && <p>{label}</p>}</div>;
+/** Shimmering placeholder rows. Feels faster than a spinner and keeps the layout from jumping. */
+export function Skeleton({ rows = 5, cards = false }: { rows?: number; cards?: boolean }) {
+  return cards
+    ? <div className="skel-cards">{Array.from({ length: rows }).map((_, i) => <div key={i} className="skel skel-card" />)}</div>
+    : <div className="card divide" aria-busy="true" aria-label="Loading">{Array.from({ length: rows }).map((_, i) => (
+        <div className="list-row" key={i}><div className="skel" style={{ width: 40, height: 40, borderRadius: 12 }} />
+          <div className="grow"><div className="skel" style={{ height: 13, width: `${55 + ((i * 17) % 30)}%` }} /><div className="skel" style={{ height: 10, width: `${35 + ((i * 11) % 25)}%`, marginTop: 8 }} /></div>
+          <div className="skel" style={{ height: 14, width: 54 }} /></div>))}</div>;
+}
+export const Loading = ({ label }: { label?: string }) => <div><Skeleton />{label && <p className="muted small center" style={{ marginTop: 10 }}>{label}</p>}</div>;
+
+export function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
+  return <div className="section-head"><span>{title}</span>{action && <button onClick={() => { tap(); onAction?.(); }}>{action} ›</button>}</div>;
+}
 
 export function Empty({ icon, title, hint, action }: { icon: string; title: string; hint?: string; action?: ReactNode }) {
   return <div className="empty"><div className="ico"><IonIcon icon={icon} /></div><h3>{title}</h3>{hint && <p style={{ margin: "0 0 14px" }}>{hint}</p>}{action}</div>;
@@ -57,8 +72,8 @@ export function ErrorBox({ error, retry }: { error: unknown; retry?: () => void 
 }
 
 /** Render a query: spinner, error, empty, then data. */
-export function Async<X>({ q, empty, children }: { q: { isLoading: boolean; isError: boolean; error: unknown; data: X | undefined; refetch: () => unknown }; empty?: (data: X) => ReactNode | null; children: (data: X) => ReactNode }) {
-  if (q.isLoading && q.data === undefined) return <Loading />;
+export function Async<X>({ q, empty, loading, children }: { loading?: ReactNode; q: { isLoading: boolean; isError: boolean; error: unknown; data: X | undefined; refetch: () => unknown }; empty?: (data: X) => ReactNode | null; children: (data: X) => ReactNode }) {
+  if (q.isLoading && q.data === undefined) return <>{loading ?? <Loading />}</>;
   if (q.isError && q.data === undefined) return <ErrorBox error={q.error} retry={() => q.refetch()} />;
   if (q.data === undefined) return null;
   return <>{empty?.(q.data) ?? children(q.data)}</>;
@@ -92,10 +107,15 @@ export function useNotify() {
   };
 }
 
-export function Row({ icon, tone = "", title, sub, right, onClick, chevron }: { icon?: string; tone?: string; title: ReactNode; sub?: ReactNode; right?: ReactNode; onClick?: () => void; chevron?: boolean }) {
+export function Avatar({ name, size = 42 }: { name: string; size?: number }) {
+  const [bg, fg] = tint(name);
+  return <div className="avatar round" style={{ width: size, height: size, background: bg, color: fg, fontSize: size * 0.34 }}>{initials(name)}</div>;
+}
+
+export function Row({ lead, icon, tone = "", title, sub, right, onClick, chevron }: { lead?: ReactNode; icon?: string; tone?: string; title: ReactNode; sub?: ReactNode; right?: ReactNode; onClick?: () => void; chevron?: boolean }) {
   const inner = (
     <>
-      {icon && <div className={`icon-chip ${tone}`}><IonIcon icon={icon} /></div>}
+      {lead ?? (icon && <div className={`icon-chip ${tone}`}><IonIcon icon={icon} /></div>)}
       <div className="grow"><div className="bold ellipsis" style={{ color: "var(--c-navy)" }}>{title}</div>{sub && <div className="small muted ellipsis">{sub}</div>}</div>
       {right}
     </>

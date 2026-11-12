@@ -1,9 +1,9 @@
 import { IonIcon } from "@ionic/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { addOutline, cartOutline, checkmarkCircleOutline, cloudOfflineOutline, personOutline, removeOutline, shareOutline, trashOutline } from "ionicons/icons";
+import { addOutline, cartOutline, chevronForwardOutline, checkmarkCircleOutline, cloudOfflineOutline, personOutline, removeOutline, shareOutline, trashOutline } from "ionicons/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QueueBanner from "~/components/QueueBanner";
-import { Async, Empty, Field, Screen, SearchBox, Seg, Sheet, useNotify } from "~/components/ui";
+import { Async, Empty, Field, Screen, SearchBox, Seg, Sheet, Skeleton, useNotify } from "~/components/ui";
 import { CartLine, cashSuggestions, computeTotals, unitCents } from "~/lib/cart";
 import { dateTime, money } from "~/lib/format";
 import { success, receiptText, shareText, tap, warn } from "~/lib/native";
@@ -29,6 +29,7 @@ export default function Sell() {
   const products = useProducts(q || undefined, categoryId); const categories = useCategories(); const all = useProducts();
   const totalsNow = useMemo(() => computeTotals(cart, 0, taxRate), [cart, taxRate]);
   const inCart = (id: number) => cart.find(l => l.product.id === id)?.qty ?? 0;
+  const colorOf = (cid: number | null) => categories.data?.find(c => c.id === cid)?.color ?? "#0f766d";
 
   const add = (p: Product, by = 1) => {
     const have = inCart(p.id);
@@ -60,23 +61,33 @@ export default function Sell() {
         <button className={`chip ${!categoryId ? "on" : ""}`} onClick={() => setCategoryId(undefined)}>All</button>
         {categories.data?.map(c => <button key={c.id} className={`chip ${categoryId === c.id ? "on" : ""}`} onClick={() => setCategoryId(categoryId === c.id ? undefined : c.id)}>{c.name}</button>)}
       </div>
-      <Async q={products} empty={d => d.length ? null : <Empty icon={cartOutline} title="No products found" hint={q ? `Nothing matches "${q}".` : "Add products in the Inventory tab."} />}>
+      <Async q={products} loading={<Skeleton cards rows={8} />} empty={d => d.length ? null : <Empty icon={cartOutline} title="No products found" hint={q ? `Nothing matches "${q}".` : "Add products in the Inventory tab."} />}>
         {d => (
           <div className="product-grid">
-            {d.map(p => (
-              <button key={p.id} className={`product ${p.stockQuantity <= 0 ? "out" : ""}`} onClick={() => add(p)}>
-                {inCart(p.id) > 0 && <span className="qty-badge">{inCart(p.id)}</span>}
-                <div className="img">{p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" /> : p.name.slice(0, 1).toUpperCase()}</div>
-                <div className="name">{p.name}</div>
-                <div className="row between"><b className="mono" style={{ color: "var(--c-teal)" }}>{money(unitCents(p) / 100, cur)}</b><span className={`tiny ${p.stockQuantity <= p.minStockLevel ? "" : "muted"}`} style={p.stockQuantity <= p.minStockLevel ? { color: "var(--c-amber)", fontWeight: 700 } : undefined}>{p.stockQuantity <= 0 ? "Out" : `${p.stockQuantity} left`}</span></div>
-              </button>
-            ))}
+            {d.map(p => {
+              const out = p.stockQuantity <= 0, low = !out && p.stockQuantity <= p.minStockLevel, n = inCart(p.id);
+              const c = colorOf(p.categoryId);
+              return (
+                <button key={p.id} className={`pcard ${out ? "out" : ""} ${n ? "sel" : ""}`} onClick={() => add(p)} aria-label={`Add ${p.name}`}>
+                  <div className="tile" style={{ background: `linear-gradient(135deg, ${c}26, ${c}0d)`, color: c }}>
+                    {p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" /> : p.name.split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase()}
+                  </div>
+                  {(out || low) && <span className={`tag ${out ? "out" : ""}`}>{out ? "Out of stock" : `${p.stockQuantity} left`}</span>}
+                  {n > 0 && <span className="qty">{n}</span>}
+                  <div className="meta">
+                    <div className="name">{p.name}</div>
+                    <div className="foot"><span className="price mono">{money(unitCents(p) / 100, cur)}</span><span className="plus">+</span></div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </Async>
       {cart.length > 0 && (
-        <div className="cartbar"><button className="btn btn-primary btn-block" style={{ justifyContent: "space-between" }} onClick={() => { tap(); setOpen(true); }}>
-          <span className="row"><IonIcon icon={cartOutline} /> {totalsNow.items} item{totalsNow.items > 1 ? "s" : ""}</span><span className="mono">{money(totalsNow.total, cur)} · Review</span></button></div>
+        <div className="cartbar"><button className="cartpill" onClick={() => { tap(); setOpen(true); }}>
+          <span className="row"><span className="cnt">{totalsNow.items}</span><span style={{ textAlign: "left" }}><div className="lbl">{totalsNow.items} item{totalsNow.items > 1 ? "s" : ""} in cart</div><div className="tot mono">{money(totalsNow.total, cur)}</div></span></span>
+          <span className="go">Review <IonIcon icon={chevronForwardOutline} /></span></button></div>
       )}
 
       <CheckoutSheet open={open} onClose={() => setOpen(false)} cart={cart} setQty={setQty} customer={customer} setCustomer={setCustomer} cur={cur} taxRate={taxRate}

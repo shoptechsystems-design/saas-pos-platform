@@ -1,7 +1,8 @@
 import { IonIcon } from "@ionic/react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { documentTextOutline, receiptOutline, shareOutline, returnDownBackOutline } from "ionicons/icons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { SaleRow } from "~/components/SaleRow";
 import { Async, Empty, ErrorBox, Loading, Pill, Row, Screen, SearchBox, Sheet, Stat, useNotify } from "~/components/ui";
 import { dateTime, daysAgo, money, startOfDay, titleCase } from "~/lib/format";
 import { receiptText, savePdf, shareText } from "~/lib/native";
@@ -14,6 +15,8 @@ import type { PdfResult, SaleDetail, SalesPage } from "~/lib/types";
 
 const RANGES = [{ id: "today", label: "Today", from: () => startOfDay() }, { id: "7", label: "7 days", from: () => daysAgo(6) }, { id: "30", label: "30 days", from: () => daysAgo(29) }, { id: "all", label: "All", from: () => undefined }] as const;
 const PAY = ["cash", "card", "transfer"] as const;
+const time = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+const dayName = (d: Date) => { const t = startOfDay(), x = startOfDay(d); return x === t ? "Today" : x === t - 86_400_000 ? "Yesterday" : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }); };
 const tone = (s: string) => (s === "completed" ? "ok" : s === "refunded" ? "bad" : "warn");
 
 export default function Orders() {
@@ -28,6 +31,15 @@ export default function Orders() {
     getNextPageParam: (last, pages) => (pages.flatMap(p => p.rows).length < last.total ? pages.length + 1 : undefined),
   });
   const first = list.data?.pages[0]; const rows = list.data?.pages.flatMap(p => p.rows) ?? [];
+  const groups = useMemo(() => {
+    const out: { key: string; label: string; total: number; rows: typeof rows }[] = [];
+    for (const r of rows) {
+      const d = new Date(r.sale.createdAt), key = d.toDateString();
+      let g = out[out.length - 1]; if (!g || g.key !== key) { g = { key, label: dayName(d), total: 0, rows: [] }; out.push(g); }
+      g.rows.push(r); if (r.sale.status === "completed") g.total += Number(r.sale.total);
+    }
+    return out;
+  }, [rows]);
 
   return (
     <Screen title="Orders" onRefresh={() => qc.invalidateQueries({ queryKey: ["sales"] })}>
@@ -39,7 +51,11 @@ export default function Orders() {
       {list.isLoading ? <Loading /> : list.isError ? <ErrorBox error={list.error} retry={() => list.refetch()} /> :
         !rows.length ? <Empty icon={receiptOutline} title="No orders found" hint="Try a different date range or filter." /> : (
           <>
-            <div className="card divide">{rows.map(r => <Row key={r.sale.id} icon={receiptOutline} tone={r.sale.status === "refunded" ? "red" : "blue"} onClick={() => setOpenId(r.sale.id)} title={r.sale.saleNumber} sub={`${r.customer?.name ?? "Walk-in"} · ${dateTime(r.sale.createdAt)} · ${r.itemCount} item${r.itemCount === 1 ? "" : "s"}`} right={<div className="right"><b className="mono">{money(r.sale.total, cur)}</b><div><Pill tone={tone(r.sale.status)}>{titleCase(r.sale.status)}</Pill></div></div>} />)}</div>
+            {groups.map(g => (
+              <div key={g.key} className="stack" style={{ gap: 10 }}>
+                <div className="day-head"><span>{g.label}</span><span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>{money(g.total, cur)}</span></div>
+                <div className="card divide">{g.rows.map(r => <SaleRow key={r.sale.id} sale={r.sale} customer={r.customer} items={r.itemCount} cur={cur} when={time(r.sale.createdAt)} onClick={() => setOpenId(r.sale.id)} />)}</div>
+              </div>))}
             {list.hasNextPage && <button className="btn btn-block" disabled={list.isFetchingNextPage} onClick={() => list.fetchNextPage()}>{list.isFetchingNextPage ? "Loading…" : "Load more"}</button>}
           </>
         )}

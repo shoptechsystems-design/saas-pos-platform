@@ -233,9 +233,10 @@ export default function Inventory() {
                 <div className="avatar" style={{ overflow: "hidden" }}>{p.imageUrl ? <img src={p.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <IonIcon icon={cubeOutline} />}</div>
                 <div className="grow">
                   <div className="bold ellipsis" style={{ color: "var(--c-navy)" }}>{p.name}</div>
-                  <div className="small muted ellipsis">{p.sku}{c ? ` · ${c.name}` : ""}</div>
+                  <div className="small muted ellipsis"><span className="sku-chip">{p.sku}</span>{c ? <> <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: c.color, margin: "0 4px 0 6px" }} />{c.name}</> : ""}</div>
+                  <div className="stock-meter"><i style={{ width: `${Math.min(100, (p.stockQuantity / Math.max(1, p.minStockLevel * 4)) * 100)}%`, background: p.stockQuantity <= 0 ? "#ef4444" : p.stockQuantity <= p.minStockLevel ? "#f59e0b" : "#14b8a6" }} /></div>
                 </div>
-                <div className="right"><div className="bold mono">{money(p.discountPrice ?? p.sellingPrice, currency)}</div><Pill tone={st.tone}>{p.stockQuantity} {p.unit}</Pill></div>
+                <div className="right"><div className="bold mono" style={{ color: "var(--c-navy)" }}>{money(p.discountPrice ?? p.sellingPrice, currency)}</div><Pill tone={st.tone}>{p.stockQuantity} {p.unit}</Pill></div>
               </button>); })}
           </div></Card>
         )}

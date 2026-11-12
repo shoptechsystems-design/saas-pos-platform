@@ -19,3 +19,7 @@ export const roleLabel = (role?: string) => ({ tenant_admin: "Owner / Admin", ca
 export const titleCase = (s: string) => s.replace(/_/g, " ").replace(/^\w/, c => c.toUpperCase());
 export const startOfDay = (d = new Date()) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 export const daysAgo = (n: number) => startOfDay(new Date(Date.now() - n * 86_400_000));
+
+const TINTS: [string, string][] = [["#ccfbf1", "#0f766d"], ["#e0e7ff", "#4338ca"], ["#fee2e2", "#b91c1c"], ["#fef3c7", "#b45309"], ["#dbeafe", "#1d4ed8"], ["#ede9fe", "#6d28d9"], ["#dcfce7", "#15803d"], ["#ffedd5", "#c2410c"]];
+/** Stable background/foreground colour pair for a name, so each person keeps the same avatar colour. */
+export const tint = (name: string): [string, string] => { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0; return TINTS[h % TINTS.length]; };

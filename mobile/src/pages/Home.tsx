@@ -1,72 +1,119 @@
 import { IonIcon } from "@ionic/react";
-import { alertCircleOutline, cartOutline, peopleOutline, receiptOutline, trendingUpOutline } from "ionicons/icons";
+import { alertCircleOutline, arrowDownOutline, arrowUpOutline, cartOutline, cashOutline, cubeOutline, peopleOutline, receiptOutline, trendingUpOutline, walletOutline } from "ionicons/icons";
 import { useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import QueueBanner from "~/components/QueueBanner";
-import { Async, Card, Empty, Pill, Row, Screen, Stat } from "~/components/ui";
-import { dateTime, initials, money, moneyShort, num, roleLabel, titleCase } from "~/lib/format";
+import { AreaChart, Sparkline } from "~/components/charts";
+import { SaleRow } from "~/components/SaleRow";
+import { Async, Card, Empty, Pill, Row, Screen, SectionHead } from "~/components/ui";
+import { dateTime, initials, money, moneyShort, num, roleLabel } from "~/lib/format";
+import { tap } from "~/lib/native";
 import { useLowStock, usePaymentMix, useRecentSales, useStats, useTopProducts, useTrend } from "~/lib/queries";
 import { useSession } from "~/lib/session";
+
+const MIX_COLORS: Record<string, string> = { cash: "#14b8a6", card: "#6366f1", transfer: "#fb7c66", other: "#94a3b8" };
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const dayLabel = (day: string) => new Date(day + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 export default function Home() {
   const s = useSession(); const nav = useNavigate(); const qc = useQueryClient();
   const cur = s.tenant?.currency;
-  const stats = useStats(); const trend = useTrend(14); const top = useTopProducts(30); const mix = usePaymentMix(30); const low = useLowStock(); const recent = useRecentSales();
-  const refresh = () => qc.invalidateQueries();
+  const [days, setDays] = useState<7 | 14 | 30>(14);
+  const stats = useStats(); const trend = useTrend(days); const week = useTrend(7); const top = useTopProducts(30); const mix = usePaymentMix(30); const low = useLowStock(); const recent = useRecentSales();
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const maxTrend = Math.max(1, ...(trend.data ?? []).map(p => p.total));
+
+  // Fill days with no sales so charts show every date.
+  const series = useMemo(() => {
+    const byDay = new Map((trend.data ?? []).map(p => [p.day, p.total]));
+    return Array.from({ length: days }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (days - 1 - i)); const k = ymd(d); return { day: k, label: dayLabel(k), value: byDay.get(k) ?? 0 }; });
+  }, [trend.data, days]);
+  const spark = useMemo(() => {
+    const byDay = new Map((week.data ?? []).map(p => [p.day, p.total]));
+    return Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return byDay.get(ymd(d)) ?? 0; });
+  }, [week.data]);
+
+  const today = num(stats.data?.todaySales);
+  const yKey = ymd(new Date(Date.now() - 86_400_000));
+  const yesterday = (week.data ?? []).find(p => p.day === yKey)?.total ?? 0;
+  const delta = yesterday > 0 ? ((today - yesterday) / yesterday) * 100 : null;
+  const periodTotal = series.reduce((a, p) => a + p.value, 0);
   const mixTotal = (mix.data ?? []).reduce((a, p) => a + p.total, 0) || 1;
+  const topMax = Math.max(1, ...(top.data ?? []).map(p => p.revenue));
+  const first = s.user?.name?.split(" ")[0] ?? "there";
+
+  const qa: { label: string; icon: string; to: string; bg: string; fg: string; show: boolean }[] = [
+    { label: "New sale", icon: cartOutline, to: "/sell", bg: "#e6f4f2", fg: "#0f766d", show: s.can.sell },
+    { label: "Expense", icon: walletOutline, to: "/more/expenses", bg: "#fff4e5", fg: "#c2410c", show: true },
+    { label: "Shift", icon: cashOutline, to: "/more/shifts", bg: "#eef2ff", fg: "#4f46e5", show: true },
+    { label: "Stock", icon: cubeOutline, to: "/inventory", bg: "#fdf2f8", fg: "#be185d", show: true },
+  ];
 
   return (
-    <Screen title={s.tenant?.name ?? "Karyano"} onRefresh={refresh} right={<div className="avatar round" style={{ width: 36, height: 36 }}>{initials(s.user?.name)}</div>}>
+    <Screen brand title={s.tenant?.name ?? "Karyano"} subtitle={`${greet}, ${first}`} onRefresh={() => qc.invalidateQueries()} right={<div className="avatar round" style={{ width: 38, height: 38 }}>{initials(s.user?.name)}</div>}>
       <QueueBanner currency={cur} />
-      <div className="hero">
-        <div className="label">{greet}, {s.user?.name?.split(" ")[0] ?? "there"}</div>
-        <div className="big mono">{stats.data ? money(stats.data.todaySales, cur) : "—"}</div>
-        <div style={{ opacity: 0.85, fontSize: 13 }}>Today's sales · {stats.data?.todayOrders ?? 0} order{stats.data?.todayOrders === 1 ? "" : "s"} · <span style={{ opacity: 0.8 }}>{roleLabel(s.role)}</span></div>
-        {s.can.sell && <button className="btn btn-block" style={{ marginTop: 14, background: "#fff", color: "var(--c-navy)" }} onClick={() => nav("/sell")}><IonIcon icon={cartOutline} /> New sale</button>}
+
+      <div className="hero2">
+        <div className="hero2-top"><span className="hero2-label">Today</span><span className="hero2-chip">{roleLabel(s.role)}</span></div>
+        <div className="hero2-sub">Total sales</div>
+        <div className="hero2-big mono">{stats.data ? money(stats.data.todaySales, cur) : "—"}</div>
+        <div className="hero2-meta">
+          {delta !== null && <span className={`delta ${Math.abs(delta) < 0.5 ? "flat" : delta > 0 ? "up" : "down"}`}><IonIcon icon={delta >= 0 ? arrowUpOutline : arrowDownOutline} />{Math.abs(delta).toFixed(0)}% vs yesterday</span>}
+          <span>{stats.data?.todayOrders ?? 0} order{stats.data?.todayOrders === 1 ? "" : "s"} today</span>
+        </div>
+        <Sparkline values={spark} className="hero2-spark" />
       </div>
+
+      <div className="qa">{qa.filter(a => a.show).map(a => (
+        <button key={a.label} onClick={() => { tap(); nav(a.to); }}><span className="ico" style={{ background: a.bg, color: a.fg }}><IonIcon icon={a.icon} /></span>{a.label}</button>))}</div>
 
       <div className="kpis">
-        <Stat label="This month" value={stats.data ? moneyShort(num(stats.data.monthSales), cur) : "—"} />
-        <Stat label="Customers" value={String(stats.data?.customers ?? "—")} />
-        <Stat label="Products" value={String(stats.data?.products ?? "—")} />
-        <Stat label="Low stock" value={String(stats.data?.lowStock ?? "—")} tone={stats.data?.lowStock ? "var(--c-amber)" : undefined} />
+        <div className="card kpi2"><div className="icon-chip green"><IonIcon icon={trendingUpOutline} /></div><div className="t"><div className="l">This month</div><div className="v mono">{stats.data ? moneyShort(num(stats.data.monthSales), cur) : "—"}</div></div></div>
+        <div className="card kpi2"><div className="icon-chip blue"><IonIcon icon={peopleOutline} /></div><div className="t"><div className="l">Customers</div><div className="v mono">{stats.data?.customers ?? "—"}</div></div></div>
+        <div className="card kpi2"><div className="icon-chip"><IonIcon icon={cubeOutline} /></div><div className="t"><div className="l">Products</div><div className="v mono">{stats.data?.products ?? "—"}</div></div></div>
+        <div className="card kpi2" onClick={() => nav("/inventory")}><div className={`icon-chip ${stats.data?.lowStock ? "amber" : "green"}`}><IonIcon icon={alertCircleOutline} /></div><div className="t"><div className="l">Low stock</div><div className="v mono" style={stats.data?.lowStock ? { color: "var(--c-amber)" } : undefined}>{stats.data?.lowStock ?? "—"}</div></div></div>
       </div>
 
-      <div className="section-title">Last 14 days</div>
       <Card>
-        <Async q={trend} empty={d => d.length ? null : <div className="muted small center">No sales in the last 14 days yet.</div>}>
-          {d => (
-            <div className="bars">{d.slice(-14).map(p => <div className="b" key={p.day}><i style={{ height: `${Math.max(3, (p.total / maxTrend) * 100)}%` }} title={`${p.day}: ${money(p.total, cur)}`} /><span>{p.day.slice(8, 10)}</span></div>)}</div>
-          )}
-        </Async>
+        <div className="chart-head">
+          <div><div className="tiny muted bold">REVENUE · LAST {days} DAYS</div><div className="h1 mono" style={{ fontSize: 22, marginTop: 2 }}>{moneyShort(periodTotal, cur)}</div></div>
+          <div className="pillseg">{([7, 14, 30] as const).map(d => <button key={d} className={days === d ? "on" : ""} onClick={() => { tap(); setDays(d); }}>{d}D</button>)}</div>
+        </div>
+        {trend.isLoading ? <div className="skel" style={{ height: 168, borderRadius: 14 }} /> : <AreaChart data={series} format={v => money(v, cur)} />}
       </Card>
 
-      <div className="section-title">Top products · 30 days</div>
+      <SectionHead title="Top products" action="This month" />
       <Card pad={false}>
         <Async q={top} empty={d => d.length ? null : <Empty icon={trendingUpOutline} title="No sales yet" hint="Top sellers appear after your first sales." />}>
-          {d => <div className="divide">{d.map((p, i) => <Row key={p.productId} icon={receiptOutline} title={`${i + 1}. ${p.name}`} sub={`${p.units} sold`} right={<b className="mono">{moneyShort(p.revenue, cur)}</b>} />)}</div>}
+          {d => <div className="divide">{d.slice(0, 5).map((p, i) => (
+            <div className="list-row" key={p.productId}><div className={`rank ${i < 3 ? `r${i + 1}` : ""}`}>{i + 1}</div>
+              <div className="grow"><div className="row between"><b className="ellipsis" style={{ color: "var(--c-navy)" }}>{p.name}</b><b className="mono">{moneyShort(p.revenue, cur)}</b></div>
+                <div className="meter sm"><i style={{ width: `${(p.revenue / topMax) * 100}%`, background: i === 0 ? "linear-gradient(90deg,#14b8a6,#0f766d)" : "#7dd3c8" }} /></div>
+                <div className="tiny muted" style={{ marginTop: 4 }}>{p.units} sold</div></div></div>))}</div>}
         </Async>
       </Card>
 
-      <div className="section-title">Payment methods · 30 days</div>
+      <SectionHead title="How customers pay" action="30 days" />
       <Card>
         <Async q={mix} empty={d => d.length ? null : <div className="muted small center">No payments recorded yet.</div>}>
-          {d => <div className="stack" style={{ gap: 12 }}>{d.map(p => <div key={p.method}><div className="row between small"><b style={{ textTransform: "capitalize" }}>{p.method}</b><span className="muted mono">{moneyShort(p.total, cur)} · {p.orders}</span></div><div className="meter" style={{ marginTop: 5 }}><i style={{ width: `${(p.total / mixTotal) * 100}%` }} /></div></div>)}</div>}
+          {d => <>
+            <div className="stackbar">{d.map(p => <i key={p.method} style={{ width: `${(p.total / mixTotal) * 100}%`, background: MIX_COLORS[p.method] ?? MIX_COLORS.other }} />)}</div>
+            <div className="legend">{[...d].sort((a, b) => b.total - a.total).map(p => (
+              <div className="li" key={p.method}><span className="dot" style={{ background: MIX_COLORS[p.method] ?? MIX_COLORS.other }} /><b style={{ textTransform: "capitalize", color: "var(--c-navy)" }}>{p.method}</b>
+                <span className="muted small">{Math.round((p.total / mixTotal) * 100)}% · {p.orders} orders</span><b className="mono" style={{ marginLeft: "auto" }}>{moneyShort(p.total, cur)}</b></div>))}</div></>}
         </Async>
       </Card>
 
       {(low.data?.length ?? 0) > 0 && <>
-        <div className="section-title">Needs restocking</div>
-        <Card pad={false}><div className="divide">{low.data!.slice(0, 5).map(p => <Row key={p.id} icon={alertCircleOutline} tone="amber" title={p.name} sub={p.sku} right={<Pill tone={p.stockQuantity === 0 ? "bad" : "warn"}>{p.stockQuantity} left</Pill>} />)}</div></Card>
+        <SectionHead title="Needs restocking" action="Inventory" onAction={() => nav("/inventory")} />
+        <Card pad={false}><div className="divide">{low.data!.slice(0, 4).map(p => <Row key={p.id} icon={alertCircleOutline} tone="amber" title={p.name} sub={p.sku} right={<Pill tone={p.stockQuantity === 0 ? "bad" : "warn"}>{p.stockQuantity === 0 ? "Out" : `${p.stockQuantity} left`}</Pill>} />)}</div></Card>
       </>}
 
-      <div className="section-title">Recent sales</div>
+      <SectionHead title="Recent sales" action="See all" onAction={() => nav("/orders")} />
       <Card pad={false}>
-        <Async q={recent} empty={d => d.length ? null : <Empty icon={peopleOutline} title="No sales yet" hint="Ring up your first sale from the Sell tab." />}>
-          {d => <div className="divide">{d.map(r => <Row key={r.sale.id} icon={receiptOutline} tone="blue" onClick={() => nav("/orders")} title={r.sale.saleNumber} sub={`${r.customer?.name ?? "Walk-in"} · ${dateTime(r.sale.createdAt)}`} right={<div className="right"><b className="mono">{money(r.sale.total, cur)}</b><div><Pill tone={r.sale.status === "completed" ? "ok" : "warn"}>{titleCase(r.sale.status)}</Pill></div></div>} />)}</div>}
+        <Async q={recent} empty={d => d.length ? null : <Empty icon={receiptOutline} title="No sales yet" hint="Ring up your first sale from the Sell tab." />}>
+          {d => <div className="divide">{d.slice(0, 6).map(r => <SaleRow key={r.sale.id} sale={r.sale} customer={r.customer} cur={cur} when={dateTime(r.sale.createdAt)} onClick={() => nav("/orders")} />)}</div>}
         </Async>
       </Card>
     </Screen>

@@ -33,12 +33,18 @@ function Shell({ title, sub, children, footer }: { title: string; sub: string; c
   return (
     <IonPage>
       <IonContent>
-        <div className="auth">
-          <div className="row between"><KaryanoMark size={52} />
-            <button className="icon-btn" aria-label="Server settings" onClick={() => setServer(true)}><IonIcon icon={settingsOutline} /></button></div>
-          <div><h1 className="h1" style={{ fontSize: 28 }}>{title}</h1><p className="muted" style={{ margin: "6px 0 0" }}>{sub}</p></div>
-          {children}
-          <div className="center muted small" style={{ marginTop: "auto" }}>{footer}</div>
+        <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: "#fff" }}>
+          <div className="auth-hero">
+            <button className="icon-btn gear" aria-label="Server settings" onClick={() => setServer(true)}><IonIcon icon={settingsOutline} /></button>
+            <KaryanoMark size={76} />
+            <div className="brand">Karyano</div>
+            <div className="tag">Smart point of sale for every shop</div>
+          </div>
+          <div className="auth-sheet">
+            <div><h1 className="h1" style={{ fontSize: 26 }}>{title}</h1><p className="muted" style={{ margin: "6px 0 0" }}>{sub}</p></div>
+            {children}
+            <div className="center muted small" style={{ marginTop: "auto", paddingTop: 8 }}>{footer}</div>
+          </div>
         </div>
         <ServerSheet open={server} onClose={() => setServer(false)} />
       </IonContent>

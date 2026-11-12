@@ -1,19 +1,24 @@
 import { IonIcon } from "@ionic/react";
-import { barChartOutline, bookOutline, businessOutline, cashOutline, cubeOutline, documentTextOutline, logOutOutline, peopleOutline, pricetagsOutline, settingsOutline, shieldCheckmarkOutline, timeOutline, walletOutline } from "ionicons/icons";
+import { chevronForward, barChartOutline, bookOutline, businessOutline, cashOutline, cubeOutline, documentTextOutline, logOutOutline, peopleOutline, pricetagsOutline, settingsOutline, shieldCheckmarkOutline, timeOutline, walletOutline } from "ionicons/icons";
 import { useNavigate } from "react-router-dom";
 import QueueBanner from "~/components/QueueBanner";
 import { Card, Row, Screen, useNotify } from "~/components/ui";
+import { KaryanoMark } from "~/components/Logo";
 import { initials, roleLabel } from "~/lib/format";
 import { getApiBase } from "~/lib/platform";
 import { useAuthActions, useSession } from "~/lib/session";
 
 export default function More() {
   const s = useSession(); const nav = useNavigate(); const { logout } = useAuthActions(); const { confirm } = useNotify();
-  const item = (icon: string, tone: string, title: string, sub: string, to: string) => <Row key={to} icon={icon} tone={tone} title={title} sub={sub} onClick={() => nav(to)} right={<span className="faint">›</span>} />;
+  const item = (icon: string, tone: string, title: string, sub: string, to: string) => <Row key={to} icon={icon} tone={tone} title={title} sub={sub} onClick={() => nav(to)} right={<IonIcon icon={chevronForward} className="chev" />} />;
   return (
     <Screen title="More">
-      <Card><div className="row"><div className="avatar round" style={{ width: 54, height: 54, fontSize: 18 }}>{initials(s.user?.name)}</div>
-        <div className="grow"><div className="h2">{s.user?.name ?? "Account"}</div><div className="small muted ellipsis">{s.user?.email}</div><div className="small" style={{ color: "var(--c-teal)", fontWeight: 700 }}>{roleLabel(s.role)} · {s.tenant?.name}</div></div></div></Card>
+      <div className="profile">
+        <div className="av">{initials(s.user?.name)}</div>
+        <div className="grow"><div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.02em" }} className="ellipsis">{s.user?.name ?? "Account"}</div>
+          <div className="small ellipsis" style={{ color: "rgba(226,232,240,.8)" }}>{s.user?.email}</div>
+          <div style={{ marginTop: 6, display: "inline-block", padding: "2px 10px", borderRadius: 99, background: "rgba(94,234,212,.16)", color: "#5eead4", fontSize: 11.5, fontWeight: 800 }}>{roleLabel(s.role)}{s.tenant?.name ? ` · ${s.tenant.name}` : ""}</div></div>
+      </div>
       <QueueBanner currency={s.tenant?.currency} />
 
       <div className="section-title">Sales & customers</div>
@@ -45,9 +50,9 @@ export default function More() {
       <Card pad={false}><div className="divide">
         {item(settingsOutline, "teal", "Business settings", "Name, tax, receipt footer, logo", "/more/settings")}
         <Row icon={cubeOutline} tone="navy" title="Server" sub={getApiBase() || "Not set"} />
-        <Row icon={documentTextOutline} tone="navy" title="Karyano Mobile" sub="Version 1.0.0 · same data as the web portal" />
       </div></Card>
       <button className="btn btn-danger btn-block" onClick={() => confirm("Sign out?", "Sales saved offline stay on this phone and sync after you sign in again.", "Sign out", () => logout(), true)}><IonIcon icon={logOutOutline} /> Sign out</button>
+      <div className="about"><KaryanoMark size={30} /><span>Karyano Mobile · Version 1.0.0</span><span className="tiny">Same data as your web portal</span></div>
     </Screen>
   );
 }
