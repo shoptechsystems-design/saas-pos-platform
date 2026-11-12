@@ -76,7 +76,7 @@ export default function CustomersView() {
   const inputCls = "mt-1.5 h-11 rounded-xl border-slate-200 bg-slate-50 text-slate-900";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-6 lg:space-y-0">
       <PageHeader title="Customers" description="Your customer directory, lifetime value and buying activity." actions={<>
         <Button variant="outline" onClick={() => downloadCsv("customers", ["Name", "Email", "Phone", "Orders", "Lifetime spend", "Last purchase", "Joined"], filtered.map(c => [c.name, c.email, c.phone, c.orderCount, c.totalSpent, c.lastPurchaseAt, c.createdAt]))} className="h-10 rounded-xl border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
         <Dialog open={open} onOpenChange={setOpen}>

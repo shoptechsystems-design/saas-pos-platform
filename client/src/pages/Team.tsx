@@ -54,7 +54,7 @@ export default function TeamView() {
   const admins = team.filter(t => t.membership.role === "tenant_admin").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-6 lg:space-y-0">
       <PageHeader title="Team & roles" description="Control who can access your workspace and what they can do." actions={
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="h-10 rounded-xl bg-slate-900 px-4 font-semibold text-white hover:bg-slate-700"><Plus className="mr-2 h-4 w-4" /> Add team member</Button></DialogTrigger>

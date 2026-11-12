@@ -68,7 +68,7 @@ export default function ExpensesView() {
   const amount = Number(form.amount);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-6 lg:space-y-0">
       <PageHeader title="Expenses" description="Track operating costs and see where the money goes." actions={<>
         <Button variant="outline" onClick={() => downloadCsv("expenses", ["Date", "Category", "Notes", "Amount"], filtered.map(e => [e.expenseDate, e.category, e.notes, e.amount]))} className="h-10 rounded-xl border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
         <Dialog open={open} onOpenChange={setOpen}>

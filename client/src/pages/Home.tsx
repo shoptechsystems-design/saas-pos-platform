@@ -269,7 +269,7 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
-        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8"><div className="mx-auto w-full max-w-[1600px]">
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8"><div className={`mx-auto w-full max-w-[1600px] ${["products", "customers", "sales", "expenses", "team", "activity"].includes(activeTab) && user.role !== "admin" ? "lg:h-full" : ""}`}>
           {user.role === "admin" ? (
             <SuperAdminView />
           ) : (
@@ -414,7 +414,7 @@ function ProductCatalogView() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-6 lg:space-y-0">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h3 className="text-2xl font-extrabold tracking-[-0.015em] text-slate-900">Products</h3>
@@ -806,7 +806,7 @@ function InventoryManagementView() {
       <PurchaseOrders />
 
       <DataTable
-        rows={ledgerRows} rowKey={m => m.id} pageSize={10}
+        rows={ledgerRows} rowKey={m => m.id} pageSize={10} maxBodyHeight={440}
         toolbar={<><div><h4 className="text-base font-bold text-slate-900">Movement ledger</h4><p className="text-xs text-slate-500">Every stock change, newest first.</p></div>
           <Segmented value={ledgerFilter} onChange={setLedgerFilter} options={[{ value: "all", label: "All" }, { value: "in", label: "Stock in" }, { value: "out", label: "Stock out" }]} /></>}
         empty={{ icon: Truck, title: "No stock movements yet", hint: "Sales, purchases and manual adjustments will be logged here automatically." }}

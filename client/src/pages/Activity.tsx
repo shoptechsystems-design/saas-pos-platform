@@ -34,7 +34,7 @@ export default function ActivityView() {
     { key: "detail", header: "Details", hideBelow: "md", cell: r => <span className="text-sm text-slate-600">{describe(r.log)}</span> },
   ];
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-6 lg:space-y-0">
       <PageHeader title="Activity log" description="A tamper-evident trail of sales, refunds, shifts and stock changes." />
       <DataTable columns={cols} rows={q.data?.rows ?? []} rowKey={r => r.log.id} loading={q.isLoading} server={{ page, pageSize: 15, total: q.data?.total ?? 0, onPageChange: setPage }}
         toolbar={<Segmented value={entity} onChange={v => { setEntity(v); setPage(1); }} options={[{ value: "all", label: "All" }, { value: "sale", label: "Sales" }, { value: "shift", label: "Cash drawer" }, { value: "purchase", label: "Purchasing" }, { value: "product", label: "Products" }]} />}

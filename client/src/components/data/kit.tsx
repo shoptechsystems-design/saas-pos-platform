@@ -112,7 +112,7 @@ type ServerPaging = { page: number; pageSize: number; total: number; onPageChang
 const hideClass = { sm: "hidden sm:table-cell", md: "hidden md:table-cell", lg: "hidden lg:table-cell" } as const;
 
 export function DataTable<T>({
-  columns, rows, rowKey, loading, toolbar, empty, pageSize = 12, server, onRowClick, footer,
+  columns, rows, rowKey, loading, toolbar, empty, pageSize = 12, server, onRowClick, footer, maxBodyHeight,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -124,6 +124,8 @@ export function DataTable<T>({
   server?: ServerPaging;
   onRowClick?: (row: T) => void;
   footer?: ReactNode;
+  /** Cap the scrolling body (px) for tables stacked on a long page, so they scroll inside their card. */
+  maxBodyHeight?: number;
 }) {
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
   const [clientPage, setClientPage] = useState(1);
@@ -165,17 +167,19 @@ export function DataTable<T>({
   }, [page, pages]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_28px_-12px_rgba(15,23,42,0.08)]">
-      {toolbar && <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">{toolbar}</div>}
-      <div className="overflow-x-auto">
+    // In a height-constrained flex column (the table pages) the body scrolls inside the card while the toolbar,
+    // column headers and pager stay in view. Elsewhere it simply grows to its natural height.
+    <div className="flex min-h-[260px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_28px_-12px_rgba(15,23,42,0.08)]">
+      {toolbar && <div className="flex shrink-0 flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">{toolbar}</div>}
+      <div className="min-h-0 flex-1 overflow-auto" style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}>
         <table className="w-full min-w-[640px] border-collapse text-left text-sm">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/80">
+            <tr>
               {columns.map(c => {
                 const active = sort?.key === c.key;
                 const Icon = !c.sortValue || server ? null : active ? (sort!.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
                 return (
-                  <th key={c.key} className={`px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 ${c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : ""} ${c.hideBelow ? hideClass[c.hideBelow] : ""}`}>
+                  <th key={c.key} className={`sticky top-0 z-10 bg-slate-50 px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 shadow-[inset_0_-1px_0_#e2e8f0] ${c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : ""} ${c.hideBelow ? hideClass[c.hideBelow] : ""}`}>
                     {c.sortValue && !server ? (
                       <button type="button" onClick={() => toggleSort(c)} className={`inline-flex items-center gap-1.5 uppercase tracking-wider transition hover:text-slate-900 ${active ? "text-slate-900" : ""} ${c.align === "right" ? "flex-row-reverse" : ""}`}>
                         {c.header}{Icon && <Icon className={`h-3 w-3 ${active ? "text-teal-600" : "text-slate-300"}`} />}
@@ -210,7 +214,7 @@ export function DataTable<T>({
       </div>
 
       {!loading && total > 0 && (
-        <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 px-5 py-3 sm:flex-row">
+        <div className="flex shrink-0 flex-col items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 px-5 py-3 sm:flex-row">
           <p className="text-xs text-slate-500">Showing <span className="font-semibold text-slate-800">{from.toLocaleString()}–{to.toLocaleString()}</span> of <span className="font-semibold text-slate-800">{total.toLocaleString()}</span></p>
           {pages > 1 && (
             <nav className="flex items-center gap-1" aria-label="Pagination">

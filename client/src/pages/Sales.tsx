@@ -103,7 +103,7 @@ export default function SalesView() {
   const sel = "h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-6 lg:space-y-0">
       <PageHeader title="Sales history" description="Every completed transaction, filterable and exportable." actions={<>
         <Button variant="outline" onClick={exportCsv} disabled={exporting} className="h-10 rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50"><Download className="mr-2 h-4 w-4" />{exporting ? "Exporting…" : "Export CSV"}</Button>
         <Button variant="outline" onClick={getStatement} disabled={statement.isFetching || customer === "all"} className="h-10 rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50"><FileText className="mr-2 h-4 w-4" />{statement.isFetching ? "Preparing…" : "Customer statement"}</Button>

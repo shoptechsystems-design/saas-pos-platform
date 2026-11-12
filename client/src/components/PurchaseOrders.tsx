@@ -51,7 +51,7 @@ export default function PurchaseOrders() {
   const inputCls = "h-10 rounded-xl border-slate-200 bg-slate-50 text-slate-900";
   return (
     <>
-      <DataTable columns={cols} rows={list.data ?? []} rowKey={r => r.purchase.id} loading={list.isLoading} pageSize={6}
+      <DataTable columns={cols} rows={list.data ?? []} rowKey={r => r.purchase.id} loading={list.isLoading} pageSize={6} maxBodyHeight={440}
         toolbar={<><div><h4 className="text-base font-bold text-slate-900">Purchase orders</h4><p className="text-xs text-slate-500">Order from suppliers, then receive to add stock automatically.</p></div>
           <Button onClick={() => setOpen(true)} className="h-10 rounded-xl bg-slate-900 font-semibold text-white hover:bg-slate-700"><Plus className="mr-2 h-4 w-4" /> New order</Button></>}
         empty={{ icon: Truck, title: "No purchase orders yet", hint: "Create an order for low-stock items, then mark it received when the delivery arrives." }} />
