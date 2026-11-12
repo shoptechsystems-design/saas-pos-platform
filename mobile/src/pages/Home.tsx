@@ -51,19 +51,19 @@ export default function Home() {
   ];
 
   return (
-    <Screen brand title={s.tenant?.name ?? "Karyano"} subtitle={`${greet}, ${first}`} onRefresh={() => qc.invalidateQueries()} right={<div className="avatar round" style={{ width: 38, height: 38 }}>{initials(s.user?.name)}</div>}>
-      <QueueBanner currency={cur} />
-
-      <div className="hero2">
-        <div className="hero2-top"><span className="hero2-label">Today</span><span className="hero2-chip">{roleLabel(s.role)}</span></div>
-        <div className="hero2-sub">Total sales</div>
-        <div className="hero2-big mono">{stats.data ? money(stats.data.todaySales, cur) : "—"}</div>
-        <div className="hero2-meta">
+    <Screen brand title={s.tenant?.name ?? "Karyano"} subtitle={`${greet}, ${first}`} strip={
+      <div className="has-spark" style={{ position: "relative" }}>
+        <div className="strip-top"><span className="strip-label">Today</span><span className="strip-chip">{roleLabel(s.role)}</span></div>
+        <div className="strip-sub">Total sales</div>
+        <div className="strip-big mono">{stats.data ? money(stats.data.todaySales, cur) : "—"}</div>
+        <div className="strip-meta">
           {delta !== null && <span className={`delta ${Math.abs(delta) < 0.5 ? "flat" : delta > 0 ? "up" : "down"}`}><IonIcon icon={delta >= 0 ? arrowUpOutline : arrowDownOutline} />{Math.abs(delta).toFixed(0)}% vs yesterday</span>}
           <span>{stats.data?.todayOrders ?? 0} order{stats.data?.todayOrders === 1 ? "" : "s"} today</span>
         </div>
-        <Sparkline values={spark} className="hero2-spark" />
-      </div>
+        <div style={{ height: 52 }} />
+        <Sparkline values={spark} className="strip-spark" />
+      </div>} onRefresh={() => qc.invalidateQueries()} right={<div className="avatar round" style={{ width: 38, height: 38 }}>{initials(s.user?.name)}</div>}>
+      <QueueBanner currency={cur} />
 
       <div className="qa">{qa.filter(a => a.show).map(a => (
         <button key={a.label} onClick={() => { tap(); nav(a.to); }}><span className="ico" style={{ background: a.bg, color: a.fg }}><IonIcon icon={a.icon} /></span>{a.label}</button>))}</div>

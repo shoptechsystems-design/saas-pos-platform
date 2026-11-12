@@ -5,14 +5,15 @@ import QueueBanner from "~/components/QueueBanner";
 import { Card, Row, Screen, useNotify } from "~/components/ui";
 import { KaryanoMark } from "~/components/Logo";
 import { initials, roleLabel } from "~/lib/format";
-import { getApiBase } from "~/lib/platform";
+import { getApiBase, useServerSettingsVisible } from "~/lib/platform";
 import { useAuthActions, useSession } from "~/lib/session";
 
 export default function More() {
+  const showServer = useServerSettingsVisible();
   const s = useSession(); const nav = useNavigate(); const { logout } = useAuthActions(); const { confirm } = useNotify();
   const item = (icon: string, tone: string, title: string, sub: string, to: string) => <Row key={to} icon={icon} tone={tone} title={title} sub={sub} onClick={() => nav(to)} right={<IonIcon icon={chevronForward} className="chev" />} />;
   return (
-    <Screen title="More">
+    <Screen title="More" subtitle={s.tenant?.name ?? "Settings and tools"}>
       <div className="profile">
         <div className="av">{initials(s.user?.name)}</div>
         <div className="grow"><div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.02em" }} className="ellipsis">{s.user?.name ?? "Account"}</div>
@@ -49,7 +50,7 @@ export default function More() {
       <div className="section-title">Settings</div>
       <Card pad={false}><div className="divide">
         {item(settingsOutline, "teal", "Business settings", "Name, tax, receipt footer, logo", "/more/settings")}
-        <Row icon={cubeOutline} tone="navy" title="Server" sub={getApiBase() || "Not set"} />
+        {showServer && <Row icon={cubeOutline} tone="navy" title="Server" sub={getApiBase() || "Not set"} />}
       </div></Card>
       <button className="btn btn-danger btn-block" onClick={() => confirm("Sign out?", "Sales saved offline stay on this phone and sync after you sign in again.", "Sign out", () => logout(), true)}><IonIcon icon={logOutOutline} /> Sign out</button>
       <div className="about"><KaryanoMark size={30} /><span>Karyano Mobile · Version 1.0.0</span><span className="tiny">Same data as your web portal</span></div>

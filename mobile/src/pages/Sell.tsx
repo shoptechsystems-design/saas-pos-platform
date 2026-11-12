@@ -54,7 +54,7 @@ export default function Sell() {
   const reset = () => { setCart([]); setCustomer(null); setOpen(false); };
 
   return (
-    <Screen title="Sell" onRefresh={() => qc.invalidateQueries({ queryKey: ["products"] })} right={cart.length ? <button className="btn btn-sm" onClick={() => { tap(); setCart([]); }}>Clear</button> : undefined}>
+    <Screen title="Sell" subtitle={`${totalsNow.items ? `${totalsNow.items} in cart` : "Tap a product to start"}`} onRefresh={() => qc.invalidateQueries({ queryKey: ["products"] })} right={cart.length ? <button className="btn btn-sm" onClick={() => { tap(); setCart([]); }}>Clear</button> : undefined}>
       <QueueBanner currency={cur} />
       <SearchBox value={search} onChange={setSearch} onEnter={scan} placeholder="Search or scan barcode" />
       <div className="chips">
@@ -112,7 +112,7 @@ function CustomerPicker({ open, onClose, onPick }: { open: boolean; onClose: () 
 }
 
 function CheckoutSheet(p: { open: boolean; onClose: () => void; cart: CartLine[]; setQty: (id: number, q: number) => void; customer: { id: number; name: string } | null; setCustomer: (c: { id: number; name: string } | null) => void; cur?: string; taxRate: number; business: string; footer?: string | null; onDone: (o: Outcome) => void; onError: (e: unknown) => void }) {
-  const qc = useQueryClient();
+  const qc = useQueryClient(); const loader = useNotify();
   const [method, setMethod] = useState<PaymentMethod>("cash"); const [discount, setDiscount] = useState(""); const [received, setReceived] = useState(""); const [busy, setBusy] = useState(false); const [pick, setPick] = useState(false);
   const reqId = useRef(newRequestId());
   const t = computeTotals(p.cart, Number(discount) || 0, p.taxRate);
@@ -123,7 +123,7 @@ function CheckoutSheet(p: { open: boolean; onClose: () => void; cart: CartLine[]
   const pay = async () => {
     if (busy || !p.cart.length) return;
     if (short) { warn(); return p.onError(new Error("Amount received is less than the total.")); }
-    setBusy(true);
+    setBusy(true); loader.busy("Processing sale…");
     const payload = { items: p.cart.map(l => ({ productId: l.product.id, quantity: l.qty })), customerId: p.customer?.id ?? null, paymentMethod: method, amountReceived: method === "cash" ? recv : t.total, discount: t.discount, clientRequestId: reqId.current };
     const lines = p.cart;
     try {
@@ -138,7 +138,7 @@ function CheckoutSheet(p: { open: boolean; onClose: () => void; cart: CartLine[]
         reqId.current = newRequestId(); setDiscount(""); setReceived(""); setMethod("cash");
         p.onDone({ kind: "offline", total: t.total, items: t.items });
       } else { warn(); p.onError(e); }
-    } finally { setBusy(false); }
+    } finally { setBusy(false); loader.done(); }
   };
 
   return (

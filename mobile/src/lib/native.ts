@@ -15,7 +15,7 @@ export const warn = () => { if (isNative) Haptics.notification({ type: Notificat
 export async function initNative() {
   if (!isNative) return;
   document.documentElement.classList.add("native-app");
-  try { await StatusBar.setStyle({ style: Style.Dark }); await StatusBar.setBackgroundColor({ color: "#0F172A" }); } catch { /* unsupported */ }
+  try { await StatusBar.setStyle({ style: Style.Dark }); await StatusBar.setBackgroundColor({ color: "#0B1220" }); } catch { /* unsupported */ }
   App.addListener("backButton", ({ canGoBack }) => {
     const roots = ["/", "/home", "/sell", "/orders", "/inventory", "/more", "/login", "/welcome"];
     if (canGoBack && !roots.includes(window.location.pathname)) window.history.back(); else App.exitApp();

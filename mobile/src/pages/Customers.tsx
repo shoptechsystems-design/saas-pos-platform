@@ -115,7 +115,7 @@ export default function Customers() {
   const groups = useGroups();
   const canAdd = s.can.sell;
   return (
-    <Screen title="Customers" back="/more" onRefresh={() => Promise.all([customers.refetch(), groups.refetch()])}
+    <Screen title="Customers" subtitle="Contacts, groups and statements" back="/more" onRefresh={() => Promise.all([customers.refetch(), groups.refetch()])}
       right={canAdd && tab === "customers" ? <button className="icon-btn" aria-label="Add customer" onClick={() => { tap(); setAdding(true); }}><IonIcon icon={addOutline} /></button> : undefined}>
       <Seg value={tab} onChange={setTab} options={[{ value: "customers", label: "Customers" }, { value: "groups", label: "Groups" }]} />
       {tab === "groups" ? <Groups groups={groups} isAdmin={s.can.admin} /> : <>

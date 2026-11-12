@@ -1,5 +1,5 @@
-import { IonContent, IonHeader, IonModal, IonPage, IonRefresher, IonRefresherContent, IonSpinner, IonToolbar, useIonAlert, useIonToast } from "@ionic/react";
-import { alertCircleOutline, chevronBack, closeOutline, searchOutline } from "ionicons/icons";
+import { IonContent, IonHeader, IonModal, IonPage, IonRefresher, IonRefresherContent, IonSpinner, IonToolbar, useIonAlert, useIonLoading, useIonToast } from "@ionic/react";
+import { alertCircle, checkmarkCircle, informationCircle, alertCircleOutline, chevronBack, closeOutline, searchOutline } from "ionicons/icons";
 import { IonIcon } from "@ionic/react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
@@ -8,11 +8,11 @@ import { KaryanoMark } from "~/components/Logo";
 import { success, tap, warn } from "~/lib/native";
 import { initials, tint } from "~/lib/format";
 
-export function Screen({ title, subtitle, brand, back, right, children, onRefresh, bare }: { title: string; subtitle?: string; brand?: boolean; back?: boolean | string; right?: ReactNode; children: ReactNode; onRefresh?: () => Promise<unknown> | unknown; bare?: boolean }) {
+export function Screen({ title, subtitle, brand, strip, back, right, children, onRefresh, bare }: { title: string; subtitle?: string; brand?: boolean; strip?: ReactNode; back?: boolean | string; right?: ReactNode; children: ReactNode; onRefresh?: () => Promise<unknown> | unknown; bare?: boolean }) {
   const nav = useNavigate();
   return (
     <IonPage>
-      <IonHeader className="ion-no-border">
+      <IonHeader className={`ion-no-border ${strip ? "with-strip" : ""}`}>
         <IonToolbar>
           <div className="hdr">
             {back ? <button className="icon-btn" aria-label="Back" onClick={() => (typeof back === "string" ? nav(back) : nav(-1))}><IonIcon icon={chevronBack} /></button> : brand ? <KaryanoMark size={36} /> : null}
@@ -23,6 +23,7 @@ export function Screen({ title, subtitle, brand, back, right, children, onRefres
       </IonHeader>
       <IonContent>
         {onRefresh && <IonRefresher slot="fixed" onIonRefresh={async e => { try { await onRefresh(); } finally { e.detail.complete(); } }}><IonRefresherContent /></IonRefresher>}
+        {strip && <div className="strip">{strip}</div>}
         {bare ? children : <div className="page">{children}</div>}
       </IonContent>
     </IonPage>
@@ -95,15 +96,25 @@ export function Stat({ label, value, sub, tone }: { label: string; value: string
   return <div className="card kpi"><div className="l">{label}</div><div className="v" style={tone ? { color: tone } : undefined}>{value}</div>{sub && <div className="tiny muted">{sub}</div>}</div>;
 }
 
-/** Toast + confirm helpers shared by every screen. */
+/** Toast, confirm and blocking-loader helpers shared by every screen. */
 export function useNotify() {
   const [present] = useIonToast();
   const [alert] = useIonAlert();
+  const [showLoader, hideLoader] = useIonLoading();
+  const show = (message: string, kind: "ok" | "error" | "info", duration: number) => present({
+    message, duration, position: "top", swipeGesture: "vertical", cssClass: `k-toast k-${kind}`,
+    icon: kind === "ok" ? checkmarkCircle : kind === "error" ? alertCircle : informationCircle,
+    buttons: kind === "error" ? [{ icon: closeOutline, role: "cancel", htmlAttributes: { "aria-label": "Dismiss" } }] : undefined,
+  });
   return {
-    ok: (message: string) => { success(); present({ message, duration: 2000, color: "success", position: "top" }); },
-    fail: (e: unknown) => { warn(); present({ message: e instanceof Error ? e.message : String(e), duration: 3500, color: "danger", position: "top" }); },
+    ok: (message: string) => { success(); show(message, "ok", 2400); },
+    info: (message: string) => { tap(); show(message, "info", 2600); },
+    fail: (e: unknown) => { warn(); show(e instanceof Error ? e.message : String(e), "error", 4500); },
+    /** Full-screen blocking loader for actions that must not be interrupted or repeated (payments). */
+    busy: (message: string) => showLoader({ message, spinner: "crescent", cssClass: "k-loading", backdropDismiss: false }),
+    done: () => hideLoader(),
     confirm: (header: string, message: string, label: string, onConfirm: () => void, danger = false) =>
-      alert({ header, message, buttons: [{ text: "Cancel", role: "cancel" }, { text: label, role: danger ? "destructive" : "confirm", handler: onConfirm }] }),
+      alert({ header, message, cssClass: "k-alert", buttons: [{ text: "Cancel", role: "cancel" }, { text: label, role: danger ? "destructive" : "confirm", handler: onConfirm }] }),
   };
 }
 

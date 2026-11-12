@@ -52,11 +52,12 @@ export default function Expenses() {
     return { all, cats: [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5) };
   }, [q.data]);
   return (
-    <Screen title="Expenses" back="/more" onRefresh={() => q.refetch()}
+    <Screen title="Expenses" subtitle="Track business spending" back="/more" onRefresh={() => q.refetch()} strip={q.data?.length ? (
+      <div><div className="strip-top"><span className="strip-label">Total recorded</span><span className="strip-chip">{q.data.length} expense{q.data.length === 1 ? "" : "s"}</span></div>
+        <div className="strip-big mono">{money(totals.all, cur)}</div><div className="strip-meta">Latest 500 entries</div></div>) : undefined}
       right={s.can.admin ? <button className="icon-btn" aria-label="Add expense" onClick={() => { tap(); setAdding(true); }}><IonIcon icon={addOutline} /></button> : undefined}>
       <Async q={q} empty={d => d.length ? null : <Empty icon={walletOutline} title="No expenses yet" hint="Record rent, utilities and other costs to see true profit in reports." action={s.can.admin ? <button className="btn btn-primary" onClick={() => setAdding(true)}>Add expense</button> : undefined} />}>
         {d => <>
-          <div className="hero"><div className="label">Total recorded</div><div className="big">{money(totals.all, cur)}</div><div className="small" style={{ color: "#cbd5e1" }}>{d.length} expense{d.length === 1 ? "" : "s"} · latest 500</div></div>
           {totals.cats.length > 0 && <Card><div className="h2" style={{ marginBottom: 10 }}>Top categories</div><div className="stack" style={{ gap: 12 }}>{totals.cats.map(([name, total]) => (
             <div key={name}><div className="row between small"><b>{name}</b><span className="mono">{money(total, cur)}</span></div><div className="meter" style={{ marginTop: 5 }}><i style={{ width: `${totals.all ? (total / totals.all) * 100 : 0}%` }} /></div></div>
           ))}</div></Card>}

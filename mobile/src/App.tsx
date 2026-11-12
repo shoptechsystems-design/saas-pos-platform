@@ -10,6 +10,7 @@ import "@ionic/react/css/typography.css";
 import "@ionic/react/css/padding.css";
 import "./theme.css";
 import Protected from "~/components/Protected";
+import { BusyButtons, GlobalProgress, NetworkStatus } from "~/components/feedback";
 import { startQueueRunner, useQueue } from "~/lib/offline";
 import { useSession } from "~/lib/session";
 import Activity from "~/pages/Activity";
@@ -77,9 +78,12 @@ function Shell() {
 export default function MobileApp() {
   return (
     <IonApp>
+      <GlobalProgress />
+      <BusyButtons />
       <IonReactRouter>
         <Shell />
       </IonReactRouter>
+      <NetworkStatus />
     </IonApp>
   );
 }

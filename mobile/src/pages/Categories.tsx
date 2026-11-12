@@ -41,7 +41,7 @@ export default function Categories() {
   const remove = (c: Category) => n.confirm("Delete category?", `"${c.name}" will be removed. Products in it become uncategorised.`, "Delete", async () => { try { await del.mutateAsync(c.id); n.ok("Category deleted"); } catch (e) { n.fail(e); } }, true);
 
   return (
-    <Screen title="Categories" back="/more" onRefresh={() => q.refetch()} right={<button className="icon-btn" aria-label="Add category" onClick={() => setForm("new")}><IonIcon icon={add} /></button>}>
+    <Screen title="Categories" subtitle="Organise your catalog" back="/more" onRefresh={() => q.refetch()} right={<button className="icon-btn" aria-label="Add category" onClick={() => setForm("new")}><IonIcon icon={add} /></button>}>
       <Async q={q} empty={rows => rows.length ? null : <Empty icon={pricetagsOutline} title="No categories yet" hint="Group products so they're quicker to find at the till." action={<button className="btn btn-primary" onClick={() => setForm("new")}>Add category</button>} />}>
         {rows => (
           <Card pad={false}>

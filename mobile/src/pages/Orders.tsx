@@ -42,7 +42,7 @@ export default function Orders() {
   }, [rows]);
 
   return (
-    <Screen title="Orders" onRefresh={() => qc.invalidateQueries({ queryKey: ["sales"] })}>
+    <Screen title="Orders" subtitle={first ? `${first.total} order${first.total === 1 ? "" : "s"} · ${money(first.revenue, cur)}` : "Sales history"} onRefresh={() => qc.invalidateQueries({ queryKey: ["sales"] })}>
       <SearchBox value={search} onChange={setSearch} placeholder="Search sale number or customer" />
       <div className="chips">{RANGES.map(r => <button key={r.id} className={`chip ${range === r.id ? "on" : ""}`} onClick={() => setRange(r.id)}>{r.label}</button>)}
         <span style={{ width: 8, flex: "none" }} />{PAY.map(m => <button key={m} className={`chip ${pay === m ? "on" : ""}`} style={{ textTransform: "capitalize" }} onClick={() => setPay(pay === m ? undefined : m)}>{m}</button>)}</div>

@@ -38,7 +38,7 @@ export default function Activity() {
   if (!s.can.admin) return <Screen title="Activity" back="/more"><Empty icon={lockClosedOutline} title="Owner access only" hint="The audit log is available to the business owner / admin." /></Screen>;
   const rows = q.data?.pages.flatMap(p => p.rows) ?? [];
   return (
-    <Screen title="Activity" back="/more" onRefresh={() => q.refetch()}>
+    <Screen title="Activity" subtitle="Who changed what" back="/more" onRefresh={() => q.refetch()}>
       <div className="chips">{ENTITIES.map(e => <button key={e || "all"} className={`chip ${entity === e ? "on" : ""}`} onClick={() => setEntity(e)}>{e ? titleCase(e) : "All"}</button>)}</div>
       <Async q={{ isLoading: q.isLoading, isError: q.isError, error: q.error, data: q.data ? rows : undefined, refetch: q.refetch }} empty={d => d.length ? null : <Empty icon={pulseOutline} title="No activity" hint="Actions taken in the app will appear here." />}>
         {d => <>

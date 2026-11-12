@@ -143,7 +143,7 @@ export default function Purchases() {
   const shown = (rows: PurchaseRow[]) => rows.filter(r => status === "all" || r.purchase.status === status || (status === "ordered" && r.purchase.status === "draft"));
 
   return (
-    <Screen title="Purchase orders" back="/more" onRefresh={() => q.refetch()} right={<button className="icon-btn" aria-label="New purchase order" onClick={() => setCreating(true)}><IonIcon icon={add} /></button>}>
+    <Screen title="Purchase orders" subtitle="Order and receive stock" back="/more" onRefresh={() => q.refetch()} right={<button className="icon-btn" aria-label="New purchase order" onClick={() => setCreating(true)}><IonIcon icon={add} /></button>}>
       <div className="chips">
         {(["all", "ordered", "received", "cancelled"] as const).map(s => <button key={s} className={`chip ${status === s ? "on" : ""}`} onClick={() => setStatus(s)} style={{ textTransform: "capitalize" }}>{s}</button>)}
       </div>

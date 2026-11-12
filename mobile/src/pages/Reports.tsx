@@ -42,13 +42,14 @@ export default function Reports() {
   };
   if (!s.can.admin) return <Screen title="Reports" back="/more"><Empty icon={lockClosedOutline} title="Owner access only" hint="Financial reports are available to the business owner / admin." /></Screen>;
   return (
-    <Screen title="Reports" back="/more" onRefresh={() => q.refetch()}>
+    <Screen title="Reports" subtitle="Profit, sales and expenses" back="/more" onRefresh={() => q.refetch()} strip={r && q.data ? (
+      <div><div className="strip-top"><span className="strip-label">Revenue</span><span className="strip-chip">{q.data.orders} order{q.data.orders === 1 ? "" : "s"}</span></div>
+        <div className="strip-big mono">{money(q.data.revenue, cur)}</div><div className="strip-meta">Average order {money(q.data.avgOrder, cur)}</div></div>) : undefined}>
       <Seg value={range} onChange={setRange} options={[{ value: "today", label: "Today" }, { value: "7d", label: "7 days" }, { value: "30d", label: "30 days" }, { value: "month", label: "Month" }, { value: "custom", label: "Custom" }]} />
       {range === "custom" && <div className="grid2"><input className="input" type="date" aria-label="From date" value={a} max={b || undefined} onChange={e => setA(e.target.value)} /><input className="input" type="date" aria-label="To date" value={b} min={a || undefined} onChange={e => setB(e.target.value)} /></div>}
       {!r ? <Empty icon={barChartOutline} title="Pick a date range" hint="Choose both a start and an end date." /> :
         <Async q={q}>
           {o => <>
-            <div className="hero"><div className="label">Revenue</div><div className="big">{money(o.revenue, cur)}</div><div className="small" style={{ color: "#cbd5e1" }}>{o.orders} order{o.orders === 1 ? "" : "s"} · avg {money(o.avgOrder, cur)}</div></div>
             <div className="kpis">
               <Stat label="Gross profit" value={money(o.grossProfit, cur)} tone={o.grossProfit >= 0 ? GREEN : RED} />
               <Stat label="Net profit" value={money(o.netProfit, cur)} tone={o.netProfit >= 0 ? GREEN : RED} sub="After expenses" />

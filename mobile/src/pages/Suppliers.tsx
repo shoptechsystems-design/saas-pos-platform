@@ -47,7 +47,7 @@ export default function Suppliers() {
   const filter = (rows: Supplier[]) => rows.filter(s => !search.trim() || [s.name, s.email, s.phone].some(v => v?.toLowerCase().includes(search.trim().toLowerCase())));
 
   return (
-    <Screen title="Suppliers" back="/more" onRefresh={() => q.refetch()} right={<button className="icon-btn" aria-label="Add supplier" onClick={() => setOpen(true)}><IonIcon icon={add} /></button>}>
+    <Screen title="Suppliers" subtitle="Vendors you buy from" back="/more" onRefresh={() => q.refetch()} right={<button className="icon-btn" aria-label="Add supplier" onClick={() => setOpen(true)}><IonIcon icon={add} /></button>}>
       <SearchBox value={search} onChange={setSearch} placeholder="Search suppliers" />
       <Async q={q} empty={rows => rows.length === 0 ? <Empty icon={storefrontOutline} title="No suppliers yet" hint="Add the people you buy stock from, then raise purchase orders against them." action={<button className="btn btn-primary" onClick={() => setOpen(true)}>Add supplier</button>} /> : filter(rows).length === 0 ? <Empty icon={storefrontOutline} title="No matches" hint="Try a different name, phone or email." /> : null}>
         {rows => (

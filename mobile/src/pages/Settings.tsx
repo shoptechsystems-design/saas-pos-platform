@@ -44,7 +44,7 @@ export default function Settings() {
     reader.readAsDataURL(picked);
   };
   return (
-    <Screen title="Business settings" back="/more" onRefresh={() => q.refetch()}>
+    <Screen title="Business settings" subtitle="Name, tax, receipts and logo" back="/more" onRefresh={() => q.refetch()}>
       <Async q={q}>
         {() => <>
           {!admin && <div className="banner info">Only the business owner / admin can change these settings.</div>}

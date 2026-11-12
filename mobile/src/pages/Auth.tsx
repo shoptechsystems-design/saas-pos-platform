@@ -1,10 +1,10 @@
 import { IonContent, IonIcon, IonPage } from "@ionic/react";
 import { KaryanoMark } from "~/components/Logo";
 import { eyeOffOutline, eyeOutline, settingsOutline } from "ionicons/icons";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { Field, Sheet } from "~/components/ui";
-import { defaultApiBase, getApiBase, setApiBase, useToken } from "~/lib/platform";
+import { Field, Sheet, useNotify } from "~/components/ui";
+import { defaultApiBase, getApiBase, revealDeveloperOptions, setApiBase, useServerSettingsVisible, useToken } from "~/lib/platform";
 import { ApiError } from "~/lib/rest";
 import { useAuthActions } from "~/lib/session";
 
@@ -30,13 +30,19 @@ function ServerSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
 
 function Shell({ title, sub, children, footer }: { title: string; sub: string; children: React.ReactNode; footer: React.ReactNode }) {
   const [server, setServer] = useState(false);
+  const canConfigure = useServerSettingsVisible(); const { info } = useNotify();
+  const taps = useRef({ n: 0, t: 0 });
+  const logoTap = () => {
+    const now = Date.now(); taps.current = { n: now - taps.current.t < 2500 ? taps.current.n + 1 : 1, t: now };
+    if (taps.current.n >= 5 && !canConfigure) { taps.current.n = 0; revealDeveloperOptions(); info("Developer options enabled for this session"); }
+  };
   return (
     <IonPage>
       <IonContent>
         <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: "#fff" }}>
           <div className="auth-hero">
-            <button className="icon-btn gear" aria-label="Server settings" onClick={() => setServer(true)}><IonIcon icon={settingsOutline} /></button>
-            <KaryanoMark size={76} />
+            {canConfigure && <button className="icon-btn gear" aria-label="Server settings" onClick={() => setServer(true)}><IonIcon icon={settingsOutline} /></button>}
+            <div onClick={logoTap} role="presentation"><KaryanoMark size={76} /></div>
             <div className="brand">Karyano</div>
             <div className="tag">Smart point of sale for every shop</div>
           </div>
@@ -46,7 +52,7 @@ function Shell({ title, sub, children, footer }: { title: string; sub: string; c
             <div className="center muted small" style={{ marginTop: "auto", paddingTop: 8 }}>{footer}</div>
           </div>
         </div>
-        <ServerSheet open={server} onClose={() => setServer(false)} />
+        {canConfigure && <ServerSheet open={server} onClose={() => setServer(false)} />}
       </IonContent>
     </IonPage>
   );

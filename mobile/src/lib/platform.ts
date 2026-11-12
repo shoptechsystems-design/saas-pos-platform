@@ -29,3 +29,14 @@ export const useToken = () => useSyncExternalStore(subscribe, getToken);
 export const isOnboarded = () => read(KEYS.onboarded) === "1";
 export const setOnboarded = (v: boolean) => write(KEYS.onboarded, v ? "1" : null);
 export const useOnboarded = () => useSyncExternalStore(subscribe, isOnboarded);
+
+/**
+ * Server settings are for developers and for builds that were shipped without a server address.
+ * Normal users of a production build never see them. Tapping the logo 5 times on the sign-in screen
+ * reveals them for the current session (useful for support and testing).
+ */
+const DEV_KEY = "karyano:dev";
+const sessionFlag = () => { try { return window.sessionStorage.getItem(DEV_KEY) === "1"; } catch { return false; } };
+const serverUiVisible = () => import.meta.env.DEV || !import.meta.env.VITE_API_URL || sessionFlag();
+export const revealDeveloperOptions = () => { try { window.sessionStorage.setItem(DEV_KEY, "1"); } catch { /* storage unavailable */ } emit(); };
+export const useServerSettingsVisible = () => useSyncExternalStore(subscribe, serverUiVisible);

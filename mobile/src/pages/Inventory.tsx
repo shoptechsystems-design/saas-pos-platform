@@ -217,7 +217,7 @@ export default function Inventory() {
   const lowCount = (q.data ?? []).filter(p => p.stockQuantity <= p.minStockLevel).length;
 
   return (
-    <Screen title="Inventory" onRefresh={() => q.refetch()} right={can.catalog ? <button className="icon-btn" aria-label="Add product" onClick={() => setForm("new")}><IonIcon icon={add} /></button> : undefined}>
+    <Screen title="Inventory" subtitle="Products, stock and variants" onRefresh={() => q.refetch()} right={can.catalog ? <button className="icon-btn" aria-label="Add product" onClick={() => setForm("new")}><IonIcon icon={add} /></button> : undefined}>
       <SearchBox value={term} onChange={setTerm} placeholder="Search name, SKU or barcode" />
       <div className="chips">
         <button className={`chip ${!cat && !lowOnly ? "on" : ""}`} onClick={() => { setCat(undefined); setLowOnly(false); }}>All</button>

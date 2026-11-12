@@ -25,7 +25,7 @@ export default function Shifts() {
   const doOpen = async () => { const v = parse(); if (v === null) return; try { await open.mutateAsync({ openingCash: v }); n.ok("Shift opened"); reset(); setOpening(false); } catch (e) { n.fail(e); } };
   const doClose = async () => { const v = parse(); if (v === null) return; try { setResult(await close.mutateAsync({ countedCash: v, notes: notes.trim() || null })); n.ok("Shift closed"); reset(); } catch (e) { n.fail(e); } };
   return (
-    <Screen title="Shifts" back="/more" onRefresh={() => Promise.all([current.refetch(), history.refetch()])}>
+    <Screen title="Shifts" subtitle="Open and close the register" back="/more" onRefresh={() => Promise.all([current.refetch(), history.refetch()])}>
       <Async q={current}>
         {c => c ? (
           <Card>

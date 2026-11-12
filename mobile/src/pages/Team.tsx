@@ -26,7 +26,7 @@ export default function Team() {
   };
   if (!s.can.admin) return <Screen title="Team" back="/more"><Empty icon={lockClosedOutline} title="Owner access only" hint="Only the business owner / admin can manage the team." /></Screen>;
   return (
-    <Screen title="Team" back="/more" onRefresh={() => q.refetch()} right={<button className="icon-btn" aria-label="Invite" onClick={() => { tap(); setOpen(true); }}><IonIcon icon={personAddOutline} /></button>}>
+    <Screen title="Team" subtitle="Cashiers and inventory managers" back="/more" onRefresh={() => q.refetch()} right={<button className="icon-btn" aria-label="Invite" onClick={() => { tap(); setOpen(true); }}><IonIcon icon={personAddOutline} /></button>}>
       <Async q={q} empty={d => d.length ? null : <Empty icon={peopleOutline} title="No team members" />}>
         {d => <Card pad={false} className="divide">{d.map(m => (
           <div className="list-row" key={m.membership.id}>
