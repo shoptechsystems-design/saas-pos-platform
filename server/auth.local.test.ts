@@ -4,7 +4,7 @@ import { toSafeUser } from "./routers";
 
 describe("direct account authentication", () => {
   it("hashes passwords and verifies only the correct password", () => {
-    const password = "OmniPOS-secure-2026";
+    const password = "Karyano-secure-2026";
     const storedHash = hashPassword(password);
 
     expect(storedHash).not.toContain(password);

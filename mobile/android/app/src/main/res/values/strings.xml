@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">OmniPOS</string>
-    <string name="title_activity_main">OmniPOS</string>
-    <string name="package_name">com.omnipos.app</string>
-    <string name="custom_url_scheme">com.omnipos.app</string>
+    <string name="app_name">Karyano</string>
+    <string name="title_activity_main">Karyano</string>
+    <string name="package_name">com.karyano.app</string>
+    <string name="custom_url_scheme">com.karyano.app</string>
 </resources>

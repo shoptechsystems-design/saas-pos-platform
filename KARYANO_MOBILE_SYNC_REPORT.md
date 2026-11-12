@@ -1,11 +1,11 @@
-# OmniPOS Mobile API Synchronization & Security Report
+# Karyano Mobile API Synchronization & Security Report
 
-**Target system:** OmniPOS SaaS Platform (`https://omnipos-hjcb6uyk.manus.space`)
-**Mobile repository:** `shoptechsystems-design/omnipos-mobile`
+**Target system:** Karyano SaaS Platform (`https://karyano-hjcb6uyk.manus.space`)
+**Mobile repository:** `shoptechsystems-design/karyano-mobile`
 
 ## Executive summary
 
-The Expo mobile client shares the OmniPOS tenant-scoped tRPC backend, PKR calculations, authentication, inventory rules, customer history, and receipt branding. This release adds Bluetooth HID barcode scanning, offline SQLite transaction persistence with idempotent replay, visible synchronization status, and branded customer/reconciliation PDFs.
+The Expo mobile client shares the Karyano tenant-scoped tRPC backend, PKR calculations, authentication, inventory rules, customer history, and receipt branding. This release adds Bluetooth HID barcode scanning, offline SQLite transaction persistence with idempotent replay, visible synchronization status, and branded customer/reconciliation PDFs.
 
 ## Authentication and tenant isolation
 
@@ -17,7 +17,7 @@ The Sell screen uses a normal text input, which supports Bluetooth scanners oper
 
 ## Offline checkout and synchronization
 
-Native builds store queued sales in `expo-sqlite` (`omnipos-offline.db`); web preview uses an AsyncStorage fallback. Each queued sale stores a client request ID, cart/payment/customer payload, attempt count, status, and last error. `pos.checkout` accepts `clientRequestId`, derives a deterministic sale number from it, and returns the existing sale on replay so stock and customer totals are not duplicated.
+Native builds store queued sales in `expo-sqlite` (`karyano-offline.db`); web preview uses an AsyncStorage fallback. Each queued sale stores a client request ID, cart/payment/customer payload, attempt count, status, and last error. `pos.checkout` accepts `clientRequestId`, derives a deterministic sale number from it, and returns the existing sale on replay so stock and customer totals are not duplicated.
 
 The mobile sync runner retries on app foreground, network reconnect, app-state transitions, and a 30-second active interval. A visible banner reports pending count, failed count, the latest error, syncing state, and a manual Retry action. Entries remain available for retry and become `failed` after five attempts.
 

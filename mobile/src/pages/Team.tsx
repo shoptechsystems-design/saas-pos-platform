@@ -38,7 +38,7 @@ export default function Team() {
       </Async>
       <div className="banner info"><span className="grow">Cashiers can sell and manage customers. Inventory managers handle products, stock and purchasing.</span></div>
       <Sheet open={open} onClose={() => setOpen(false)} title="Add team member">
-        <div className="banner warn">The person must create their OmniPOS account first (Sign up in the app). Then add them here with the same email.</div>
+        <div className="banner warn">The person must create their Karyano account first (Sign up in the app). Then add them here with the same email.</div>
         <Field label="Name"><input className="input" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="Full name" /></Field>
         <Field label="Email" error={err}><input className="input" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} inputMode="email" autoCapitalize="none" placeholder="name@email.com" /></Field>
         <Field label="Role"><Seg value={role} onChange={setRole} options={[{ value: "cashier", label: "Cashier" }, { value: "inventory_manager", label: "Inventory" }]} /></Field>

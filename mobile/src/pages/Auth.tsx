@@ -1,5 +1,6 @@
 import { IonContent, IonIcon, IonPage } from "@ionic/react";
-import { cartOutline, eyeOffOutline, eyeOutline, settingsOutline } from "ionicons/icons";
+import { KaryanoMark } from "~/components/Logo";
+import { eyeOffOutline, eyeOutline, settingsOutline } from "ionicons/icons";
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Field, Sheet } from "~/components/ui";
@@ -19,7 +20,7 @@ function ServerSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
   };
   return (
     <Sheet open={open} onClose={onClose} title="Server settings">
-      <p className="muted small" style={{ margin: 0 }}>The address of your OmniPOS server — the same one your web portal runs on.</p>
+      <p className="muted small" style={{ margin: 0 }}>The address of your Karyano server — the same one your web portal runs on.</p>
       <Field label="Server address" error={err}><input className="input" value={url} onChange={e => { setUrl(e.target.value); setErr(""); }} inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://your-pos.example.com" /></Field>
       <button className="btn btn-primary btn-block" onClick={save}>Save</button>
       {defaultApiBase && <button className="btn btn-block" onClick={() => { setApiBase(null); setUrl(defaultApiBase); onClose(); }}>Reset to default</button>}
@@ -33,7 +34,7 @@ function Shell({ title, sub, children, footer }: { title: string; sub: string; c
     <IonPage>
       <IonContent>
         <div className="auth">
-          <div className="row between"><div className="logo-mark"><IonIcon icon={cartOutline} /></div>
+          <div className="row between"><KaryanoMark size={52} />
             <button className="icon-btn" aria-label="Server settings" onClick={() => setServer(true)}><IonIcon icon={settingsOutline} /></button></div>
           <div><h1 className="h1" style={{ fontSize: 28 }}>{title}</h1><p className="muted" style={{ margin: "6px 0 0" }}>{sub}</p></div>
           {children}
@@ -67,7 +68,7 @@ export function Login() {
     finally { setBusy(false); }
   };
   return (
-    <Shell title="Welcome back" sub="Sign in to your OmniPOS workspace." footer={<>New to OmniPOS? <Link className="link" to="/signup">Create an account</Link></>}>
+    <Shell title="Welcome back" sub="Sign in to your Karyano workspace." footer={<>New to Karyano? <Link className="link" to="/signup">Create an account</Link></>}>
       <form className="stack" style={{ gap: 14 }} onSubmit={submit} noValidate>
         <Field label="Email"><input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@business.com" autoComplete="email" inputMode="email" autoCapitalize="none" /></Field>
         <Field label="Password"><PasswordInput value={password} onChange={setPassword} placeholder="Your password" auto="current-password" /></Field>

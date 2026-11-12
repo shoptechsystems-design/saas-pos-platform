@@ -1,6 +1,6 @@
-# OmniPOS Mobile
+# Karyano Mobile
 
-Phone app for OmniPOS: **Ionic React + Capacitor** (Android + iOS), talking to the portal's REST API (`/api/v1`, see `../MOBILE_API_CONTRACT.md`). It shows exactly the same tenant data as the web portal.
+Phone app for Karyano: **Ionic React + Capacitor** (Android + iOS), talking to the portal's REST API (`/api/v1`, see `../MOBILE_API_CONTRACT.md`). It shows exactly the same tenant data as the web portal.
 
 ## Features
 Onboarding · sign up (creates a business workspace) · sign in · role-aware tabs (owner/admin, cashier, inventory manager) · **Sell** (search, barcode/Bluetooth-scanner, cart, discount, cash/card/transfer, change, shareable receipt) · **offline checkout queue** (stable `clientRequestId`, auto-retry on reconnect/foreground/30 s, no duplicates) · Orders (filters, detail, refund) · Inventory (products, images, stock adjust, variants, movements) · Customers + groups + statement PDF · Suppliers · Purchase orders (create/receive/cancel) · Expenses · Shifts · Reports + reconciliation PDF · Team · Activity log · Business settings/logo.

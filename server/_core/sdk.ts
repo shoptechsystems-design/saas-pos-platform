@@ -285,7 +285,7 @@ class SDKServer {
       return buildCronUser(userInfo);
     }
 
-    // OmniPOS uses direct local accounts. Ignore legacy external preview sessions
+    // Karyano uses direct local accounts. Ignore legacy external preview sessions
     // before touching the database so an old Manus cookie cannot block the public entry screen.
     if (!session.openId.startsWith("local:")) {
       throw ForbiddenError("External authentication is disabled for this workspace");

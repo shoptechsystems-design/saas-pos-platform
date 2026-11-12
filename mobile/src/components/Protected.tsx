@@ -1,8 +1,12 @@
-import { IonSpinner } from "@ionic/react";
+import { KaryanoMark } from "~/components/Logo";
 import { useEffect, useRef, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useSession, useAuthActions } from "~/lib/session";
 import { setToken, useOnboarded } from "~/lib/platform";
+
+function BootScreen() {
+  return <div style={{ display: "grid", placeItems: "center", height: "100%", background: "#0b1220" }}><KaryanoMark size={76} className="boot-pulse" /></div>;
+}
 
 /** Onboarding first, then sign-in, then the app. Handles offline start-up and accounts without a workspace. */
 export default function Protected({ children }: { children: ReactNode }) {
@@ -18,7 +22,7 @@ export default function Protected({ children }: { children: ReactNode }) {
   }, [s.invalid, s.meUpdatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!onboarded) return <Navigate to="/welcome" replace />;
   if (!s.token) return <Navigate to="/login" replace />;
-  if (s.loading) return <div style={{ display: "grid", placeItems: "center", height: "100%" }}><IonSpinner name="crescent" color="primary" /></div>;
+  if (s.loading) return <BootScreen />;
   if (s.unreachable) {
     return (
       <div className="auth" style={{ justifyContent: "center", textAlign: "center" }}>
@@ -38,6 +42,6 @@ export default function Protected({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (!s.authed) return <div style={{ display: "grid", placeItems: "center", height: "100%" }}><IonSpinner name="crescent" color="primary" /></div>;
+  if (!s.authed) return <BootScreen />;
   return <>{children}</>;
 }

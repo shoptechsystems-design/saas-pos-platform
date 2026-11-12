@@ -80,9 +80,9 @@ export default function Sell() {
       )}
 
       <CheckoutSheet open={open} onClose={() => setOpen(false)} cart={cart} setQty={setQty} customer={customer} setCustomer={setCustomer} cur={cur} taxRate={taxRate}
-        business={s.tenant?.name ?? "OmniPOS"} footer={s.tenant?.receiptFooter}
+        business={s.tenant?.name ?? "Karyano"} footer={s.tenant?.receiptFooter}
         onDone={o => { setOutcome(o); reset(); if (o.kind === "online") success(); }} onError={fail} />
-      <ResultSheet outcome={outcome} onClose={() => { setOutcome(null); setTimeout(() => searchRef.current?.focus(), 200); }} cur={cur} business={s.tenant?.name ?? "OmniPOS"} footer={s.tenant?.receiptFooter} onShared={() => ok("Receipt shared")} />
+      <ResultSheet outcome={outcome} onClose={() => { setOutcome(null); setTimeout(() => searchRef.current?.focus(), 200); }} cur={cur} business={s.tenant?.name ?? "Karyano"} footer={s.tenant?.receiptFooter} onShared={() => ok("Receipt shared")} />
     </Screen>
   );
 }

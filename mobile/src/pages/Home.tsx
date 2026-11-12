@@ -19,7 +19,7 @@ export default function Home() {
   const mixTotal = (mix.data ?? []).reduce((a, p) => a + p.total, 0) || 1;
 
   return (
-    <Screen title={s.tenant?.name ?? "OmniPOS"} onRefresh={refresh} right={<div className="avatar round" style={{ width: 36, height: 36 }}>{initials(s.user?.name)}</div>}>
+    <Screen title={s.tenant?.name ?? "Karyano"} onRefresh={refresh} right={<div className="avatar round" style={{ width: 36, height: 36 }}>{initials(s.user?.name)}</div>}>
       <QueueBanner currency={cur} />
       <div className="hero">
         <div className="label">{greet}, {s.user?.name?.split(" ")[0] ?? "there"}</div>

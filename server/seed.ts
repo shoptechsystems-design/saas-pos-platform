@@ -9,7 +9,7 @@ const SUPER_ADMIN_PASSWORD_HASH = "f862b71b3598d9a584114253b03e97f3:b0923b7aea9b
 export async function seedDemoData() {
   const db = await getDb();
   if (!db) return;
-  console.log("[Seed] Starting demo data seeding for OmniPOS...");
+  console.log("[Seed] Starting demo data seeding for Karyano...");
 
   // Keep the explicit platform owner reproducible across fresh environments and restarts.
   const existingSuperAdmins = await db.select().from(users).where(eq(users.email, SUPER_ADMIN_EMAIL)).limit(1);
@@ -237,5 +237,5 @@ export async function seedDemoData() {
     }).catch(() => {});
   }
 
-  console.log("[Seed] OmniPOS demo data seeding completed successfully.");
+  console.log("[Seed] Karyano demo data seeding completed successfully.");
 }

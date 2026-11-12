@@ -1,5 +1,11 @@
 {
-  "background_color": "#FFFFFF",
+  "name": "Karyano",
+  "short_name": "Karyano",
+  "description": "Smart point of sale for every shop.",
+  "display": "standalone",
+  "start_url": "/",
+  "theme_color": "#0B1220",
+  "background_color": "#0B1220",
   "icons": [
     {
       "src": "../icons/icon-48.webp",

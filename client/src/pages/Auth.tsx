@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { KaryanoLogo } from "@/components/Logo";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, CheckCircle, Eye, EyeOff, Lock, Mail, ShieldCheck, Store, TrendingUp, User } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -41,7 +42,7 @@ export default function AuthScreen({ initialMode = "login", onBack, onAuthentica
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: async result => {
       authUtils.auth.me.setData(undefined, result.user);
-      toast.success("Welcome back to OmniPOS.");
+      toast.success("Welcome back to Karyano.");
       await onAuthenticated();
     },
     onError: error => toast.error(error.message),
@@ -49,7 +50,7 @@ export default function AuthScreen({ initialMode = "login", onBack, onAuthentica
   const registerMutation = trpc.auth.register.useMutation({
     onSuccess: async result => {
       authUtils.auth.me.setData(undefined, result.user);
-      toast.success("Workspace created. Welcome to OmniPOS.");
+      toast.success("Workspace created. Welcome to Karyano.");
       await onAuthenticated();
     },
     onError: error => toast.error(error.message),
@@ -83,10 +84,7 @@ export default function AuthScreen({ initialMode = "login", onBack, onAuthentica
 
       {/* showcase */}
       <section className="relative hidden flex-col justify-between border-r border-white/5 p-14 lg:flex">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#2dd4bf] to-[#0f766e] font-black text-[#04201c] shadow-[0_8px_24px_-6px_rgba(20,184,166,0.6)]">OP</div>
-          <div><p className="text-lg font-bold tracking-tight">OmniPOS</p><p className="text-xs text-slate-500">Commerce operations, clarified.</p></div>
-        </div>
+        <div><KaryanoLogo height={46} className="text-white" /></div>
 
         <div className="relative">
           <h1 className="max-w-xl text-5xl font-extrabold leading-[1.06] tracking-[-0.025em]">
@@ -123,16 +121,13 @@ export default function AuthScreen({ initialMode = "login", onBack, onAuthentica
       <section className="relative flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-md">
           <div className="mb-8 flex items-center justify-between">
-            <div className="flex items-center gap-3 lg:hidden">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#2dd4bf] to-[#0f766e] text-sm font-black text-[#04201c]">OP</div>
-              <span className="text-lg font-bold">OmniPOS</span>
-            </div>
+            <div className="lg:hidden"><KaryanoLogo height={38} className="text-white" /></div>
             {onBack && <button type="button" onClick={onBack} className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 transition hover:text-white"><ArrowLeft className="h-3.5 w-3.5" /> Back to overview</button>}
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-7 shadow-[0_40px_100px_-30px_rgba(0,0,0,0.8)] backdrop-blur-xl sm:p-9">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#2dd4bf]">{mode === "login" ? "Welcome back" : "Start your workspace"}</p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.015em]">{mode === "login" ? "Sign in to OmniPOS" : "Create your business account"}</h2>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.015em]">{mode === "login" ? "Sign in to Karyano" : "Create your business account"}</h2>
             <p className="mt-2 text-sm text-slate-400">{mode === "login" ? "Use your email and password to continue." : "Set up your PKR-ready POS workspace in minutes."}</p>
 
             <div className="mb-6 mt-7 grid grid-cols-2 rounded-xl border border-white/10 bg-black/20 p-1">
@@ -170,7 +165,7 @@ export default function AuthScreen({ initialMode = "login", onBack, onAuthentica
             </form>
 
             <p className="mt-6 text-center text-xs text-slate-500">
-              {mode === "login" ? "New to OmniPOS?" : "Already have an account?"}{" "}
+              {mode === "login" ? "New to Karyano?" : "Already have an account?"}{" "}
               <button type="button" onClick={() => setMode(mode === "login" ? "register" : "login")} className="font-semibold text-[#2dd4bf] hover:underline">{mode === "login" ? "Create a workspace" : "Sign in"}</button>
             </p>
           </div>

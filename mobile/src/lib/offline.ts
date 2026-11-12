@@ -25,7 +25,7 @@ export interface QueuedCheckout {
   summary: { total: number; itemCount: number; customerName?: string };
 }
 
-const KEY = "omnipos:queue";
+const KEY = "karyano:queue";
 const listeners = new Set<() => void>();
 let snapshot: QueuedCheckout[] = load();
 let syncing = false;

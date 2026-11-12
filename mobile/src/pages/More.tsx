@@ -45,7 +45,7 @@ export default function More() {
       <Card pad={false}><div className="divide">
         {item(settingsOutline, "teal", "Business settings", "Name, tax, receipt footer, logo", "/more/settings")}
         <Row icon={cubeOutline} tone="navy" title="Server" sub={getApiBase() || "Not set"} />
-        <Row icon={documentTextOutline} tone="navy" title="OmniPOS Mobile" sub="Version 1.0.0 · same data as the web portal" />
+        <Row icon={documentTextOutline} tone="navy" title="Karyano Mobile" sub="Version 1.0.0 · same data as the web portal" />
       </div></Card>
       <button className="btn btn-danger btn-block" onClick={() => confirm("Sign out?", "Sales saved offline stay on this phone and sync after you sign in again.", "Sign out", () => logout(), true)}><IonIcon icon={logOutOutline} /> Sign out</button>
     </Screen>

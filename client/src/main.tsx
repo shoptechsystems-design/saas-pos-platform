@@ -18,7 +18,7 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
-  // OmniPOS uses its own direct email/password auth screen; never redirect to the external portal.
+  // Karyano uses its own direct email/password auth screen; never redirect to the external portal.
   return;
 };
 
@@ -44,7 +44,7 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       headers() {
-        // Direct OmniPOS accounts authenticate with the httpOnly session cookie.
+        // Direct Karyano accounts authenticate with the httpOnly session cookie.
         // Do not forward preview-only Manus tokens into this application.
         return {};
       },

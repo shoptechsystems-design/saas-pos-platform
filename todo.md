@@ -1,4 +1,4 @@
-# OmniPOS SaaS Platform - Release Checklist
+# Karyano SaaS Platform - Release Checklist
 
 ## Completed in this release
 

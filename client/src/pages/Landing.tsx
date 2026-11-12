@@ -1,3 +1,4 @@
+import { KaryanoLogo } from "@/components/Logo";
 import { useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import {
   ArrowRight,
@@ -61,7 +62,7 @@ function HeroScene() {
               <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
             </div>
-            <span className="rounded-full bg-white/5 px-3 py-1 text-[10px] font-semibold text-slate-400">omnipos.app / dashboard</span>
+            <span className="rounded-full bg-white/5 px-3 py-1 text-[10px] font-semibold text-slate-400">karyano.app / dashboard</span>
             <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#2dd4bf]"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#2dd4bf]" /> Live</span>
           </div>
 
@@ -192,10 +193,7 @@ export default function Landing({ onLogin, onRegister }: Props) {
       {/* nav */}
       <header className="sticky top-0 z-50 border-b border-white/5 bg-[#070b14]/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#2dd4bf] to-[#0f766e] text-sm font-black text-[#04201c] shadow-[0_8px_24px_-6px_rgba(20,184,166,0.6)]">OP</div>
-            <p className="text-[17px] font-bold tracking-tight">OmniPOS</p>
-          </div>
+          <a href="/" aria-label="Karyano home" className="flex items-center"><KaryanoLogo height={40} className="text-white" /></a>
           <nav className="hidden items-center gap-9 text-sm font-medium text-slate-400 md:flex">
             <a href="#features" className="transition hover:text-white">Platform</a>
             <a href="#workflow" className="transition hover:text-white">Workflow</a>
@@ -218,8 +216,8 @@ export default function Landing({ onLogin, onRegister }: Props) {
             <h1 className="text-5xl font-extrabold leading-[1.04] tracking-[-0.025em] sm:text-6xl lg:text-[4.4rem]">
               Run your shop with <span className="bg-gradient-to-r from-[#5eead4] via-[#2dd4bf] to-[#fb7c66] bg-clip-text text-transparent">calm precision.</span>
             </h1>
-            <p className="mt-7 max-w-xl text-lg leading-8 text-slate-400">
-              OmniPOS unifies checkout, inventory, customers and reporting in one fast, multi-tenant workspace, built for PKR and for the way real shops work.
+            <p className="mt-7 max-w-lg text-lg leading-8 text-slate-400">
+              Karyano unifies checkout, inventory, customers and reporting in one fast, multi-tenant workspace, built for PKR and for the way real shops work.
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
               <button onClick={onRegister} className="group inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-[#2dd4bf] to-[#14b8a6] px-7 text-sm font-bold text-[#04201c] shadow-[0_18px_40px_-12px_rgba(20,184,166,0.7)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_48px_-12px_rgba(20,184,166,0.85)]">
@@ -309,7 +307,7 @@ export default function Landing({ onLogin, onRegister }: Props) {
       </main>
 
       <footer className="relative mx-auto flex max-w-7xl flex-col gap-3 border-t border-white/5 px-5 py-8 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-        <p>© 2026 OmniPOS. Commerce operations, clarified.</p>
+        <p>© 2026 Karyano. Commerce operations, clarified.</p>
         <p>Secure multi-tenant POS for modern businesses.</p>
       </footer>
     </div>

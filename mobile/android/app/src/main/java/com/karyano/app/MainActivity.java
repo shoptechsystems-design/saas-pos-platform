@@ -1,4 +1,4 @@
-package com.omnipos.app;
+package com.karyano.app;
 
 import com.getcapacitor.BridgeActivity;
 

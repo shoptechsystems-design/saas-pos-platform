@@ -148,3 +148,10 @@ button.list-row:active { background: #f8fafc; }
 .fab { position: fixed; right: 18px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 10; width: 56px; height: 56px; border-radius: 18px; border: 0; background: var(--c-teal); color: #fff; font-size: 28px; display: grid; place-items: center; box-shadow: 0 10px 24px rgba(15, 118, 109, 0.4); }
 ion-modal.sheet-modal .ion-page { position: relative; display: block; contain: content; max-height: 92vh; overflow-y: auto; background: #fff; }
 ion-modal.sheet-modal { --background: #fff; }
+
+/* Karyano brand */
+.boot-pulse { animation: boot-pulse 1.6s ease-in-out infinite; filter: drop-shadow(0 12px 28px rgba(20, 184, 166, 0.35)); }
+@keyframes boot-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.94); opacity: 0.85; } }
+.ob-mark { filter: drop-shadow(0 18px 36px rgba(15, 118, 109, 0.35)); animation: ob-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+@keyframes ob-pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .boot-pulse, .ob-mark { animation: none; } }

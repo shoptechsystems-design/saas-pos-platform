@@ -58,7 +58,7 @@ function SaleSheet({ id, onClose }: { id: number | null; onClose: () => void }) 
     <Sheet open={id !== null} onClose={() => { setRefunding(false); setReason(""); onClose(); }} title="Order details">
       <Async q={q}>
         {d => {
-          const sale = d.sale; const text = receiptText({ business: s.tenant?.name ?? "OmniPOS", saleNumber: sale.saleNumber, when: dateTime(sale.createdAt), lines: d.items.map(i => ({ name: i.productName, qty: i.quantity, total: money(i.lineTotal, cur) })), subtotal: money(sale.subtotal, cur), discount: money(sale.discount, cur), tax: money(sale.tax, cur), total: money(sale.total, cur), change: Number(sale.changeAmount) > 0 ? money(sale.changeAmount, cur) : undefined, footer: s.tenant?.receiptFooter });
+          const sale = d.sale; const text = receiptText({ business: s.tenant?.name ?? "Karyano", saleNumber: sale.saleNumber, when: dateTime(sale.createdAt), lines: d.items.map(i => ({ name: i.productName, qty: i.quantity, total: money(i.lineTotal, cur) })), subtotal: money(sale.subtotal, cur), discount: money(sale.discount, cur), tax: money(sale.tax, cur), total: money(sale.total, cur), change: Number(sale.changeAmount) > 0 ? money(sale.changeAmount, cur) : undefined, footer: s.tenant?.receiptFooter });
           return <>
             <div className="row between"><div><div className="h2 mono">{sale.saleNumber}</div><div className="small muted">{dateTime(sale.createdAt)}</div></div><Pill tone={tone(sale.status)}>{titleCase(sale.status)}</Pill></div>
             <div className="card card-pad stack small" style={{ gap: 6 }}>

@@ -8,7 +8,7 @@ import { sdk } from "./_core/sdk";
 import { getUserByEmail } from "./db";
 
 /**
- * REST API (v1) for the OmniPOS mobile app.
+ * REST API (v1) for the Karyano mobile app.
  *
  * Every endpoint is a thin adapter over the same tRPC procedures the portal uses
  * (via `appRouter.createCaller`), so validation, RBAC, tenant isolation and
@@ -232,7 +232,7 @@ export function buildOpenApi(serverUrl = "/api/v1") {
   }
   return {
     openapi: "3.0.3",
-    info: { title: "OmniPOS REST API", version: "1.0.0", description: "Same data and rules as the OmniPOS portal. Auth with POST /auth/login then `Authorization: Bearer <token>`." },
+    info: { title: "Karyano REST API", version: "1.0.0", description: "Same data and rules as the Karyano portal. Auth with POST /auth/login then `Authorization: Bearer <token>`." },
     servers: [{ url: serverUrl }],
     components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer" } } },
     paths,

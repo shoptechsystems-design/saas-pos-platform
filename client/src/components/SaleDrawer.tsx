@@ -30,7 +30,7 @@ export default function SaleDrawer({ saleId, onClose }: { saleId: number | null;
   const d = q.data;
   const canRefund = ctx?.membership.role === "tenant_admin" && d?.sale.status === "completed";
   const receipt: ReceiptData | null = d ? {
-    business: { name: settings?.name ?? "OmniPOS", footer: settings?.receiptFooter }, saleNumber: d.sale.saleNumber, date: d.sale.createdAt, cashier: d.cashier?.name, customer: d.customer?.name,
+    business: { name: settings?.name ?? "Karyano", footer: settings?.receiptFooter }, saleNumber: d.sale.saleNumber, date: d.sale.createdAt, cashier: d.cashier?.name, customer: d.customer?.name,
     paymentMethod: d.sale.paymentMethod, status: d.sale.status, subtotal: d.sale.subtotal, discount: d.sale.discount, tax: d.sale.tax, total: d.sale.total, received: d.sale.amountReceived, change: d.sale.changeAmount,
     items: d.items.map(i => ({ name: i.productName, quantity: i.quantity, unitPrice: i.unitPrice, lineTotal: i.lineTotal })),
   } : null;

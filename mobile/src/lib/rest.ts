@@ -27,7 +27,7 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
     // A 401 can be a momentary backend hiccup, so it never signs you out by itself. Only the session check
     // in Protected (GET /auth/me confirmed twice) clears a dead token.
     const error = json?.error;
-    if (!error && response.status >= 500) throw new ApiError(response.status, "SERVER", "The OmniPOS server had a problem. Please try again.");
+    if (!error && response.status >= 500) throw new ApiError(response.status, "SERVER", "The Karyano server had a problem. Please try again.");
     if (!error && response.status === 404) throw new ApiError(404, "NOT_FOUND", "The server does not support the mobile API yet. Deploy the latest portal version.");
     if (response.status === 401) throw new ApiError(401, "UNAUTHORIZED", "Your session could not be verified. Pull down to retry; if it keeps happening, sign in again.");
     throw new ApiError(response.status, error?.code ?? "ERROR", friendly(error) ?? `Request failed (${response.status}).`);

@@ -1,14 +1,14 @@
 > **Update:** the mobile app now lives in `mobile/` (Ionic React + Capacitor, same pattern as the other ShopTech apps) and uses the REST API in `MOBILE_API_CONTRACT.md` (`/api/v1`). See `mobile/README.md`. The notes below describe the earlier Expo/tRPC repo and are kept for history.
 
-# OmniPOS Mobile App Build Prompt
+# Karyano Mobile App Build Prompt
 
-Build and maintain the production React Native Expo application in `omnipos-mobile-repo/` for the OmniPOS SaaS platform. Do not replace live data with mocks.
+Build and maintain the production React Native Expo application in `karyano-mobile-repo/` for the Karyano SaaS platform. Do not replace live data with mocks.
 
 ## Existing portal
 
-- Live portal: `https://omnipos-hjcb6uyk.manus.space`
-- API base: `https://omnipos-hjcb6uyk.manus.space/api/trpc`
-- Read `OMNIPOS_MOBILE_API_CONTRACT.md` and `OMNIPOS_MOBILE_SYNC_REPORT.md` before changing contracts.
+- Live portal: `https://karyano-hjcb6uyk.manus.space`
+- API base: `https://karyano-hjcb6uyk.manus.space/api/trpc`
+- Read `KARYANO_MOBILE_API_CONTRACT.md` and `KARYANO_MOBILE_SYNC_REPORT.md` before changing contracts.
 
 ## Required behavior
 

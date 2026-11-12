@@ -113,7 +113,7 @@ export default function POSView({ setActiveTab }: { setActiveTab: (tab: string) 
   const { data: ctx } = trpc.tenant.context.useQuery();
 
   /* held orders persist per workspace */
-  const holdKey = `omnipos:held:${ctx?.tenant?.id ?? "x"}`;
+  const holdKey = `karyano:held:${ctx?.tenant?.id ?? "x"}`;
   const [held, setHeld] = useState<Held[]>([]);
   useEffect(() => { try { setHeld(JSON.parse(localStorage.getItem(holdKey) || "[]")); } catch { setHeld([]); } }, [holdKey]);
   const saveHeld = (next: Held[]) => { setHeld(next); try { localStorage.setItem(holdKey, JSON.stringify(next)); } catch { /* storage unavailable */ } };
@@ -179,7 +179,7 @@ export default function POSView({ setActiveTab }: { setActiveTab: (tab: string) 
       const snapshot = cart;
       setReceipt({
         phone: customer?.phone ?? null,
-        data: { business: { name: settings?.name ?? "OmniPOS", footer: settings?.receiptFooter }, saleNumber: res.saleNumber, date: new Date(), cashier: ctx ? undefined : undefined, customer: customer?.name, paymentMethod: method,
+        data: { business: { name: settings?.name ?? "Karyano", footer: settings?.receiptFooter }, saleNumber: res.saleNumber, date: new Date(), cashier: ctx ? undefined : undefined, customer: customer?.name, paymentMethod: method,
           items: snapshot.map(l => ({ name: l.product.name, quantity: l.quantity, unitPrice: unitPrice(l.product), lineTotal: unitPrice(l.product) * l.quantity })),
           subtotal: res.subtotal, discount: res.discount, tax: res.tax, total: res.total, received: method === "cash" ? received : res.total, change: res.change },
       });

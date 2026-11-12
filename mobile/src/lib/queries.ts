@@ -17,7 +17,7 @@ export const keys = {
 const useEnabled = () => Boolean(useToken());
 
 // ---- offline-friendly catalog cache (so Sell still works without a connection) ----
-const CACHE = "omnipos:cache:";
+const CACHE = "karyano:cache:";
 const cacheGet = <X,>(k: string): X | undefined => { try { const v = localStorage.getItem(CACHE + k); return v ? JSON.parse(v) : undefined; } catch { return undefined; } };
 const cacheSet = (k: string, v: unknown) => { try { localStorage.setItem(CACHE + k, JSON.stringify(v)); } catch { /* quota */ } };
 export const clearCaches = () => { try { Object.keys(localStorage).filter(k => k.startsWith(CACHE)).forEach(k => localStorage.removeItem(k)); } catch { /* ignore */ } };

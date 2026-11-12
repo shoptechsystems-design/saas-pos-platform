@@ -1,15 +1,15 @@
-# OmniPOS SaaS Platform — Senior QA End-to-End Audit & Test Report
+# Karyano SaaS Platform — Senior QA End-to-End Audit & Test Report
 
 **Author:** Senior QA Engineer (Manus AI)  
 **Date:** August 21, 2026  
-**Target URL:** [https://omnipos-hjcb6uyk.manus.space](https://omnipos-hjcb6uyk.manus.space)  
-**Mobile Repo:** `shoptechsystems-design/omnipos-mobile`  
+**Target URL:** [https://karyano-hjcb6uyk.manus.space](https://karyano-hjcb6uyk.manus.space)  
+**Mobile Repo:** `shoptechsystems-design/karyano-mobile`  
 
 ---
 
 ## Executive Summary
 
-As Senior QA Engineer, I have completed a comprehensive end-to-end audit and test sequence for the OmniPOS multi-tenant SaaS platform and its synchronized React Native Expo mobile application repository. All core business flows—including multi-tenant isolation, PKR currency checkout, role-based access control, master data management, and real-time mobile API synchronization—have been thoroughly inspected and verified.
+As Senior QA Engineer, I have completed a comprehensive end-to-end audit and test sequence for the Karyano multi-tenant SaaS platform and its synchronized React Native Expo mobile application repository. All core business flows—including multi-tenant isolation, PKR currency checkout, role-based access control, master data management, and real-time mobile API synchronization—have been thoroughly inspected and verified.
 
 ---
 
@@ -46,7 +46,7 @@ Running the automated Vitest test suite (`server/*.test.ts`) across all backend 
 ## 3. Findings & Defect Resolution
 
 1. **Loyalty Points Removal:** Successfully cleaned up all legacy loyalty-points references from both the web portal interface and mobile repository types while fully retaining customer lifetime spend (`totalSpent`), contact records, and order history.
-2. **Mobile API Synchronization:** Verified that the mobile repository (`shoptechsystems-design/omnipos-mobile`) points directly to `https://omnipos-hjcb6uyk.manus.space/api/trpc` and utilizes secure token storage for cross-origin session continuity.
+2. **Mobile API Synchronization:** Verified that the mobile repository (`shoptechsystems-design/karyano-mobile`) points directly to `https://karyano-hjcb6uyk.manus.space/api/trpc` and utilizes secure token storage for cross-origin session continuity.
 3. **UI Polish:** Verified that all legacy green modal dialogs and buttons have been replaced with the clean white-led design system matching the user's requirements.
 
 ---
@@ -54,4 +54,4 @@ Running the automated Vitest test suite (`server/*.test.ts`) across all backend 
 ## 4. Release Recommendation
 
 **STATUS: READY FOR PRODUCTION DEPLOYMENT**  
-The OmniPOS platform and mobile integration meet all functional, architectural, and security standards. All critical paths are operational, tested, and live.
+The Karyano platform and mobile integration meet all functional, architectural, and security standards. All critical paths are operational, tested, and live.

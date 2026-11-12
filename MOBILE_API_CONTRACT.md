@@ -1,4 +1,4 @@
-# OmniPOS REST API v1 (mobile)
+# Karyano REST API v1 (mobile)
 
 The phone app that consumes this API lives in [`mobile/`](mobile/README.md) (Ionic React + Capacitor).
 

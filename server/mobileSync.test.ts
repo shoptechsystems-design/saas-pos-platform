@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-describe("OmniPOS Mobile and Portal API Synchronization & Security", () => {
+describe("Karyano Mobile and Portal API Synchronization & Security", () => {
   it("verifies mobile currency formatting matches portal PKR standard", () => {
     const rawPrice = 1250.5;
     const formatted = `₨${rawPrice.toFixed(2)}`;

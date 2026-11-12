@@ -60,6 +60,7 @@ import POSView from "./POS";
 import ActivityView from "./Activity";
 import { DataTable, Pill, SearchBox, Segmented, StatTile, fmtDate, fmtTime, relativeTime } from "@/components/data/kit";
 import Landing from "./Landing";
+import { KaryanoMark } from "@/components/Logo";
 import AuthScreen from "./Auth";
 import DashboardView from "./Dashboard";
 import CustomersView from "./Customers";
@@ -116,10 +117,8 @@ export default function Home() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white text-[#0f172a]">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-[#0f172a] flex items-center justify-center shadow-xl animate-pulse">
-            <Store className="h-6 w-6 text-[#f8f3e7]" />
-          </div>
-          <p className="text-sm font-medium tracking-wide text-slate-500">Loading OmniPOS Platform...</p>
+          <KaryanoMark size={60} className="animate-pulse drop-shadow-xl" />
+          <p className="text-sm font-medium tracking-wide text-slate-500">Loading Karyano…</p>
         </div>
       </div>
     );
@@ -142,7 +141,7 @@ export default function Home() {
 
   const businessName = user.role === "admin"
     ? "Platform Administration"
-    : (tenantSettings?.name || "OmniPOS Workspace");
+    : (tenantSettings?.name || "Karyano Workspace");
 
   const navGroups = user.role === "admin" ? [
     { label: "Platform Administration", items: [{ id: "superadmin", label: "Super Admin Console", icon: Store }] }
@@ -168,16 +167,16 @@ export default function Home() {
   const flatPages = navGroups.flatMap(g => g.items);
 
   return (
-    <div className="omnipos-app flex h-dvh w-full overflow-hidden bg-[#f8fafc] text-[#0f172a]">
+    <div className="karyano-app flex h-dvh w-full overflow-hidden bg-[#f8fafc] text-[#0f172a]">
       {/* Grouped premium sidebar */}
       {mobileNav && <div className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden" onClick={() => setMobileNav(false)} aria-hidden="true" />}
-      <aside className={`omnipos-sidebar fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] max-w-[85vw] shrink-0 flex-col border-r border-white/5 bg-[#0b1220] text-slate-300 transition-transform duration-300 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:transition-[width] ${mobileNav ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "lg:w-[84px]" : "lg:w-[280px]"}`}>
+      <aside className={`karyano-sidebar fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] max-w-[85vw] shrink-0 flex-col border-r border-white/5 bg-[#0b1220] text-slate-300 transition-transform duration-300 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:transition-[width] ${mobileNav ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "lg:w-[84px]" : "lg:w-[280px]"}`}>
         <div className={`flex h-[88px] items-center border-b border-white/10 ${collapsed ? "justify-center px-3" : "gap-3 px-5"}`}>
           {tenantSettings?.logoUrl ? (
             <img src={tenantSettings.logoUrl.startsWith('/') ? tenantSettings.logoUrl : tenantSettings.logoUrl} alt="Store logo" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl object-cover shadow-[0_8px_18px_rgba(15,23,42,0.16)] border border-slate-200 bg-white" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
           ) : (
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#14b8a6] to-[#0f766e] text-white font-black text-sm shadow-[0_8px_24px_rgba(20,184,166,0.35)]">
-              {tenantSettings?.name ? tenantSettings.name.charAt(0).toUpperCase() : "OP"}
+              {tenantSettings?.name ? tenantSettings.name.charAt(0).toUpperCase() : "K"}
             </div>
           )}
           {!collapsed && <div className="min-w-0"><p className="truncate text-[15px] font-bold tracking-[-0.01em] text-white">{businessName}</p><div className="mt-1 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#2dd4bf]" /><span className="truncate text-[11px] font-semibold text-[#2dd4bf]">{currentRole}</span></div></div>}
@@ -1207,7 +1206,7 @@ function TenantSettingsView() {
               <img src={logoUrl} alt="Store logo preview" className="h-20 w-20 rounded-2xl object-cover shadow-md mb-3 border border-slate-200 bg-white" onError={(e) => { console.error("Logo preview load error for URL:", logoUrl); }} />
             ) : (
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0f172a] text-white font-black text-xl shadow-md mb-3">
-                {name ? name.charAt(0).toUpperCase() : "OP"}
+                {name ? name.charAt(0).toUpperCase() : "K"}
               </div>
             )}
             <p className="text-xs font-bold text-slate-700">Logo preview</p>

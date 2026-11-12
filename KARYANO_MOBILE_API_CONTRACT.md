@@ -1,8 +1,8 @@
-# OmniPOS Mobile Application - API & Integration Contract
+# Karyano Mobile Application - API & Integration Contract
 
 > **Preferred for mobile: the REST API in `MOBILE_API_CONTRACT.md` (`/api/v1`).** The tRPC contract below remains valid for the web portal.
 
-Base URL (tRPC): `https://omnipos-hjcb6uyk.manus.space/api/trpc`
+Base URL (tRPC): `https://karyano-hjcb6uyk.manus.space/api/trpc`
 
 ## Authentication
 
