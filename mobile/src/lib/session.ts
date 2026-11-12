@@ -15,8 +15,12 @@ export function useSession() {
     token, user: token ? me.data ?? null : null, tenant: ctx.data?.tenant, role,
     loading: Boolean(token) && (me.isLoading || (Boolean(me.data) && ctx.isLoading)),
     authed: Boolean(token) && Boolean(me.data),
+    /** The server answered "no such session" for the stored token (checked again before we act on it). */
+    invalid: Boolean(token) && me.isSuccess && me.data === null,
+    meUpdatedAt: me.dataUpdatedAt,
     noWorkspace: Boolean(token) && Boolean(me.data) && ctx.isError && ctx.error instanceof ApiError && ctx.error.status === 403,
-    unreachable: Boolean(token) && (me.isError || ctx.isError) && !(me.error instanceof ApiError && me.error.status === 401) && !(ctx.error instanceof ApiError && ctx.error.status === 403),
+    // Only when there is nothing loaded to show. A failed background refresh must never replace a working screen.
+    unreachable: Boolean(token) && !(me.data && ctx.data) && (me.isError || ctx.isError) && !(ctx.error instanceof ApiError && ctx.error.status === 403),
     retry: () => { me.refetch(); ctx.refetch(); },
     can: {
       sell: role === "tenant_admin" || role === "cashier",

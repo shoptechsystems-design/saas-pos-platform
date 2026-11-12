@@ -1,4 +1,4 @@
-import { getApiBase, getToken, setToken } from "./platform";
+import { getApiBase, getToken } from "./platform";
 
 /** An error from the REST API (or a network failure, status 0). `message` is safe to show to people. */
 export class ApiError extends Error {
@@ -24,11 +24,12 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
   try { json = text ? JSON.parse(text) : undefined; } catch { json = undefined; }
 
   if (!response.ok) {
-    // A rejected token (expired / account removed) means we are no longer signed in.
-    if (response.status === 401 && token) setToken(null);
+    // A 401 can be a momentary backend hiccup, so it never signs you out by itself. Only the session check
+    // in Protected (GET /auth/me confirmed twice) clears a dead token.
     const error = json?.error;
     if (!error && response.status >= 500) throw new ApiError(response.status, "SERVER", "The OmniPOS server had a problem. Please try again.");
     if (!error && response.status === 404) throw new ApiError(404, "NOT_FOUND", "The server does not support the mobile API yet. Deploy the latest portal version.");
+    if (response.status === 401) throw new ApiError(401, "UNAUTHORIZED", "Your session could not be verified. Pull down to retry; if it keeps happening, sign in again.");
     throw new ApiError(response.status, error?.code ?? "ERROR", friendly(error) ?? `Request failed (${response.status}).`);
   }
   if (json === undefined) throw new ApiError(response.status, "BAD_RESPONSE", "The server returned an unexpected response. Is the server address correct?");

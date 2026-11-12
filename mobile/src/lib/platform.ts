@@ -4,7 +4,8 @@ import { useSyncExternalStore } from "react";
 /** True inside the Android/iOS app, false in a desktop browser. */
 export const isNative = Capacitor.isNativePlatform();
 
-const DEFAULT_API = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
+// In `pnpm dev` with no .env.local, fall back to the portal dev server (CORS is enabled on /api/v1).
+const DEFAULT_API = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3000" : "")).replace(/\/+$/, "");
 const KEYS = { token: "omnipos:token", api: "omnipos:api", onboarded: "omnipos:onboarded" } as const;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(l => l());

@@ -1,5 +1,5 @@
 import { IonSpinner } from "@ionic/react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useSession, useAuthActions } from "~/lib/session";
 import { setToken, useOnboarded } from "~/lib/platform";
@@ -9,6 +9,13 @@ export default function Protected({ children }: { children: ReactNode }) {
   const onboarded = useOnboarded();
   const s = useSession();
   const { logout } = useAuthActions();
+  const rechecked = useRef(false);
+  // A dead token is only dropped after the server said "no session" twice in a row (one retry after 1.2 s).
+  useEffect(() => {
+    if (!s.invalid) { rechecked.current = false; return; }
+    if (!rechecked.current) { rechecked.current = true; const t = setTimeout(s.retry, 1200); return () => clearTimeout(t); }
+    setToken(null);
+  }, [s.invalid, s.meUpdatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!onboarded) return <Navigate to="/welcome" replace />;
   if (!s.token) return <Navigate to="/login" replace />;
   if (s.loading) return <div style={{ display: "grid", placeItems: "center", height: "100%" }}><IonSpinner name="crescent" color="primary" /></div>;
@@ -31,6 +38,6 @@ export default function Protected({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (!s.authed) return <Navigate to="/login" replace />;
+  if (!s.authed) return <div style={{ display: "grid", placeItems: "center", height: "100%" }}><IonSpinner name="crescent" color="primary" /></div>;
   return <>{children}</>;
 }
