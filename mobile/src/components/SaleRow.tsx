@@ -18,7 +18,7 @@ export function SaleRow({ sale, customer, items, cur, when, onClick }: { sale: S
       <div className={`paychip ${refunded ? "refunded" : pay.cls}`}><IonIcon icon={refunded ? returnDownBackOutline : pay.icon} /></div>
       <div className="grow">
         <div className="bold ellipsis" style={{ color: "var(--c-navy)" }}>{customer?.name ?? "Walk-in customer"}</div>
-        <div className="small muted ellipsis">{sale.saleNumber.replace("SALE-", "#")} · {when}{items ? ` · ${items} item${items > 1 ? "s" : ""}` : ""}</div>
+        <div className="small muted ellipsis">{when}{items ? ` · ${items} item${items > 1 ? "s" : ""}` : ""} · {sale.saleNumber.replace("SALE-", "#")}</div>
       </div>
       <div className="right"><div className={`amt mono ${refunded ? "void" : ""}`}>{money(sale.total, cur)}</div><div className="tiny" style={{ color: refunded ? "var(--c-red)" : "var(--c-faint)", fontWeight: 700 }}>{refunded ? "Refunded" : pay.label}</div></div>
     </>
