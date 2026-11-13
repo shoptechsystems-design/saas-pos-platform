@@ -5,6 +5,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Banknote,
+  BookOpen,
   CreditCard,
   Landmark,
   Minus,
@@ -74,6 +75,7 @@ function Skeleton({ className = "" }: { className?: string }) {
 const methodMeta: Record<string, { label: string; icon: typeof Banknote; color: string }> = {
   cash: { label: "Cash", icon: Banknote, color: "#14b8a6" },
   card: { label: "Card", icon: CreditCard, color: "#6366f1" },
+  credit: { label: "Udhaar", icon: BookOpen, color: "#f59e0b" },
   transfer: { label: "Transfer", icon: Landmark, color: "#fb7c66" },
 };
 
@@ -99,6 +101,7 @@ export default function DashboardView({ setActiveTab }: { setActiveTab: (tab: st
   const recent = trpc.dashboard.recentSales.useQuery();
   const top = trpc.dashboard.topProducts.useQuery({ days: range });
   const mix = trpc.dashboard.paymentMix.useQuery({ days: range });
+  const credit = trpc.credit.summary.useQuery();
 
   // Fill missing days so the chart never skips a date.
   const series = useMemo(() => {
@@ -126,6 +129,7 @@ export default function DashboardView({ setActiveTab }: { setActiveTab: (tab: st
   const productCount = Number(stats.data?.products ?? 0);
   const lowCount = Number(stats.data?.lowStock ?? 0);
   const customerCount = Number(stats.data?.customers ?? 0);
+  const debtors = Number(stats.data?.debtors ?? 0);
   const todayAvg = todayOrders ? todaySales / todayOrders : 0;
   const readiness = productCount ? Math.round(((productCount - lowCount) / productCount) * 100) : null;
 
@@ -138,7 +142,7 @@ export default function DashboardView({ setActiveTab }: { setActiveTab: (tab: st
     { label: "Today's sales", value: money(todaySales), icon: Receipt, foot: <Delta current={todaySales} previous={yesterday} label="vs yesterday" />, tone: "bg-teal-50 text-teal-600" },
     { label: "Month to date", value: money(monthSales), icon: TrendingUp, foot: <span className="text-[11px] font-medium text-slate-400">{new Date().toLocaleDateString("en-GB", { month: "long" })} revenue</span>, tone: "bg-indigo-50 text-indigo-600" },
     { label: "Avg. order value", value: money(todayOrders ? todayAvg : periodAvg), icon: ShoppingBag, foot: <span className="text-[11px] font-medium text-slate-400">{todayOrders ? `${todayOrders} orders today` : `last ${range} days`}</span>, tone: "bg-orange-50 text-orange-600" },
-    { label: "Customers", value: customerCount.toLocaleString("en-PK"), icon: Users, foot: <span className="text-[11px] font-medium text-slate-400">in your directory</span>, tone: "bg-sky-50 text-sky-600" },
+    { label: "Udhaar owed", value: money(Number(stats.data?.outstandingCredit ?? 0)), icon: BookOpen, foot: <span className="text-[11px] font-medium text-slate-400">{debtors ? `${debtors} customer${debtors === 1 ? "" : "s"} owe you` : `${customerCount} customers · nobody owes you`}</span>, tone: "bg-rose-50 text-rose-600" },
   ];
 
   return (
@@ -301,6 +305,31 @@ export default function DashboardView({ setActiveTab }: { setActiveTab: (tab: st
           )}
         </Panel>
       </div>
+
+      {/* udhaar */}
+      <Panel>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div><p className="text-xs font-semibold text-slate-500">Customer credit</p><h4 className="mt-1 text-lg font-bold tracking-tight text-slate-900">Udhaar</h4></div>
+          <button onClick={() => setActiveTab("customers")} className="text-xs font-semibold text-teal-700 hover:underline">View customers</button>
+        </div>
+        {credit.isLoading ? <Skeleton className="h-32" /> : !credit.data?.debtors ? (
+          <Empty icon={BookOpen} title="Nobody owes you anything" hint="Sell with “Udhaar” at the POS to let a customer pay later. Their balance will show here." />
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
+            <div className="grid grid-cols-3 gap-2 lg:grid-cols-1">
+              {[["Total owed", money(credit.data.outstanding), "text-rose-600"], ["Customers owing", String(credit.data.debtors), "text-slate-900"], ["Overdue 30+ days", `${credit.data.overdueCount} · ${money(credit.data.overdueTotal)}`, credit.data.overdueCount ? "text-amber-600" : "text-slate-900"]].map(([l, v, c]) => (
+                <div key={l} className="rounded-xl bg-slate-50 p-3"><p className="text-[11px] text-slate-500">{l}</p><p className={`mt-1 text-base font-extrabold tabular-nums ${c}`}>{v}</p></div>))}
+            </div>
+            <ul className="divide-y divide-slate-100 rounded-xl border border-slate-100">
+              {credit.data.top.slice(0, 5).map(d => (
+                <li key={d.id}><button onClick={() => setActiveTab("customers")} className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left transition hover:bg-slate-50">
+                  <span className="min-w-0"><span className="block truncate text-sm font-semibold text-slate-800">{d.name}</span><span className="text-[11px] text-slate-400">{d.lastPaymentAt ? `last paid ${d.ageDays}d ago` : `owing for ${d.ageDays}d`}</span></span>
+                  <span className="flex items-center gap-2">{d.overdue && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">Overdue</span>}<span className="text-sm font-extrabold tabular-nums text-rose-600">{money(d.balance)}</span></span>
+                </button></li>))}
+            </ul>
+          </div>
+        )}
+      </Panel>
 
       {/* recent transactions */}
       <Panel>

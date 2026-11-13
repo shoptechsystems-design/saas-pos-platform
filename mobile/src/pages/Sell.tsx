@@ -1,6 +1,6 @@
 import { IonIcon } from "@ionic/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { addOutline, cartOutline, chevronForwardOutline, checkmarkCircleOutline, cloudOfflineOutline, personOutline, removeOutline, shareOutline, trashOutline } from "ionicons/icons";
+import { addOutline, alertCircleOutline, cartOutline, chevronForwardOutline, checkmarkCircleOutline, cloudOfflineOutline, personOutline, removeOutline, shareOutline, trashOutline } from "ionicons/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QueueBanner from "~/components/QueueBanner";
 import { Async, Empty, Field, Screen, SearchBox, Seg, Sheet, Skeleton, useNotify } from "~/components/ui";
@@ -13,7 +13,7 @@ import { api, ApiError } from "~/lib/rest";
 import { useSession } from "~/lib/session";
 import type { CheckoutResult, PaymentMethod, Product } from "~/lib/types";
 
-type Outcome = { kind: "online"; r: CheckoutResult; lines: CartLine[]; change: string } | { kind: "offline"; total: number; items: number };
+type Outcome = { kind: "online"; r: CheckoutResult; lines: CartLine[]; change: string } | { kind: "offline"; total: number; items: number; credit?: number; customer?: string };
 
 function useDebounced<X>(v: X, ms = 250) { const [d, setD] = useState(v); useEffect(() => { const t = setTimeout(() => setD(v), ms); return () => clearTimeout(t); }, [v, ms]); return d; }
 
@@ -105,7 +105,7 @@ function CustomerPicker({ open, onClose, onPick }: { open: boolean; onClose: () 
       <SearchBox value={q} onChange={setQ} placeholder="Search name, phone or email" />
       <button className="btn btn-block" onClick={() => { onPick(null); onClose(); }}><IonIcon icon={personOutline} /> Walk-in customer</button>
       <Async q={list} empty={x => x.length ? null : <div className="muted small center">No customers match.</div>}>
-        {x => <div className="card divide">{x.slice(0, 40).map(c => <button key={c.id} className="list-row" onClick={() => { onPick({ id: c.id, name: c.name }); onClose(); }}><div className="avatar round">{c.name.slice(0, 1).toUpperCase()}</div><div className="grow"><div className="bold">{c.name}</div><div className="small muted">{c.phone ?? c.email ?? "No contact"}</div></div></button>)}</div>}
+        {x => <div className="card divide">{x.slice(0, 40).map(c => <button key={c.id} className="list-row" onClick={() => { onPick({ id: c.id, name: c.name }); onClose(); }}><div className="avatar round">{c.name.slice(0, 1).toUpperCase()}</div><div className="grow"><div className="bold">{c.name}</div><div className="small muted">{c.phone ?? c.email ?? "No contact"}</div></div>{Number(c.balance) > 0 && <span className="pill bad">owes {money(c.balance)}</span>}</button>)}</div>}
       </Async>
     </Sheet>
   );
@@ -113,30 +113,44 @@ function CustomerPicker({ open, onClose, onPick }: { open: boolean; onClose: () 
 
 function CheckoutSheet(p: { open: boolean; onClose: () => void; cart: CartLine[]; setQty: (id: number, q: number) => void; customer: { id: number; name: string } | null; setCustomer: (c: { id: number; name: string } | null) => void; cur?: string; taxRate: number; business: string; footer?: string | null; onDone: (o: Outcome) => void; onError: (e: unknown) => void }) {
   const qc = useQueryClient(); const loader = useNotify();
-  const [method, setMethod] = useState<PaymentMethod>("cash"); const [discount, setDiscount] = useState(""); const [received, setReceived] = useState(""); const [busy, setBusy] = useState(false); const [pick, setPick] = useState(false);
+  const [method, setMethod] = useState<PaymentMethod>("cash"); const [discount, setDiscount] = useState(""); const [received, setReceived] = useState(""); const [busy, setBusy] = useState(false); const [pick, setPick] = useState(false); const [payNow, setPayNow] = useState("");
+  const custList = useCustomers();
   const reqId = useRef(newRequestId());
   const t = computeTotals(p.cart, Number(discount) || 0, p.taxRate);
   const recv = received === "" ? t.total : Number(received);
   const short = method === "cash" && recv + 0.0001 < t.total;
-  useEffect(() => { if (p.open) { setReceived(""); } }, [p.open]);
+  // Udhaar: what is paid now vs put on the customer's account.
+  const cust = custList.data?.find(c => c.id === p.customer?.id);
+  const payNowNum = Math.min(Math.max(0, Number(payNow) || 0), t.total);
+  const creditAmt = Math.max(0, t.total - payNowNum);
+  const owed = Number(cust?.balance ?? 0);
+  const limit = cust?.creditLimit != null ? Number(cust.creditLimit) : null;
+  const overLimit = limit !== null && owed + creditAmt > limit;
+  const creditBlocked = method === "credit" && (!p.customer || creditAmt <= 0 || overLimit);
+  useEffect(() => { if (p.open) { setReceived(""); setPayNow(""); } }, [p.open]);
 
   const pay = async () => {
     if (busy || !p.cart.length) return;
     if (short) { warn(); return p.onError(new Error("Amount received is less than the total.")); }
+    if (method === "credit") {
+      if (!p.customer) { warn(); return p.onError(new Error("Choose a customer to sell on credit (udhaar).")); }
+      if (creditAmt <= 0) { warn(); return p.onError(new Error("Nothing is left on credit. Use a normal payment method.")); }
+      if (overLimit) { warn(); return p.onError(new Error(`Over the credit limit of ${money(limit!, p.cur)}. Take part payment now.`)); }
+    }
     setBusy(true); loader.busy("Processing sale…");
-    const payload = { items: p.cart.map(l => ({ productId: l.product.id, quantity: l.qty })), customerId: p.customer?.id ?? null, paymentMethod: method, amountReceived: method === "cash" ? recv : t.total, discount: t.discount, clientRequestId: reqId.current };
+    const payload = { items: p.cart.map(l => ({ productId: l.product.id, quantity: l.qty })), customerId: p.customer?.id ?? null, paymentMethod: method, amountReceived: method === "cash" ? recv : method === "credit" ? payNowNum : t.total, discount: t.discount, clientRequestId: reqId.current };
     const lines = p.cart;
     try {
       const r = await api.post<CheckoutResult>("/pos/checkout", payload);
       ["products", "sales", "stats", "recent", "customers", "lowStock", "trend", "top", "mix", "shift"].forEach(k => qc.invalidateQueries({ queryKey: [k] }));
-      reqId.current = newRequestId(); setDiscount(""); setReceived(""); setMethod("cash");
+      reqId.current = newRequestId(); setDiscount(""); setReceived(""); setPayNow(""); setMethod("cash");
       p.onDone({ kind: "online", r, lines, change: r.change });
     } catch (e) {
       if (e instanceof ApiError && e.isNetwork) {
         // No connection (or server trouble): keep the sale safely on this phone; it syncs automatically, and the stable id prevents duplicates.
         enqueue({ payload, summary: { total: t.total, itemCount: t.items, customerName: p.customer?.name } });
-        reqId.current = newRequestId(); setDiscount(""); setReceived(""); setMethod("cash");
-        p.onDone({ kind: "offline", total: t.total, items: t.items });
+        reqId.current = newRequestId(); setDiscount(""); setReceived(""); setPayNow(""); setMethod("cash");
+        p.onDone({ kind: "offline", total: t.total, items: t.items, credit: method === "credit" ? creditAmt : undefined, customer: p.customer?.name });
       } else { warn(); p.onError(e); }
     } finally { setBusy(false); loader.done(); }
   };
@@ -155,21 +169,38 @@ function CheckoutSheet(p: { open: boolean; onClose: () => void; cart: CartLine[]
       <button className="btn btn-block" style={{ justifyContent: "space-between" }} onClick={() => setPick(true)}><span className="row"><IonIcon icon={personOutline} /> {p.customer ? p.customer.name : "Walk-in customer"}</span><span className="muted small">Change</span></button>
       <CustomerPicker open={pick} onClose={() => setPick(false)} onPick={p.setCustomer} />
       <Field label={`Discount (${p.cur ?? "PKR"})`}><input className="input" inputMode="decimal" placeholder="0" value={discount} onChange={e => setDiscount(e.target.value.replace(/[^\d.]/g, ""))} /></Field>
-      <Seg value={method} onChange={setMethod} options={[{ value: "cash", label: "Cash" }, { value: "card", label: "Card" }, { value: "transfer", label: "Transfer" }, { value: "other", label: "Other" }]} />
+      <Seg value={method} onChange={setMethod} options={[{ value: "cash", label: "Cash" }, { value: "card", label: "Card" }, { value: "transfer", label: "Transfer" }, { value: "other", label: "Other" }, { value: "credit", label: "Udhaar" }]} />
       {method === "cash" && (
         <Field label="Amount received" error={short ? "Less than the total." : undefined}>
           <input className={`input ${short ? "invalid" : ""}`} inputMode="decimal" placeholder={String(t.total)} value={received} onChange={e => setReceived(e.target.value.replace(/[^\d.]/g, ""))} />
           <div className="row wrap" style={{ gap: 6 }}>{cashSuggestions(t.total).map(v => <button key={v} className="chip" onClick={() => setReceived(String(v))}>{money(v, p.cur)}</button>)}</div>
         </Field>
       )}
+      {method === "credit" && (!p.customer ? (
+        <div className="banner warn"><IonIcon icon={personOutline} /><span className="grow">Udhaar needs a customer, so the amount is added to their account.</span><button className="link" onClick={() => setPick(true)}>Choose</button></div>
+      ) : (
+        <>
+          <div className="card card-pad stack" style={{ gap: 4 }}>
+            <div className="row between"><b>{p.customer.name}</b><span className={`pill ${owed > 0 ? "bad" : "ok"}`}>{owed > 0 ? `owes ${money(owed, p.cur)}` : "no balance"}</span></div>
+            {limit !== null && <div className="tiny muted">Credit limit {money(limit, p.cur)}</div>}
+          </div>
+          <Field label="Pay now (optional, cash)"><input className="input" inputMode="decimal" placeholder="0" value={payNow} onChange={e => setPayNow(e.target.value.replace(/[^\d.]/g, ""))} /></Field>
+          <div className="banner" style={{ background: "var(--c-red-soft)", color: "var(--c-red)", flexDirection: "column", alignItems: "stretch", gap: 4 }}>
+            <div className="row between"><span>Goes on credit</span><b className="mono">{money(creditAmt, p.cur)}</b></div>
+            <div className="row between small" style={{ fontWeight: 600 }}><span>New balance owed</span><span className="mono">{money(owed + creditAmt, p.cur)}</span></div>
+          </div>
+          {overLimit && <div className="banner bad"><IonIcon icon={alertCircleOutline} />Over this customer's credit limit. Take part payment now.</div>}
+        </>
+      ))}
       <div className="card card-pad stack" style={{ gap: 6 }}>
         <div className="row between small"><span className="muted">Subtotal</span><span className="mono">{money(t.subtotal, p.cur)}</span></div>
         {t.discount > 0 && <div className="row between small"><span className="muted">Discount</span><span className="mono">-{money(t.discount, p.cur)}</span></div>}
         <div className="row between small"><span className="muted">Tax ({p.taxRate}%)</span><span className="mono">{money(t.tax, p.cur)}</span></div>
         <div className="row between" style={{ fontSize: 20, fontWeight: 800, color: "var(--c-navy)" }}><span>Total</span><span className="mono">{money(t.total, p.cur)}</span></div>
+        {method === "credit" && creditAmt > 0 && <><div className="row between small"><span className="muted">Paid now</span><span className="mono">{money(payNowNum, p.cur)}</span></div><div className="row between small" style={{ color: "var(--c-red)", fontWeight: 700 }}><span>On credit (udhaar)</span><span className="mono">{money(creditAmt, p.cur)}</span></div></>}
         {method === "cash" && !short && recv > t.total && <div className="row between small" style={{ color: "var(--c-green)", fontWeight: 700 }}><span>Change due</span><span className="mono">{money(recv - t.total, p.cur)}</span></div>}
       </div>
-      <button className="btn btn-primary btn-block" disabled={busy || !p.cart.length} onClick={pay}>{busy ? "Processing…" : `Charge ${money(t.total, p.cur)}`}</button>
+      <button className="btn btn-primary btn-block" disabled={busy || !p.cart.length || creditBlocked} onClick={pay}>{busy ? "Processing…" : method === "credit" ? `Put ${money(creditAmt, p.cur)} on credit` : `Charge ${money(t.total, p.cur)}`}</button>
     </Sheet>
   );
 }
@@ -178,10 +209,11 @@ function ResultSheet({ outcome, onClose, cur, business, footer, onShared }: { ou
   return (
     <Sheet open={Boolean(outcome)} onClose={onClose} title={outcome?.kind === "offline" ? "Saved offline" : "Payment complete"}>
       {outcome?.kind === "online" && (() => {
-        const { r, lines } = outcome; const text = receiptText({ business, saleNumber: r.saleNumber, when: dateTime(new Date()), lines: lines.map(l => ({ name: l.product.name, qty: l.qty, total: money((unitCents(l.product) * l.qty) / 100, cur) })), subtotal: money(r.subtotal, cur), discount: money(r.discount, cur), tax: money(r.tax, cur), total: money(r.total, cur), change: Number(r.change) > 0 ? money(r.change, cur) : undefined, footer: r.footer ?? footer });
+        const { r, lines } = outcome; const text = receiptText({ business, saleNumber: r.saleNumber, when: dateTime(new Date()), lines: lines.map(l => ({ name: l.product.name, qty: l.qty, total: money((unitCents(l.product) * l.qty) / 100, cur) })), subtotal: money(r.subtotal, cur), discount: money(r.discount, cur), tax: money(r.tax, cur), total: money(r.total, cur), change: Number(r.change) > 0 ? money(r.change, cur) : undefined, credit: Number(r.creditAmount) > 0 ? { paid: money(Number(r.total) - Number(r.creditAmount), cur), amount: money(r.creditAmount, cur), balance: r.balance ? money(r.balance, cur) : undefined } : undefined, footer: r.footer ?? footer });
         return <>
           <div className="success-ring"><IonIcon icon={checkmarkCircleOutline} /></div>
           <div className="center"><div className="h1 mono">{money(r.total, cur)}</div><div className="muted">{r.saleNumber}{r.replayed ? " · already recorded" : ""}</div></div>
+          {Number(r.creditAmount) > 0 && <div className="banner bad" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}><div className="row between"><span>On credit (udhaar)</span><b className="mono">{money(r.creditAmount, cur)}</b></div>{r.balance && <div className="row between small" style={{ fontWeight: 600 }}><span>Total balance owed</span><span className="mono">{money(r.balance, cur)}</span></div>}</div>}
           {Number(r.change) > 0 && <div className="banner ok center" style={{ justifyContent: "center", fontSize: 16 }}>Change due: <b className="mono">{money(r.change, cur)}</b></div>}
           <div className="receipt">
             {lines.map(l => <div className="ln" key={l.product.id}><span>{l.qty} × {l.product.name}</span><span className="mono">{money((unitCents(l.product) * l.qty) / 100, cur)}</span></div>)}
@@ -193,7 +225,7 @@ function ResultSheet({ outcome, onClose, cur, business, footer, onShared }: { ou
       {outcome?.kind === "offline" && <>
         <div className="success-ring" style={{ background: "var(--c-amber-soft)", color: "var(--c-amber)" }}><IonIcon icon={cloudOfflineOutline} /></div>
         <div className="center"><div className="h1 mono">{money(outcome.total, cur)}</div><div className="muted">{outcome.items} item{outcome.items > 1 ? "s" : ""}</div></div>
-        <div className="banner warn">No connection right now. This sale is saved on your phone and will be sent automatically when you're back online — it can't be duplicated.</div>
+        <div className="banner warn">No connection right now. This sale is saved on your phone and will be sent automatically when you're back online — it can't be duplicated.{outcome.credit ? ` ${money(outcome.credit, cur)} will be added to ${outcome.customer ?? "the customer"}'s udhaar account when it syncs (credit limits are checked then).` : ""}</div>
       </>}
       <button className="btn btn-primary btn-block" onClick={onClose}>New sale</button>
     </Sheet>

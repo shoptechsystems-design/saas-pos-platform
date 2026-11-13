@@ -7,7 +7,7 @@ import { api, qs } from "~/lib/rest";
 import { useSession } from "~/lib/session";
 import type { ActivityRow } from "~/lib/types";
 
-const ENTITIES = ["", "sale", "product", "purchase", "shift", "tenant_settings"];
+const ENTITIES = ["", "sale", "credit", "product", "purchase", "shift", "tenant_settings"];
 const PAGE = 20;
 
 function ago(iso: string) {
@@ -25,7 +25,7 @@ function detail(raw: string | null) {
     return Object.entries(m).filter(([, v]) => v !== null && v !== undefined && typeof v !== "object").slice(0, 3).map(([k, v]) => `${titleCase(k.replace(/([A-Z])/g, " $1").toLowerCase())}: ${String(v)}`).join(" · ");
   } catch { return ""; }
 }
-const tone = (a: string) => (/delet|refund|cancel/.test(a) ? "red" : /creat|complet|receiv|open/.test(a) ? "green" : /updat|adjust|clos/.test(a) ? "amber" : "navy");
+const tone = (a: string) => (/delet|refund|cancel/.test(a) ? "red" : /creat|complet|receiv|open|payment/.test(a) ? "green" : /updat|adjust|clos/.test(a) ? "amber" : "navy");
 
 export default function Activity() {
   const s = useSession();

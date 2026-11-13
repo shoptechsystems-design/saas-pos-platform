@@ -10,7 +10,7 @@
 import "dotenv/config";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "./db";
-import { auditLogs, categories, customers, expenses, inventoryMovements, products, purchaseItems, purchases, registerShifts, saleItems, sales, suppliers, tenantMemberships, users } from "../drizzle/schema";
+import { auditLogs, categories, customerLedger, customers, expenses, inventoryMovements, products, purchaseItems, purchases, registerShifts, saleItems, sales, suppliers, tenantMemberships, users } from "../drizzle/schema";
 import { sql } from "drizzle-orm";
 
 // Deterministic PRNG so repeated runs look the same.
@@ -125,6 +125,48 @@ async function seedExtras(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, te
   return added;
 }
 
+/** Demo udhaar: turn some past sales into credit, add repayments, leave a few balances overdue. */
+async function seedCredit(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, tenantId: number, userId: number) {
+  const have = await db.select({ id: customerLedger.id }).from(customerLedger).where(eq(customerLedger.tenantId, tenantId)).limit(1);
+  if (have.length) return 0;
+  const custs = await db.select().from(customers).where(eq(customers.tenantId, tenantId)).orderBy(customers.id).limit(7);
+  // [credit sales, share of the debt repaid, days ago of the newest credit sale, credit limit]
+  const profiles: [number, number, number, number | null][] = [[4, 0.5, 3, 50000], [3, 0.0, 41, 30000], [5, 0.8, 2, null], [3, 0.0, 55, 20000], [2, 1.0, 6, null], [4, 0.3, 9, 40000], [2, 0.0, 1, null]];
+  let added = 0;
+  for (let i = 0; i < custs.length; i++) {
+    const [count, repaidShare, newestDaysAgo, limit] = profiles[i];
+    const cutoff = new Date(Date.now() - (newestDaysAgo + count * 7) * 86400000);
+    const upper = new Date(Date.now() - newestDaysAgo * 86400000);
+    const rows = (await db.select().from(sales).where(eq(sales.customerId, custs[i].id)).orderBy(sales.createdAt))
+      .filter(r => r.tenantId === tenantId && r.status === "completed" && r.createdAt >= cutoff && r.createdAt <= upper && r.paymentMethod !== "credit");
+    const picked = rows.filter((_, k) => k % Math.max(1, Math.floor(rows.length / count)) === 0).slice(0, count);
+    if (!picked.length) continue;
+    type Ev = { at: Date; kind: "credit" | "pay"; amount: number; saleId?: number; note?: string };
+    const events: Ev[] = [];
+    for (let k = 0; k < picked.length; k++) {
+      const sale = picked[k];
+      const total = Number(sale.total), credit = k % 2 === 0 ? total : Math.round(total * 0.6);
+      await db.update(sales).set({ paymentMethod: "credit", amountReceived: money(total - credit), changeAmount: "0", creditAmount: money(credit) }).where(eq(sales.id, sale.id));
+      events.push({ at: sale.createdAt, kind: "credit", amount: credit, saleId: sale.id, note: credit < total ? `Part payment ${money(total - credit)} received now` : undefined });
+    }
+    const owedTotal = events.reduce((n, e) => n + e.amount, 0);
+    if (repaidShare > 0) {
+      const last = events[events.length - 1].at;
+      const pay = repaidShare >= 1 ? owedTotal : Math.round(owedTotal * repaidShare);
+      events.push({ at: new Date(Math.min(Date.now() - 3600000, last.getTime() + 2 * 86400000)), kind: "pay", amount: pay, note: repaidShare >= 1 ? "Cleared in full" : "Part payment" });
+    }
+    events.sort((a, b) => a.at.getTime() - b.at.getTime());
+    let balance = 0;
+    for (const e of events) {
+      balance += e.kind === "credit" ? e.amount : -e.amount;
+      await db.insert(customerLedger).values({ tenantId, customerId: custs[i].id, type: e.kind === "credit" ? "credit_sale" : "payment", amount: money(e.kind === "credit" ? e.amount : -e.amount), balanceAfter: money(balance), saleId: e.saleId, method: e.kind === "pay" ? pick(["cash", "cash", "transfer"]) : null, note: e.note ?? null, createdByUserId: userId, createdAt: e.at });
+      added++;
+    }
+    await db.update(customers).set({ balance: money(Math.max(0, balance)), creditLimit: limit === null ? null : money(limit) }).where(eq(customers.id, custs[i].id));
+  }
+  return added;
+}
+
 async function main() {
   const email = process.argv[2];
   const force = process.argv.includes("--force");
@@ -143,9 +185,9 @@ async function main() {
 
   const existing = await db.select({ id: products.id }).from(products).where(eq(products.tenantId, tenantId)).limit(1);
   if (existing.length && !force) {
-    const added = (await seedMovements(db, tenantId, user.id)) + (await seedExtras(db, tenantId, user.id));
+    const added = (await seedMovements(db, tenantId, user.id)) + (await seedExtras(db, tenantId, user.id)) + (await seedCredit(db, tenantId, user.id));
     console.log(added
-      ? `Workspace ${tenantId} already had products; added ${added} demo records (movements, purchase orders, shifts, activity).`
+      ? `Workspace ${tenantId} already had products; added ${added} demo records (movements, purchase orders, shifts, activity, udhaar).`
       : `Workspace ${tenantId} already has products. Re-run with --force to add demo data anyway.`);
     process.exit(0);
   }
@@ -243,7 +285,7 @@ async function main() {
     }
   }
 
-  const moves = (await seedMovements(db, tenantId, user.id)) + (await seedExtras(db, tenantId, user.id));
+  const moves = (await seedMovements(db, tenantId, user.id)) + (await seedExtras(db, tenantId, user.id)) + (await seedCredit(db, tenantId, user.id));
   console.log(`Seeded workspace ${tenantId} for ${email}: ${prods.length} products, ${custs.length} customers, ${saleSeq - 1000} sales, ${moves} inventory movements.`);
   process.exit(0);
 }

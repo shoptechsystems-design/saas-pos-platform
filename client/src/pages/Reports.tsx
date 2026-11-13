@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Banknote, Download, Percent, Receipt, RotateCcw, Scale, TrendingUp, Wallet } from "lucide-react";
+import { Banknote, BookOpen, Download, Percent, Receipt, RotateCcw, Scale, TrendingUp, Wallet } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { moneyWhole as money } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
@@ -111,6 +111,13 @@ export default function ReportsView() {
               )}
             </Panel>
           </div>
+
+          <Panel eyebrow="Customer credit" title="Udhaar">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {[["Credit given", d?.creditGiven ?? 0, "text-rose-600", "sold on account in this period"], ["Repayments received", d?.paymentsReceived ?? 0, "text-emerald-600", "collected from customers"], ["Outstanding now", d?.outstanding ?? 0, "text-slate-900", "owed to you today"]].map(([l, v, c, h]) => (
+                <div key={l as string} className="rounded-xl bg-slate-50 p-4"><p className="flex items-center gap-1.5 text-xs text-slate-500"><BookOpen className="h-3 w-3" />{l}</p><p className={`mt-1.5 text-xl font-extrabold tabular-nums ${c}`}>{money(v as number)}</p><p className="mt-0.5 text-[11px] text-slate-400">{h}</p></div>))}
+            </div>
+          </Panel>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Panel eyebrow="Mix" title="Sales by category">

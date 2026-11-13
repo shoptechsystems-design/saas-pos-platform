@@ -194,16 +194,17 @@ export async function getSalesForTenant(tenantId: number, from?: Date, to?: Date
 
 export async function getTenantStats(tenantId: number) {
   const db = await getDb();
-  if (!db) return { todaySales: "0", todayOrders: 0, monthSales: "0", products: 0, lowStock: 0, customers: 0 };
+  if (!db) return { todaySales: "0", todayOrders: 0, monthSales: "0", products: 0, lowStock: 0, customers: 0, outstandingCredit: "0", debtors: 0 };
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [today, month, productCount, lowStock, customerCount] = await Promise.all([
+  const [today, month, productCount, lowStock, customerCount, owed] = await Promise.all([
     db.select({ total: sql<string>`COALESCE(SUM(${sales.total}), 0)`, orders: sql<number>`COUNT(*)` }).from(sales).where(and(eq(sales.tenantId, tenantId), eq(sales.status, "completed"), gte(sales.createdAt, todayStart))),
     db.select({ total: sql<string>`COALESCE(SUM(${sales.total}), 0)` }).from(sales).where(and(eq(sales.tenantId, tenantId), eq(sales.status, "completed"), gte(sales.createdAt, monthStart))),
     db.select({ count: sql<number>`COUNT(*)` }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.status, "active"))),
     db.select({ count: sql<number>`COUNT(*)` }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.status, "active"), sql`${products.stockQuantity} <= ${products.minStockLevel}`)),
     db.select({ count: sql<number>`COUNT(*)` }).from(customers).where(eq(customers.tenantId, tenantId)),
+    db.select({ total: sql<string>`COALESCE(SUM(${customers.balance}), 0)`, debtors: sql<number>`COUNT(*)` }).from(customers).where(and(eq(customers.tenantId, tenantId), sql`${customers.balance} > 0`)),
   ]);
   return {
     todaySales: today[0]?.total ?? "0",
@@ -212,6 +213,8 @@ export async function getTenantStats(tenantId: number) {
     products: Number(productCount[0]?.count ?? 0),
     lowStock: Number(lowStock[0]?.count ?? 0),
     customers: Number(customerCount[0]?.count ?? 0),
+    outstandingCredit: owed[0]?.total ?? "0",
+    debtors: Number(owed[0]?.debtors ?? 0),
   };
 }
 

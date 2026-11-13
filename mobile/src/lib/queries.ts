@@ -41,6 +41,8 @@ export const useTopProducts = (days = 30) => { const on = useEnabled(); return u
 export const usePaymentMix = (days = 30) => { const on = useEnabled(); return useQuery({ queryKey: keys.mix(days), queryFn: () => api.get<T.PaymentMix[]>(`/dashboard/payment-mix?days=${days}`), enabled: on }); };
 
 // ---- catalog ----
+export const useCreditSummary = () => { const on = useEnabled(); return useQuery({ queryKey: ["credit"], queryFn: () => api.get<T.CreditSummary>("/credit/summary"), enabled: on }); };
+export const useLedger = (customerId?: number) => { const on = useEnabled(); return useQuery({ queryKey: ["ledger", customerId], queryFn: () => api.get<T.Ledger>(`/customers/${customerId}/ledger?pageSize=50`), enabled: on && !!customerId }); };
 export const useCategories = () => { const on = useEnabled(); return useQuery({ queryKey: keys.categories, queryFn: () => cached("categories", () => api.get<T.Category[]>("/categories")), enabled: on }); };
 export const useProducts = (query?: string, categoryId?: number) => {
   const on = useEnabled();

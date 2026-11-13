@@ -1,18 +1,18 @@
 import { IonIcon } from "@ionic/react";
-import { alertCircleOutline, arrowDownOutline, arrowUpOutline, cartOutline, cashOutline, cubeOutline, peopleOutline, receiptOutline, trendingUpOutline, walletOutline } from "ionicons/icons";
+import { alertCircleOutline, arrowDownOutline, arrowUpOutline, bookOutline, cartOutline, cashOutline, cubeOutline, peopleOutline, receiptOutline, trendingUpOutline, walletOutline } from "ionicons/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import QueueBanner from "~/components/QueueBanner";
 import { AreaChart, Sparkline } from "~/components/charts";
 import { SaleRow } from "~/components/SaleRow";
-import { Async, Card, Empty, Pill, Row, Screen, SectionHead } from "~/components/ui";
+import { Async, Avatar, Card, Empty, Pill, Row, Screen, SectionHead } from "~/components/ui";
 import { dateTime, initials, money, moneyShort, num, roleLabel } from "~/lib/format";
 import { tap } from "~/lib/native";
-import { useLowStock, usePaymentMix, useRecentSales, useStats, useTopProducts, useTrend } from "~/lib/queries";
+import { useCreditSummary, useLowStock, usePaymentMix, useRecentSales, useStats, useTopProducts, useTrend } from "~/lib/queries";
 import { useSession } from "~/lib/session";
 
-const MIX_COLORS: Record<string, string> = { cash: "#14b8a6", card: "#6366f1", transfer: "#fb7c66", other: "#94a3b8" };
+const MIX_COLORS: Record<string, string> = { cash: "#14b8a6", card: "#6366f1", transfer: "#fb7c66", credit: "#f59e0b", other: "#94a3b8" };
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const dayLabel = (day: string) => new Date(day + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
@@ -20,6 +20,7 @@ export default function Home() {
   const s = useSession(); const nav = useNavigate(); const qc = useQueryClient();
   const cur = s.tenant?.currency;
   const [days, setDays] = useState<7 | 14 | 30>(14);
+  const credit = useCreditSummary();
   const stats = useStats(); const trend = useTrend(days); const week = useTrend(7); const top = useTopProducts(30); const mix = usePaymentMix(30); const low = useLowStock(); const recent = useRecentSales();
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -70,7 +71,7 @@ export default function Home() {
 
       <div className="kpis">
         <div className="card kpi2"><div className="icon-chip green"><IonIcon icon={trendingUpOutline} /></div><div className="t"><div className="l">This month</div><div className="v mono">{stats.data ? moneyShort(num(stats.data.monthSales), cur) : "—"}</div></div></div>
-        <div className="card kpi2"><div className="icon-chip blue"><IonIcon icon={peopleOutline} /></div><div className="t"><div className="l">Customers</div><div className="v mono">{stats.data?.customers ?? "—"}</div></div></div>
+        <div className="card kpi2" onClick={() => nav("/more/customers?owes=1")}><div className={`icon-chip ${Number(stats.data?.outstandingCredit) > 0 ? "red" : "green"}`}><IonIcon icon={bookOutline} /></div><div className="t"><div className="l">Udhaar owed</div><div className="v mono" style={Number(stats.data?.outstandingCredit) > 0 ? { color: "var(--c-red)" } : undefined}>{stats.data ? moneyShort(num(stats.data.outstandingCredit), cur) : "—"}</div></div></div>
         <div className="card kpi2"><div className="icon-chip"><IonIcon icon={cubeOutline} /></div><div className="t"><div className="l">Products</div><div className="v mono">{stats.data?.products ?? "—"}</div></div></div>
         <div className="card kpi2" onClick={() => nav("/inventory")}><div className={`icon-chip ${stats.data?.lowStock ? "amber" : "green"}`}><IonIcon icon={alertCircleOutline} /></div><div className="t"><div className="l">Low stock</div><div className="v mono" style={stats.data?.lowStock ? { color: "var(--c-amber)" } : undefined}>{stats.data?.lowStock ?? "—"}</div></div></div>
       </div>
@@ -93,6 +94,19 @@ export default function Home() {
                 <div className="tiny muted" style={{ marginTop: 4 }}>{p.units} sold</div></div></div>))}</div>}
         </Async>
       </Card>
+
+      {(credit.data?.debtors ?? 0) > 0 && <>
+        <SectionHead title="Udhaar" action="See all" onAction={() => nav("/more/customers?owes=1")} />
+        <Card pad={false}>
+          <div className="row between" style={{ padding: "12px 14px", borderBottom: "1px solid var(--c-line)" }}>
+            <div><div className="tiny muted bold">TOTAL OWED TO YOU</div><div className="h1 mono" style={{ fontSize: 22, color: "var(--c-red)" }}>{money(credit.data!.outstanding, cur)}</div></div>
+            <div className="right small muted">{credit.data!.debtors} customer{credit.data!.debtors === 1 ? "" : "s"}{credit.data!.overdueCount ? <div style={{ color: "var(--c-amber)", fontWeight: 700 }}>{credit.data!.overdueCount} overdue</div> : null}</div>
+          </div>
+          <div className="divide">{credit.data!.top.slice(0, 4).map(d => (
+            <Row key={d.id} lead={<Avatar name={d.name} />} onClick={() => nav("/more/customers?owes=1")} title={d.name} sub={d.lastPaymentAt ? `last paid ${d.ageDays}d ago` : `owing for ${d.ageDays}d`}
+              right={<div className="right"><b className="mono" style={{ color: "var(--c-red)" }}>{moneyShort(d.balance, cur)}</b>{d.overdue && <div><Pill tone="warn">Overdue</Pill></div>}</div>} />))}</div>
+        </Card>
+      </>}
 
       <SectionHead title="How customers pay" action="30 days" />
       <Card>

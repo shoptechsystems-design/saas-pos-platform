@@ -11,6 +11,8 @@ export type ReceiptData = {
   items: { name: string; quantity: number; unitPrice: number | string; lineTotal: number | string }[];
   subtotal: number | string; discount: number | string; tax: number | string; total: number | string;
   received?: number | string; change?: number | string;
+  /** Udhaar: part of the total put on the customer's account, and what they owe in total afterwards. */
+  credit?: { amount: number | string; balance?: number | string | null };
 };
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
@@ -31,7 +33,7 @@ export function printReceipt(r: ReceiptData) {
     ${r.status === "refunded" ? '<div class="void">REFUNDED</div>' : ""}<hr>
     <table>${rows}</table><hr>
     <table>${line("Subtotal", moneyWhole(r.subtotal))}${Number(r.discount) > 0 ? line("Discount", "−" + moneyWhole(r.discount)) : ""}${line("Tax", moneyWhole(r.tax))}${line("TOTAL", moneyWhole(r.total), true)}
-    ${line("Paid by", esc(r.paymentMethod.toUpperCase()))}${r.received != null && Number(r.received) > 0 ? line("Received", moneyWhole(r.received)) : ""}${r.change != null && Number(r.change) > 0 ? line("Change", moneyWhole(r.change)) : ""}</table><hr>
+    ${r.credit && Number(r.credit.amount) > 0 ? line("Paid now", moneyWhole(Number(r.total) - Number(r.credit.amount))) + line("ON CREDIT (UDHAAR)", moneyWhole(r.credit.amount), true) + (r.credit.balance != null ? line("Total balance due", moneyWhole(r.credit.balance)) : "") : line("Paid by", esc(r.paymentMethod.toUpperCase())) + (r.received != null && Number(r.received) > 0 ? line("Received", moneyWhole(r.received)) : "") + (r.change != null && Number(r.change) > 0 ? line("Change", moneyWhole(r.change)) : "")}</table><hr>
     <div class="c"><small>${r.customer ? "Customer: " + esc(r.customer) + "<br>" : ""}${r.cashier ? "Served by " + esc(r.cashier) + "<br>" : ""}</small>${esc(r.business.footer || "Thank you for shopping with us!")}</div>
     <script>window.onload=function(){window.focus();window.print();}</script></body></html>`);
   w.document.close();
@@ -41,7 +43,8 @@ export function printReceipt(r: ReceiptData) {
 /** Plain-text receipt, used for WhatsApp / copy. */
 export function receiptText(r: ReceiptData) {
   const lines = [`*${r.business.name}*`, `Receipt ${r.saleNumber}`, new Date(r.date).toLocaleString("en-GB"), "", ...r.items.map(i => `${i.quantity} × ${i.name} — ${moneyWhole(i.lineTotal)}`), "",
-    ...(Number(r.discount) > 0 ? [`Discount: −${moneyWhole(r.discount)}`] : []), `Tax: ${moneyWhole(r.tax)}`, `*Total: ${moneyWhole(r.total)}*`, `Paid by ${r.paymentMethod}`, "", r.business.footer || "Thank you for shopping with us!"];
+    ...(Number(r.discount) > 0 ? [`Discount: −${moneyWhole(r.discount)}`] : []), `Tax: ${moneyWhole(r.tax)}`, `*Total: ${moneyWhole(r.total)}*`,
+    ...(r.credit && Number(r.credit.amount) > 0 ? [`Paid now: ${moneyWhole(Number(r.total) - Number(r.credit.amount))}`, `*On credit (udhaar): ${moneyWhole(r.credit.amount)}*`, ...(r.credit.balance != null ? [`Total balance due: ${moneyWhole(r.credit.balance)}`] : [])] : [`Paid by ${r.paymentMethod}`]), "", r.business.footer || "Thank you for shopping with us!"];
   return lines.join("\n");
 }
 

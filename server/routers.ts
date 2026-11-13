@@ -21,6 +21,7 @@ import {
   auditLogs,
   categories,
   customerGroups,
+  customerLedger,
   customers,
   expenses,
   inventoryMovements,
@@ -59,7 +60,7 @@ import { systemRouter } from "./_core/systemRouter";
 const salesFilterInput = z.object({
   search: z.string().trim().max(80).optional(),
   customerId: z.number().int().optional(),
-  paymentMethod: z.enum(["cash", "card", "transfer"]).optional(),
+  paymentMethod: z.enum(["cash", "card", "transfer", "credit"]).optional(),
   status: z.enum(["completed", "refunded", "all"]).default("completed"),
   from: z.number().optional(),
   to: z.number().optional(),
@@ -74,6 +75,16 @@ function buildSalesWhere(tenantId: number, input: z.infer<typeof salesFilterInpu
   if (input.to) conds.push(lte(sales.createdAt, new Date(input.to)));
   if (input.search) conds.push(or(like(sales.saleNumber, `%${input.search}%`), like(customers.name, `%${input.search}%`))!);
   return and(...conds);
+}
+
+
+/** Cash that actually went into the drawer since `since`: cash sales, the cash part of credit sales, and cash repayments of udhaar. */
+async function cashTakenSince(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, tenantId: number, since: Date) {
+  const [s] = await db.select({ cash: sql<string>`COALESCE(SUM(CASE WHEN ${sales.paymentMethod} = 'cash' THEN ${sales.total} WHEN ${sales.paymentMethod} = 'credit' THEN ${sales.amountReceived} ELSE 0 END), 0)` })
+    .from(sales).where(and(eq(sales.tenantId, tenantId), eq(sales.status, "completed"), gte(sales.createdAt, since)));
+  const [r] = await db.select({ cash: sql<string>`COALESCE(SUM(-${customerLedger.amount}), 0)` })
+    .from(customerLedger).where(and(eq(customerLedger.tenantId, tenantId), eq(customerLedger.type, "payment"), eq(customerLedger.method, "cash"), gte(customerLedger.createdAt, since)));
+  return { cashSales: Number(s?.cash ?? 0), repayments: Number(r?.cash ?? 0) };
 }
 
 const money = z.coerce.number().finite().nonnegative();
@@ -338,11 +349,24 @@ export const appRouter = router({
         const from = new Date();
         from.setDate(from.getDate() - input.days + 1);
         from.setHours(0, 0, 0, 0);
-        const rows = await db.select({ method: sales.paymentMethod, total: sql<string>`SUM(${sales.total})`, orders: sql<number>`COUNT(*)` })
+        const rows = await db.select({ method: sales.paymentMethod, total: sql<string>`SUM(${sales.total} - ${sales.creditAmount})`, credit: sql<string>`SUM(${sales.creditAmount})`, orders: sql<number>`COUNT(*)` })
           .from(sales)
           .where(and(eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed"), gte(sales.createdAt, from)))
           .groupBy(sales.paymentMethod);
-        return rows.map(r => ({ method: r.method, total: Number(r.total), orders: Number(r.orders) }));
+        // Credit sales: the part paid now is cash, the rest is udhaar. Report them as separate buckets.
+        const out = new Map<string, { method: string; total: number; orders: number }>();
+        let creditTotal = 0, creditOrders = 0;
+        for (const r of rows) {
+          const method = r.method === "credit" ? "cash" : r.method;
+          const cur = out.get(method) ?? { method, total: 0, orders: 0 };
+          cur.total += Number(r.total);
+          cur.orders += r.method === "credit" ? 0 : Number(r.orders);
+          out.set(method, cur);
+          if (r.method === "credit") { creditTotal += Number(r.credit); creditOrders += Number(r.orders); }
+        }
+        const list = Array.from(out.values()).filter(x => x.total > 0 || x.orders > 0);
+        if (creditOrders > 0) list.push({ method: "credit", total: creditTotal, orders: creditOrders });
+        return list;
       }),
   }),
 
@@ -456,7 +480,7 @@ export const appRouter = router({
     exportRows: tenantProcedure.input(salesFilterInput).query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
-      return db.select({ saleNumber: sales.saleNumber, status: sales.status, createdAt: sales.createdAt, customer: customers.name, paymentMethod: sales.paymentMethod, subtotal: sales.subtotal, discount: sales.discount, tax: sales.tax, total: sales.total })
+      return db.select({ saleNumber: sales.saleNumber, status: sales.status, createdAt: sales.createdAt, customer: customers.name, paymentMethod: sales.paymentMethod, subtotal: sales.subtotal, discount: sales.discount, tax: sales.tax, total: sales.total, creditAmount: sales.creditAmount })
         .from(sales).leftJoin(customers, eq(customers.id, sales.customerId)).where(buildSalesWhere(ctx.tenant.id, input)).orderBy(desc(sales.createdAt)).limit(5000);
     }),
     detail: tenantProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ ctx, input }) => {
@@ -484,6 +508,16 @@ export const appRouter = router({
         }
         if (sale.customerId) {
           await tx.update(customers).set({ totalSpent: sql`GREATEST(${customers.totalSpent} - ${sale.total}, 0)` }).where(and(eq(customers.id, sale.customerId), eq(customers.tenantId, ctx.tenant.id)));
+          if (toCents(sale.creditAmount) > 0) {
+            // The credit part of a refunded sale is no longer owed (never below zero if some was already repaid).
+            const [cust] = await tx.select().from(customers).where(and(eq(customers.id, sale.customerId), eq(customers.tenantId, ctx.tenant.id))).for("update");
+            if (cust) {
+              const reduce = Math.min(toCents(sale.creditAmount), Math.max(0, toCents(cust.balance)));
+              const after = toCents(cust.balance) - reduce;
+              await tx.update(customers).set({ balance: formatMoney(after) }).where(eq(customers.id, cust.id));
+              if (reduce > 0) await tx.insert(customerLedger).values({ tenantId: ctx.tenant.id, customerId: cust.id, type: "refund", amount: formatMoney(-reduce), balanceAfter: formatMoney(after), saleId: sale.id, note: `Refund of ${sale.saleNumber}`, createdByUserId: ctx.user.id });
+            }
+          }
         }
         await tx.insert(auditLogs).values({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "refunded", entity: "sale", entityId: sale.id, metadata: JSON.stringify({ saleNumber: sale.saleNumber, total: sale.total, reason: input.reason }) });
         return { success: true as const, saleNumber: sale.saleNumber, total: sale.total };
@@ -533,16 +567,76 @@ export const appRouter = router({
       }),
   }),
 
+  credit: router({
+    summary: tenantProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      const empty = { outstanding: 0, debtors: 0, overdueCount: 0, overdueTotal: 0, top: [] as { id: number; name: string; phone: string | null; balance: number; creditLimit: number | null; ageDays: number; overdue: boolean; lastPaymentAt: Date | null }[] };
+      if (!db) return empty;
+      const rows = await db.select({
+        id: customers.id, name: customers.name, phone: customers.phone, balance: customers.balance, creditLimit: customers.creditLimit,
+        lastPaymentAt: sql<string | null>`(SELECT MAX(l.createdAt) FROM customer_ledger l WHERE l.customerId = customers.id AND l.tenantId = customers.tenantId AND l.type = 'payment')`,
+        oldestCreditAt: sql<string | null>`(SELECT MIN(l.createdAt) FROM customer_ledger l WHERE l.customerId = customers.id AND l.tenantId = customers.tenantId AND l.type = 'credit_sale')`,
+      }).from(customers).where(and(eq(customers.tenantId, ctx.tenant.id), sql`${customers.balance} > 0`)).orderBy(desc(customers.balance));
+      const now = Date.now();
+      const list = rows.map(r => {
+        // Age = days since the last repayment (or since the first credit if they never repaid). Over 30 days = overdue.
+        const ref = r.lastPaymentAt ?? r.oldestCreditAt;
+        const ageDays = ref ? Math.max(0, Math.floor((now - new Date(ref).getTime()) / 86400000)) : 0;
+        return { id: r.id, name: r.name, phone: r.phone, balance: Number(r.balance), creditLimit: r.creditLimit === null ? null : Number(r.creditLimit), ageDays, overdue: ageDays > 30, lastPaymentAt: r.lastPaymentAt ? new Date(r.lastPaymentAt) : null };
+      });
+      const overdue = list.filter(x => x.overdue);
+      return { outstanding: list.reduce((n, x) => n + x.balance, 0), debtors: list.length, overdueCount: overdue.length, overdueTotal: overdue.reduce((n, x) => n + x.balance, 0), top: list.slice(0, 10) };
+    }),
+    ledger: tenantProcedure.input(z.object({ customerId: z.number().int().positive(), page: z.number().int().min(1).default(1), pageSize: z.number().int().min(5).max(100).default(30) })).query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const [customer] = await db.select({ id: customers.id, name: customers.name, phone: customers.phone, balance: customers.balance, creditLimit: customers.creditLimit }).from(customers).where(and(eq(customers.id, input.customerId), eq(customers.tenantId, ctx.tenant.id))).limit(1);
+      if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found." });
+      const [{ total }] = await db.select({ total: sql<number>`COUNT(*)`.mapWith(Number) }).from(customerLedger).where(and(eq(customerLedger.tenantId, ctx.tenant.id), eq(customerLedger.customerId, input.customerId)));
+      const rows = await db.select({ entry: customerLedger, saleNumber: sales.saleNumber, by: { name: users.name } }).from(customerLedger)
+        .leftJoin(sales, eq(sales.id, customerLedger.saleId)).leftJoin(users, eq(users.id, customerLedger.createdByUserId))
+        .where(and(eq(customerLedger.tenantId, ctx.tenant.id), eq(customerLedger.customerId, input.customerId)))
+        .orderBy(desc(customerLedger.createdAt), desc(customerLedger.id)).limit(input.pageSize).offset((input.page - 1) * input.pageSize);
+      return { customer, rows, total };
+    }),
+    receive: cashierProcedure.input(z.object({ customerId: z.number().int().positive(), amount: money.refine(v => v > 0, "Enter an amount greater than zero."), method: z.enum(["cash", "card", "transfer", "other"]).default("cash"), note: z.string().trim().max(300).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      return db.transaction(async tx => {
+        const [cust] = await tx.select().from(customers).where(and(eq(customers.id, input.customerId), eq(customers.tenantId, ctx.tenant.id))).for("update");
+        if (!cust) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found." });
+        const owed = toCents(cust.balance), paid = toCents(input.amount);
+        if (owed <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: `${cust.name} doesn't owe anything.` });
+        if (paid > owed) throw new TRPCError({ code: "BAD_REQUEST", message: `That is more than the ${formatMoney(owed)} ${cust.name} owes.` });
+        const after = owed - paid;
+        await tx.update(customers).set({ balance: formatMoney(after) }).where(eq(customers.id, cust.id));
+        await tx.insert(customerLedger).values({ tenantId: ctx.tenant.id, customerId: cust.id, type: "payment", amount: formatMoney(-paid), balanceAfter: formatMoney(after), method: input.method, note: input.note ?? null, createdByUserId: ctx.user.id });
+        await tx.insert(auditLogs).values({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "payment", entity: "credit", entityId: cust.id, metadata: JSON.stringify({ customer: cust.name, amount: formatMoney(paid), method: input.method, balance: formatMoney(after) }) });
+        return { balance: formatMoney(after), paid: formatMoney(paid), customerName: cust.name };
+      });
+    }),
+    setLimit: tenantAdminProcedure.input(z.object({ customerId: z.number().int().positive(), creditLimit: money.nullable() })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const [cust] = await db.select().from(customers).where(and(eq(customers.id, input.customerId), eq(customers.tenantId, ctx.tenant.id))).limit(1);
+      if (!cust) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found." });
+      await db.update(customers).set({ creditLimit: input.creditLimit === null ? null : input.creditLimit.toFixed(2) }).where(eq(customers.id, cust.id));
+      await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "limit", entity: "credit", entityId: cust.id, metadata: { customer: cust.name, creditLimit: input.creditLimit } });
+      return { success: true as const, creditLimit: input.creditLimit };
+    }),
+  }),
+
   pos: router({
     checkout: cashierProcedure
-      .input(z.object({ items: z.array(z.object({ productId: z.number().int().positive(), quantity: z.number().int().positive().max(999) })).min(1), discount: money.default(0), paymentMethod: z.enum(["cash", "card", "transfer", "other"]), amountReceived: money, customerId: z.number().int().positive().nullable().optional(), clientRequestId: z.string().trim().min(8).max(48).optional() }))
+      .input(z.object({ items: z.array(z.object({ productId: z.number().int().positive(), quantity: z.number().int().positive().max(999) })).min(1), discount: money.default(0), paymentMethod: z.enum(["cash", "card", "transfer", "other", "credit"]), amountReceived: money, customerId: z.number().int().positive().nullable().optional(), clientRequestId: z.string().trim().min(8).max(48).optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
         const saleNumber = createIdempotentSaleNumber(input.clientRequestId);
         const existingSale = await db.select().from(sales).where(and(eq(sales.tenantId, ctx.tenant.id), eq(sales.saleNumber, saleNumber))).limit(1);
         if (existingSale[0]) {
-          return { saleId: existingSale[0].id, saleNumber: existingSale[0].saleNumber, subtotal: String(existingSale[0].subtotal), discount: String(existingSale[0].discount), tax: String(existingSale[0].tax), total: String(existingSale[0].total), change: String(existingSale[0].changeAmount), footer: ctx.tenant.receiptFooter, logoUrl: ctx.tenant.logoUrl, replayed: true };
+          const [replayCustomer] = existingSale[0].customerId ? await db.select({ balance: customers.balance }).from(customers).where(and(eq(customers.id, existingSale[0].customerId), eq(customers.tenantId, ctx.tenant.id))).limit(1) : [];
+          return { saleId: existingSale[0].id, saleNumber: existingSale[0].saleNumber, subtotal: String(existingSale[0].subtotal), discount: String(existingSale[0].discount), tax: String(existingSale[0].tax), total: String(existingSale[0].total), change: String(existingSale[0].changeAmount), creditAmount: String(existingSale[0].creditAmount), balance: replayCustomer ? String(replayCustomer.balance) : null, footer: ctx.tenant.receiptFooter, logoUrl: ctx.tenant.logoUrl, replayed: true };
         }
         return db.transaction(async tx => {
           const ids = input.items.map(item => item.productId);
@@ -560,10 +654,33 @@ export const appRouter = router({
           const taxableCents = subtotalCents - discountCents;
           const taxCents = Math.round(taxableCents * (Number(ctx.tenant.taxRate) / 100));
           const totalCents = taxableCents + taxCents;
-          const receivedCents = toCents(input.amountReceived);
-          if (input.paymentMethod === "cash" && receivedCents < totalCents) throw new TRPCError({ code: "BAD_REQUEST", message: "Amount received is less than the total." });
-          const changeCents = Math.max(0, receivedCents - totalCents);
-          const saleIds = await tx.insert(sales).values({ tenantId: ctx.tenant.id, customerId: input.customerId, saleNumber, status: "completed", subtotal: formatMoney(subtotalCents), discount: formatMoney(discountCents), tax: formatMoney(taxCents), total: formatMoney(totalCents), paymentMethod: input.paymentMethod, amountReceived: formatMoney(receivedCents), changeAmount: formatMoney(changeCents), createdByUserId: ctx.user.id }).$returningId();
+          // A customer attached to a sale must belong to this business. Credit sales lock the row so two sales can't both slip under the limit.
+          const isCredit = input.paymentMethod === "credit";
+          let customerRow: typeof customers.$inferSelect | undefined;
+          if (input.customerId) {
+            const rows = await (isCredit
+              ? tx.select().from(customers).where(and(eq(customers.id, input.customerId), eq(customers.tenantId, ctx.tenant.id))).for("update")
+              : tx.select().from(customers).where(and(eq(customers.id, input.customerId), eq(customers.tenantId, ctx.tenant.id))).limit(1));
+            customerRow = rows[0];
+            if (!customerRow) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found." });
+          }
+          let receivedCents = toCents(input.amountReceived);
+          let creditCents = 0;
+          let changeCents = 0;
+          if (isCredit) {
+            // Udhaar: whatever is not paid now goes on the customer's account.
+            if (!customerRow) throw new TRPCError({ code: "BAD_REQUEST", message: "Choose a customer to sell on credit (udhaar)." });
+            receivedCents = Math.min(receivedCents, totalCents);
+            creditCents = totalCents - receivedCents;
+            if (creditCents <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Nothing is left on credit. Use a normal payment method." });
+            if (customerRow.creditLimit !== null && toCents(customerRow.balance) + creditCents > toCents(customerRow.creditLimit)) {
+              throw new TRPCError({ code: "BAD_REQUEST", message: `Credit limit exceeded: ${customerRow.name} already owes ${formatMoney(toCents(customerRow.balance))} and the limit is ${formatMoney(toCents(customerRow.creditLimit))}.` });
+            }
+          } else {
+            if (input.paymentMethod === "cash" && receivedCents < totalCents) throw new TRPCError({ code: "BAD_REQUEST", message: "Amount received is less than the total." });
+            changeCents = Math.max(0, receivedCents - totalCents);
+          }
+          const saleIds = await tx.insert(sales).values({ tenantId: ctx.tenant.id, customerId: input.customerId, saleNumber, status: "completed", subtotal: formatMoney(subtotalCents), discount: formatMoney(discountCents), tax: formatMoney(taxCents), total: formatMoney(totalCents), paymentMethod: input.paymentMethod, amountReceived: formatMoney(receivedCents), changeAmount: formatMoney(changeCents), creditAmount: formatMoney(creditCents), createdByUserId: ctx.user.id }).$returningId();
           const saleId = saleIds[0]?.id;
           if (!saleId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not create sale." });
           await tx.insert(saleItems).values(lines.map(line => ({ tenantId: ctx.tenant.id, saleId, productId: line.product.id, productName: line.product.name, sku: line.product.sku, quantity: line.quantity, unitPrice: formatMoney(line.unitPrice), lineTotal: formatMoney(line.lineTotal) })));
@@ -574,8 +691,14 @@ export const appRouter = router({
           if (input.customerId) {
             await tx.update(customers).set({ loyaltyPoints: sql`${customers.loyaltyPoints} + ${Math.floor(totalCents / 100)}`, totalSpent: sql`${customers.totalSpent} + ${formatMoney(totalCents)}`, lastPurchaseAt: new Date() }).where(and(eq(customers.id, input.customerId), eq(customers.tenantId, ctx.tenant.id)));
           }
-          await tx.insert(auditLogs).values({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "completed", entity: "sale", entityId: saleId, metadata: JSON.stringify({ saleNumber, total: formatMoney(totalCents) }) });
-          return { saleId, saleNumber, subtotal: formatMoney(subtotalCents), discount: formatMoney(discountCents), tax: formatMoney(taxCents), total: formatMoney(totalCents), change: formatMoney(changeCents), footer: ctx.tenant.receiptFooter, logoUrl: ctx.tenant.logoUrl, replayed: false };
+          let newBalanceCents: number | null = customerRow ? toCents(customerRow.balance) : null;
+          if (creditCents > 0 && customerRow) {
+            newBalanceCents = toCents(customerRow.balance) + creditCents;
+            await tx.update(customers).set({ balance: formatMoney(newBalanceCents) }).where(and(eq(customers.id, customerRow.id), eq(customers.tenantId, ctx.tenant.id)));
+            await tx.insert(customerLedger).values({ tenantId: ctx.tenant.id, customerId: customerRow.id, type: "credit_sale", amount: formatMoney(creditCents), balanceAfter: formatMoney(newBalanceCents), saleId, note: receivedCents > 0 ? `Part payment ${formatMoney(receivedCents)} received now` : null, createdByUserId: ctx.user.id });
+          }
+          await tx.insert(auditLogs).values({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "completed", entity: "sale", entityId: saleId, metadata: JSON.stringify({ saleNumber, total: formatMoney(totalCents), ...(creditCents > 0 ? { credit: formatMoney(creditCents) } : {}) }) });
+          return { saleId, saleNumber, subtotal: formatMoney(subtotalCents), discount: formatMoney(discountCents), tax: formatMoney(taxCents), total: formatMoney(totalCents), change: formatMoney(changeCents), creditAmount: formatMoney(creditCents), balance: newBalanceCents === null ? null : formatMoney(newBalanceCents), footer: ctx.tenant.receiptFooter, logoUrl: ctx.tenant.logoUrl, replayed: false };
         });
       }),
     history: tenantProcedure.input(z.object({ query: z.string().trim().optional() }).optional()).query(async ({ ctx, input }) => {
@@ -589,7 +712,7 @@ export const appRouter = router({
   reports: router({
     overview: tenantAdminProcedure.input(z.object({ from: z.number(), to: z.number() })).query(async ({ ctx, input }) => {
       const db = await getDb();
-      const empty = { revenue: 0, orders: 0, avgOrder: 0, tax: 0, discounts: 0, cogs: 0, grossProfit: 0, expenses: 0, netProfit: 0, refunds: { count: 0, total: 0 }, byCategory: [], byHour: [], byWeekday: [], topCustomers: [], daily: [], expenseByCategory: [] };
+      const empty = { creditGiven: 0, paymentsReceived: 0, outstanding: 0, revenue: 0, orders: 0, avgOrder: 0, tax: 0, discounts: 0, cogs: 0, grossProfit: 0, expenses: 0, netProfit: 0, refunds: { count: 0, total: 0 }, byCategory: [], byHour: [], byWeekday: [], topCustomers: [], daily: [], expenseByCategory: [] };
       if (!db) return empty;
       const from = new Date(input.from), to = new Date(input.to), t = ctx.tenant.id;
       const inRange = and(eq(sales.tenantId, t), eq(sales.status, "completed"), gte(sales.createdAt, from), lte(sales.createdAt, to));
@@ -630,8 +753,12 @@ export const appRouter = router({
       const daily = Array.from(dailyMap, ([day, value]) => ({ day, total: value.total, orders: value.orders })).sort((a, b) => a.day.localeCompare(b.day));
       const topCustomers = await db.select({ id: customers.id, name: customers.name, total: sql<string>`SUM(${sales.total})`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).innerJoin(customers, eq(customers.id, sales.customerId)).where(inRange).groupBy(customers.id, customers.name).orderBy(desc(sql`SUM(${sales.total})`)).limit(5);
       const expenseByCategory = await db.select({ name: expenses.category, total: sql<string>`SUM(${expenses.amount})` }).from(expenses).where(and(eq(expenses.tenantId, t), gte(expenses.expenseDate, from), lte(expenses.expenseDate, to))).groupBy(expenses.category).orderBy(desc(sql`SUM(${expenses.amount})`));
+      const [cr] = await db.select({ given: sql<string>`COALESCE(SUM(${sales.creditAmount}),0)` }).from(sales).where(inRange);
+      const [pr] = await db.select({ received: sql<string>`COALESCE(SUM(-${customerLedger.amount}),0)` }).from(customerLedger).where(and(eq(customerLedger.tenantId, t), eq(customerLedger.type, "payment"), gte(customerLedger.createdAt, from), lte(customerLedger.createdAt, to)));
+      const [ob] = await db.select({ owed: sql<string>`COALESCE(SUM(${customers.balance}),0)` }).from(customers).where(and(eq(customers.tenantId, t), sql`${customers.balance} > 0`));
       const revenue = Number(agg?.revenue ?? 0), cogs = Number(cg?.cogs ?? 0), expensesTotal = Number(ex?.total ?? 0), orders = agg?.orders ?? 0;
       return {
+        creditGiven: Number(cr?.given ?? 0), paymentsReceived: Number(pr?.received ?? 0), outstanding: Number(ob?.owed ?? 0),
         revenue, orders, avgOrder: orders ? revenue / orders : 0, tax: Number(agg?.tax ?? 0), discounts: Number(agg?.discounts ?? 0),
         cogs, grossProfit: revenue - Number(agg?.tax ?? 0) - cogs, expenses: expensesTotal, netProfit: revenue - Number(agg?.tax ?? 0) - cogs - expensesTotal,
         refunds: { count: ref?.count ?? 0, total: Number(ref?.total ?? 0) },
@@ -655,12 +782,23 @@ export const appRouter = router({
         if (input.to) predicates.push(lte(sales.createdAt, new Date(input.to)));
         const rows = await db.select().from(sales).where(and(...predicates)).orderBy(asc(sales.createdAt));
         const total = rows.reduce((sum, row) => sum + Number(row.total), 0);
+        const ledgerPreds = [eq(customerLedger.tenantId, ctx.tenant.id), eq(customerLedger.customerId, input.customerId), eq(customerLedger.type, "payment")];
+        if (input.from) ledgerPreds.push(gte(customerLedger.createdAt, new Date(input.from)));
+        if (input.to) ledgerPreds.push(lte(customerLedger.createdAt, new Date(input.to)));
+        const repayments = await db.select().from(customerLedger).where(and(...ledgerPreds)).orderBy(asc(customerLedger.createdAt));
+        const repaid = repayments.reduce((sum, r) => sum + Math.abs(Number(r.amount)), 0);
         const pdf = await buildBrandedPdf({
-          title: "Customer purchase statement",
+          title: Number(customer.balance) > 0 ? "Customer statement (udhaar)" : "Customer purchase statement",
           subtitle: `${customer.name}${customer.email ? ` - ${customer.email}` : ""}${customer.phone ? ` - ${customer.phone}` : ""}`,
           tenant: ctx.tenant,
-          rows: rows.map(row => ({ label: `${row.saleNumber} - ${new Date(row.createdAt).toLocaleDateString()}`, value: `₨${Number(row.total).toFixed(2)} - ${row.paymentMethod}` })),
-          totals: [{ label: "Orders", value: String(rows.length) }, { label: "Total purchases", value: `₨${total.toFixed(2)}` }],
+          rows: [
+            ...rows.map(row => ({ label: `${row.saleNumber} - ${new Date(row.createdAt).toLocaleDateString()}`, value: Number(row.creditAmount) > 0 ? `₨${Number(row.total).toFixed(2)} - udhaar ₨${Number(row.creditAmount).toFixed(2)}` : `₨${Number(row.total).toFixed(2)} - ${row.paymentMethod}` })),
+            ...repayments.map(r => ({ label: `Payment received - ${new Date(r.createdAt).toLocaleDateString()}`, value: `-₨${Math.abs(Number(r.amount)).toFixed(2)} - ${r.method ?? "cash"}` })),
+          ],
+          totals: [
+            { label: "Orders", value: String(rows.length) }, { label: "Total purchases", value: `₨${total.toFixed(2)}` },
+            ...(Number(customer.balance) > 0 || repayments.length ? [{ label: "Payments received", value: `₨${repaid.toFixed(2)}` }, { label: "Outstanding balance (udhaar)", value: `₨${Number(customer.balance).toFixed(2)}` }] : []),
+          ],
         });
         return { filename: `karyano-${customer.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-statement.pdf`, mimeType: "application/pdf", base64: pdf };
       }),
@@ -850,10 +988,9 @@ export const appRouter = router({
       if (!db) return null;
       const [shift] = await db.select().from(registerShifts).where(and(eq(registerShifts.tenantId, ctx.tenant.id), eq(registerShifts.status, "open"))).orderBy(desc(registerShifts.openedAt)).limit(1);
       if (!shift) return null;
-      const [c] = await db.select({ cash: sql<string>`COALESCE(SUM(${sales.total}),0)`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).where(and(eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed"), eq(sales.paymentMethod, "cash"), gte(sales.createdAt, shift.openedAt)));
+      const { cashSales, repayments } = await cashTakenSince(db, ctx.tenant.id, shift.openedAt);
       const [all] = await db.select({ total: sql<string>`COALESCE(SUM(${sales.total}),0)`, orders: sql<number>`COUNT(*)`.mapWith(Number) }).from(sales).where(and(eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed"), gte(sales.createdAt, shift.openedAt)));
-      const cashSales = Number(c?.cash ?? 0);
-      return { shift, cashSales, expectedCash: Number(shift.openingCash) + cashSales, totalSales: Number(all?.total ?? 0), orders: all?.orders ?? 0 };
+      return { shift, cashSales, repayments, expectedCash: Number(shift.openingCash) + cashSales + repayments, totalSales: Number(all?.total ?? 0), orders: all?.orders ?? 0 };
     }),
     open: cashierProcedure.input(z.object({ openingCash: money })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -869,8 +1006,8 @@ export const appRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const [shift] = await db.select().from(registerShifts).where(and(eq(registerShifts.tenantId, ctx.tenant.id), eq(registerShifts.status, "open"))).orderBy(desc(registerShifts.openedAt)).limit(1);
       if (!shift) throw new TRPCError({ code: "BAD_REQUEST", message: "There is no open shift." });
-      const [c] = await db.select({ cash: sql<string>`COALESCE(SUM(${sales.total}),0)` }).from(sales).where(and(eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed"), eq(sales.paymentMethod, "cash"), gte(sales.createdAt, shift.openedAt)));
-      const expected = Number(shift.openingCash) + Number(c?.cash ?? 0);
+      const taken = await cashTakenSince(db, ctx.tenant.id, shift.openedAt);
+      const expected = Number(shift.openingCash) + taken.cashSales + taken.repayments;
       const variance = input.countedCash - expected;
       await db.update(registerShifts).set({ status: "closed", closedAt: new Date(), closedByUserId: ctx.user.id, expectedCash: expected.toFixed(2), countedCash: input.countedCash.toFixed(2), variance: variance.toFixed(2), notes: input.notes ?? null }).where(eq(registerShifts.id, shift.id));
       await writeAuditLog({ tenantId: ctx.tenant.id, userId: ctx.user.id, action: "closed", entity: "shift", entityId: shift.id, metadata: { expected, counted: input.countedCash, variance } });

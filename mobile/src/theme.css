@@ -422,3 +422,14 @@ ion-tab-button.tab-sell ion-icon { width: 24px; height: 24px; padding: 13px; fle
 ion-tab-button.tab-sell ion-icon { top: -31px; }
 ion-tab-button.tab-sell ion-label { margin-top: 30.8px; }
 @media (max-height: 500px) { ion-tab-button.tab-sell ion-icon { top: -22px; } }
+
+/* udhaar (customer credit) */
+.paychip.credit { background: #fef3c7; color: #b45309; }
+.owe-card { padding: 16px; border-radius: 20px; background: linear-gradient(135deg, #fff1f2, #fffbeb); border: 1px solid #fecdd3; }
+.owe-card.clear { background: #f0fdf4; border-color: #bbf7d0; }
+.owe-card .lbl { font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: #be123c; display: flex; align-items: center; gap: 6px; }
+.owe-card.clear .lbl { color: #15803d; }
+.owe-card .amt-big { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; color: #be123c; margin-top: 2px; }
+.owe-card.clear .amt-big { color: #15803d; }
+.ledger-ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; flex: none; }
+.ledger-ico.up { background: #fff1f2; color: #e11d48; } .ledger-ico.down { background: #ecfdf5; color: #059669; }

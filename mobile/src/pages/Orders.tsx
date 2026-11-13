@@ -14,7 +14,7 @@ import { useSession } from "~/lib/session";
 import type { PdfResult, SaleDetail, SalesPage } from "~/lib/types";
 
 const RANGES = [{ id: "today", label: "Today", from: () => startOfDay() }, { id: "7", label: "7 days", from: () => daysAgo(6) }, { id: "30", label: "30 days", from: () => daysAgo(29) }, { id: "all", label: "All", from: () => undefined }] as const;
-const PAY = ["cash", "card", "transfer"] as const;
+const PAY = ["cash", "card", "transfer", "credit"] as const;
 const time = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 const dayName = (d: Date) => { const t = startOfDay(), x = startOfDay(d); return x === t ? "Today" : x === t - 86_400_000 ? "Yesterday" : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }); };
 const tone = (s: string) => (s === "completed" ? "ok" : s === "refunded" ? "bad" : "warn");
@@ -45,7 +45,7 @@ export default function Orders() {
     <Screen title="Orders" subtitle={first ? `${first.total} order${first.total === 1 ? "" : "s"} · ${money(first.revenue, cur)}` : "Sales history"} onRefresh={() => qc.invalidateQueries({ queryKey: ["sales"] })}>
       <SearchBox value={search} onChange={setSearch} placeholder="Search sale number or customer" />
       <div className="chips">{RANGES.map(r => <button key={r.id} className={`chip ${range === r.id ? "on" : ""}`} onClick={() => setRange(r.id)}>{r.label}</button>)}
-        <span style={{ width: 8, flex: "none" }} />{PAY.map(m => <button key={m} className={`chip ${pay === m ? "on" : ""}`} style={{ textTransform: "capitalize" }} onClick={() => setPay(pay === m ? undefined : m)}>{m}</button>)}</div>
+        <span style={{ width: 8, flex: "none" }} />{PAY.map(m => <button key={m} className={`chip ${pay === m ? "on" : ""}`} style={{ textTransform: "capitalize" }} onClick={() => setPay(pay === m ? undefined : m)}>{m === "credit" ? "Udhaar" : m}</button>)}</div>
       <div className="seg">{(["completed", "refunded", "all"] as const).map(v => <button key={v} className={status === v ? "on" : ""} onClick={() => setStatus(v)}>{v}</button>)}</div>
       {first && <div className="kpis"><Stat label="Revenue" value={money(first.revenue, cur)} sub={`${first.total} order${first.total === 1 ? "" : "s"}`} /><Stat label="Average order" value={money(first.avgOrder, cur)} sub={first.refundedCount ? `${first.refundedCount} refunded` : undefined} /></div>}
       {list.isLoading ? <Loading /> : list.isError ? <ErrorBox error={list.error} retry={() => list.refetch()} /> :
@@ -80,7 +80,10 @@ function SaleSheet({ id, onClose }: { id: number | null; onClose: () => void }) 
             <div className="card card-pad stack small" style={{ gap: 6 }}>
               <div className="row between"><span className="muted">Customer</span><b>{d.customer?.name ?? "Walk-in"}</b></div>
               <div className="row between"><span className="muted">Cashier</span><b>{d.cashier?.name ?? "—"}</b></div>
-              <div className="row between"><span className="muted">Payment</span><b style={{ textTransform: "capitalize" }}>{sale.paymentMethod}</b></div>
+              {Number(sale.creditAmount) > 0 ? <>
+                <div className="row between"><span className="muted">Paid now</span><b className="mono">{money(Number(sale.total) - Number(sale.creditAmount), cur)}</b></div>
+                <div className="row between"><span style={{ color: "var(--c-red)", fontWeight: 700 }}>On credit (udhaar)</span><b className="mono" style={{ color: "var(--c-red)" }}>{money(sale.creditAmount, cur)}</b></div>
+              </> : <div className="row between"><span className="muted">Payment</span><b style={{ textTransform: "capitalize" }}>{sale.paymentMethod}</b></div>}
             </div>
             <div className="receipt">
               {d.items.map(i => <div className="ln" key={i.id}><span>{i.quantity} × {i.productName}<br /><span className="tiny muted mono">{money(i.unitPrice, cur)} · {i.sku}</span></span><span className="mono">{money(i.lineTotal, cur)}</span></div>)}

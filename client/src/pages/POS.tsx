@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Banknote, Check, Clock, CreditCard, Landmark, Loader2, MessageCircle, Minus, PackageX, Percent, Plus, Printer, Search, ShoppingBag, Tag, Trash2, Wallet, X } from "lucide-react";
+import { Banknote, BookOpen, Check, Clock, CreditCard, Landmark, Loader2, MessageCircle, Minus, PackageX, Percent, Plus, Printer, Search, ShoppingBag, Tag, Trash2, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { moneyWhole as money } from "@/lib/format";
@@ -14,10 +14,10 @@ import { fmtTime } from "@/components/data/kit";
 type Product = any;
 type CartLine = { product: Product; quantity: number };
 type Held = { id: string; lines: CartLine[]; customerId: number | null; time: string };
-type Method = "cash" | "card" | "transfer" | "other";
+type Method = "cash" | "card" | "transfer" | "other" | "credit";
 
 const METHODS: { id: Method; label: string; icon: typeof Banknote }[] = [
-  { id: "cash", label: "Cash", icon: Banknote }, { id: "card", label: "Card", icon: CreditCard }, { id: "transfer", label: "Transfer", icon: Landmark }, { id: "other", label: "Other", icon: Wallet },
+  { id: "cash", label: "Cash", icon: Banknote }, { id: "card", label: "Card", icon: CreditCard }, { id: "transfer", label: "Transfer", icon: Landmark }, { id: "other", label: "Other", icon: Wallet }, { id: "credit", label: "Udhaar", icon: BookOpen },
 ];
 const unitPrice = (p: Product) => Number(p.discountPrice ?? p.sellingPrice);
 
@@ -102,6 +102,7 @@ export default function POSView({ setActiveTab }: { setActiveTab: (tab: string) 
   const [payOpen, setPayOpen] = useState(false);
   const [method, setMethod] = useState<Method>("cash");
   const [received, setReceived] = useState("");
+  const [payNow, setPayNow] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
   const [receipt, setReceipt] = useState<{ data: ReceiptData; phone: string | null } | null>(null);
   const requestId = useRef<string>("");
@@ -139,6 +140,12 @@ export default function POSView({ setActiveTab }: { setActiveTab: (tab: string) 
   const receivedNum = Number(received) || 0;
   const change = Math.max(0, receivedNum - total);
   const customer = customers.find(c => c.id === customerId);
+  // Udhaar: what is paid now vs put on the customer's account, and whether it stays inside their limit.
+  const payNowNum = Math.min(Math.max(0, Number(payNow) || 0), total);
+  const creditAmt = Math.max(0, total - payNowNum);
+  const owed = Number(customer?.balance ?? 0);
+  const creditLimit = customer?.creditLimit != null ? Number(customer.creditLimit) : null;
+  const overLimit = creditLimit !== null && owed + creditAmt > creditLimit;
 
   const add = (p: Product) => {
     if (p.stockQuantity <= 0) return toast.error(`${p.name} is out of stock.`);
@@ -179,9 +186,10 @@ export default function POSView({ setActiveTab }: { setActiveTab: (tab: string) 
       const snapshot = cart;
       setReceipt({
         phone: customer?.phone ?? null,
-        data: { business: { name: settings?.name ?? "Karyano", footer: settings?.receiptFooter }, saleNumber: res.saleNumber, date: new Date(), cashier: ctx ? undefined : undefined, customer: customer?.name, paymentMethod: method,
+        data: { business: { name: settings?.name ?? "Karyano", footer: settings?.receiptFooter }, saleNumber: res.saleNumber, date: new Date(), cashier: ctx ? undefined : undefined, customer: customer?.name, paymentMethod: method === "credit" ? "udhaar" : method,
+          credit: Number(res.creditAmount) > 0 ? { amount: res.creditAmount, balance: res.balance } : undefined,
           items: snapshot.map(l => ({ name: l.product.name, quantity: l.quantity, unitPrice: unitPrice(l.product), lineTotal: unitPrice(l.product) * l.quantity })),
-          subtotal: res.subtotal, discount: res.discount, tax: res.tax, total: res.total, received: method === "cash" ? received : res.total, change: res.change },
+          subtotal: res.subtotal, discount: res.discount, tax: res.tax, total: res.total, received: method === "cash" ? received : method === "credit" ? String(payNowNum) : res.total, change: res.change },
       });
       setPayOpen(false); setCartOpen(false); clear(); setReceived(""); requestId.current = "";
       toast.success(`Sale ${res.saleNumber} completed.`);
@@ -189,8 +197,8 @@ export default function POSView({ setActiveTab }: { setActiveTab: (tab: string) 
     },
     onError: e => toast.error(e.message),
   });
-  const startPayment = () => { requestId.current = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`).replace(/-/g, "").slice(0, 32); setMethod("cash"); setReceived(""); setPayOpen(true); };
-  const canPay = method !== "cash" || receivedNum >= total;
+  const startPayment = () => { requestId.current = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`).replace(/-/g, "").slice(0, 32); setMethod("cash"); setReceived(""); setPayNow(""); setPayOpen(true); };
+  const canPay = method === "credit" ? !!customer && creditAmt > 0 && !overLimit : method !== "cash" || receivedNum >= total;
   const quick = useMemo(() => { const step = total > 5000 ? 1000 : total > 1000 ? 500 : 100; const r = Math.ceil(total / step) * step; return Array.from(new Set([Math.ceil(total), r, r + step, r + step * 2, Math.ceil((r + step * 3) / 1000) * 1000])).filter(v => v >= total).slice(0, 5); }, [total]);
 
   /* ── cart panel (shared by desktop aside and mobile sheet) ── */
@@ -226,7 +234,7 @@ export default function POSView({ setActiveTab }: { setActiveTab: (tab: string) 
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <Select value={customerId ? String(customerId) : "walk"} onValueChange={v => setCustomerId(v === "walk" ? null : Number(v))}>
             <SelectTrigger className="h-10 w-full rounded-xl border-slate-200 bg-white text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent className="max-h-64 border-slate-200 bg-white text-slate-900"><SelectItem value="walk">Walk-in customer</SelectItem>{customers.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent>
+            <SelectContent className="max-h-64 border-slate-200 bg-white text-slate-900"><SelectItem value="walk">Walk-in customer</SelectItem>{customers.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}{Number(c.balance) > 0 ? ` · owes ${money(Number(c.balance))}` : ""}</SelectItem>)}</SelectContent>
           </Select>
           <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-white">
             <button onClick={() => setDiscountMode(m => (m === "amount" ? "percent" : "amount"))} aria-label="Toggle discount type" title="Toggle ₨ / %" className="flex w-9 items-center justify-center border-r border-slate-200 bg-slate-50 text-xs font-bold text-slate-600 hover:bg-slate-100">{discountMode === "percent" ? <Percent className="h-3.5 w-3.5" /> : "₨"}</button>
@@ -319,8 +327,8 @@ export default function POSView({ setActiveTab }: { setActiveTab: (tab: string) 
         <DialogContent className="max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto rounded-2xl border-slate-200 bg-white p-5 text-slate-900 sm:p-6">
           <DialogHeader><DialogTitle className="text-xl font-bold">Take payment</DialogTitle></DialogHeader>
           <div className="rounded-2xl bg-slate-900 p-5 text-center text-white"><p className="text-xs font-medium text-slate-400">Amount due</p><p className="mt-1 text-4xl font-extrabold tabular-nums">{money(total)}</p></div>
-          <div className="grid grid-cols-4 gap-2">
-            {METHODS.map(m => <button key={m.id} onClick={() => setMethod(m.id)} className={`flex flex-col items-center gap-1.5 rounded-xl border py-3 text-xs font-semibold transition ${method === m.id ? "border-teal-500 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}><m.icon className="h-5 w-5" />{m.label}</button>)}
+          <div className="grid grid-cols-5 gap-1.5">
+            {METHODS.map(m => <button key={m.id} onClick={() => setMethod(m.id)} className={`flex flex-col items-center gap-1.5 rounded-xl border py-3 text-[11px] font-semibold transition ${method === m.id ? "border-teal-500 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}><m.icon className="h-5 w-5" />{m.label}</button>)}
           </div>
           {method === "cash" && (
             <div className="space-y-3">
@@ -329,8 +337,36 @@ export default function POSView({ setActiveTab }: { setActiveTab: (tab: string) 
               <div className="flex justify-between rounded-xl bg-emerald-50 px-4 py-3 text-sm"><span className="font-medium text-emerald-800">Change due</span><span className="text-lg font-extrabold tabular-nums text-emerald-700">{money(change)}</span></div>
             </div>
           )}
-          <Button onClick={() => checkout.mutate({ items: cart.map(l => ({ productId: l.product.id, quantity: l.quantity })), discount: Math.round(discount * 100) / 100, paymentMethod: method, amountReceived: method === "cash" ? receivedNum : Math.round(total * 100) / 100, customerId, clientRequestId: requestId.current })} disabled={!canPay || checkout.isPending} className="h-12 w-full rounded-xl bg-slate-900 text-base font-bold text-white hover:bg-slate-700">
-            {checkout.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}{checkout.isPending ? "Processing…" : `Confirm ${money(total)}`}
+          {method === "credit" && (
+            <div className="space-y-3">
+              {!customer ? (
+                <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3.5">
+                  <p className="text-sm font-semibold text-amber-900">Choose who this credit is for</p>
+                  <Select onValueChange={v => setCustomerId(Number(v))}>
+                    <SelectTrigger className="h-11 w-full rounded-xl border-amber-200 bg-white text-sm"><SelectValue placeholder="Select customer" /></SelectTrigger>
+                    <SelectContent className="max-h-64 border-slate-200 bg-white text-slate-900">{customers.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}{Number(c.balance) > 0 ? ` · owes ${money(Number(c.balance))}` : ""}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <p className="text-xs text-amber-800/80">Udhaar needs a customer so the amount is added to their account.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm">
+                    <div><p className="font-semibold">{customer.name}</p><p className="text-xs text-slate-500">{owed > 0 ? `Already owes ${money(owed)}` : "No outstanding balance"}{creditLimit !== null ? ` · limit ${money(creditLimit)}` : ""}</p></div>
+                    <button onClick={() => setCustomerId(null)} className="text-xs font-semibold text-teal-700 hover:underline">Change</button>
+                  </div>
+                  <div><label className="text-xs font-semibold text-slate-600">Pay now (optional, cash)</label>
+                    <Input type="number" inputMode="decimal" min="0" value={payNow} onChange={e => setPayNow(e.target.value)} placeholder="0" className="mt-1.5 h-12 rounded-xl border-slate-200 bg-slate-50 text-lg font-bold" /></div>
+                  <div className="space-y-1.5 rounded-xl bg-rose-50 px-4 py-3 text-sm">
+                    <div className="flex justify-between"><span className="text-rose-800">Goes on credit</span><span className="font-extrabold tabular-nums text-rose-700">{money(creditAmt)}</span></div>
+                    <div className="flex justify-between text-xs text-rose-800/80"><span>New balance owed</span><span className="font-bold tabular-nums">{money(owed + creditAmt)}</span></div>
+                  </div>
+                  {overLimit && <p className="rounded-lg bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700">This goes over {customer.name}'s credit limit of {money(creditLimit!)}. Take part payment now or raise the limit.</p>}
+                </>
+              )}
+            </div>
+          )}
+          <Button onClick={() => checkout.mutate({ items: cart.map(l => ({ productId: l.product.id, quantity: l.quantity })), discount: Math.round(discount * 100) / 100, paymentMethod: method, amountReceived: method === "cash" ? receivedNum : method === "credit" ? Math.round(payNowNum * 100) / 100 : Math.round(total * 100) / 100, customerId, clientRequestId: requestId.current })} disabled={!canPay || checkout.isPending} className="h-12 w-full rounded-xl bg-slate-900 text-base font-bold text-white hover:bg-slate-700">
+            {checkout.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}{checkout.isPending ? "Processing…" : method === "credit" ? `Put ${money(creditAmt)} on credit` : `Confirm ${money(total)}`}
           </Button>
         </DialogContent>
       </Dialog>
@@ -341,6 +377,8 @@ export default function POSView({ setActiveTab }: { setActiveTab: (tab: string) 
           <div className="flex flex-col items-center text-center"><span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100"><Check className="h-7 w-7 text-emerald-600" /></span><DialogTitle className="mt-3 text-xl font-bold">Payment complete</DialogTitle><p className="mt-1 font-mono text-xs text-slate-500">{receipt?.data.saleNumber}</p></div>
           {receipt && <dl className="space-y-1.5 rounded-xl bg-slate-50 p-4 text-sm">
             <div className="flex justify-between"><dt className="text-slate-500">Total</dt><dd className="font-extrabold tabular-nums">{money(receipt.data.total)}</dd></div>
+            {receipt.data.credit && <div className="flex justify-between"><dt className="text-slate-500">On credit (udhaar)</dt><dd className="font-bold tabular-nums text-rose-600">{money(receipt.data.credit.amount)}</dd></div>}
+            {receipt.data.credit?.balance != null && <div className="flex justify-between"><dt className="text-slate-500">Total balance owed</dt><dd className="font-bold tabular-nums">{money(receipt.data.credit.balance)}</dd></div>}
             {Number(receipt.data.change) > 0 && <div className="flex justify-between"><dt className="text-slate-500">Change</dt><dd className="font-bold tabular-nums text-emerald-600">{money(receipt.data.change!)}</dd></div>}
             <div className="flex justify-between"><dt className="text-slate-500">Paid by</dt><dd className="font-semibold capitalize">{receipt.data.paymentMethod}</dd></div>
           </dl>}

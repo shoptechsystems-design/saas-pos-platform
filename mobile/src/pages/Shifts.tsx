@@ -34,6 +34,7 @@ export default function Shifts() {
             <div className="stack" style={{ gap: 8 }}>
               <Line k="Opening cash" v={money(c.shift.openingCash, cur)} />
               <Line k="Cash sales" v={money(c.cashSales, cur)} />
+              {(c.repayments ?? 0) > 0 && <Line k="Udhaar repayments (cash)" v={money(c.repayments ?? 0, cur)} />}
               <Line k="Expected cash in drawer" v={money(c.expectedCash, cur)} strong />
               <Line k="Total sales (all methods)" v={money(c.totalSales, cur)} />
               <Line k="Orders" v={String(c.orders)} />

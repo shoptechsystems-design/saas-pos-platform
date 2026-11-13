@@ -124,6 +124,10 @@ export const customers = mysqlTable("customers", {
   phone: varchar("phone", { length: 40 }),
   loyaltyPoints: int("loyaltyPoints").default(0).notNull(),
   totalSpent: decimal("totalSpent", { precision: 12, scale: 2 }).default("0").notNull(),
+  /** Udhaar: what this customer currently owes (credit given minus repayments). Kept in step with customer_ledger. */
+  balance: decimal("balance", { precision: 12, scale: 2 }).default("0").notNull(),
+  /** Maximum udhaar allowed. NULL = no limit. */
+  creditLimit: decimal("creditLimit", { precision: 12, scale: 2 }),
   lastPurchaseAt: timestamp("lastPurchaseAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -183,6 +187,8 @@ export const sales = mysqlTable("sales", {
   paymentMethod: varchar("paymentMethod", { length: 32 }).notNull(),
   amountReceived: decimal("amountReceived", { precision: 12, scale: 2 }).default("0").notNull(),
   changeAmount: decimal("changeAmount", { precision: 12, scale: 2 }).default("0").notNull(),
+  /** Part of the total put on the customer's account (udhaar). paymentMethod = "credit" whenever this is > 0. */
+  creditAmount: decimal("creditAmount", { precision: 12, scale: 2 }).default("0").notNull(),
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => ({
@@ -341,3 +347,24 @@ export const registerShifts = mysqlTable("register_shifts", {
 }));
 
 export type RegisterShift = typeof registerShifts.$inferSelect;
+
+/** Every change to a customer's udhaar balance. amount > 0 = customer owes more; amount < 0 = they owe less. */
+export const customerLedger = mysqlTable("customer_ledger", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  customerId: int("customerId").notNull(),
+  type: mysqlEnum("type", ["credit_sale", "payment", "refund", "adjustment"]).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  balanceAfter: decimal("balanceAfter", { precision: 12, scale: 2 }).notNull(),
+  saleId: int("saleId"),
+  /** How a repayment was received (cash / card / transfer / other). */
+  method: varchar("method", { length: 32 }),
+  note: varchar("note", { length: 300 }),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  customerIdx: index("ledger_customer_idx").on(table.tenantId, table.customerId, table.createdAt),
+  saleIdx: index("ledger_sale_idx").on(table.tenantId, table.saleId),
+}));
+
+export type CustomerLedgerEntry = typeof customerLedger.$inferSelect;

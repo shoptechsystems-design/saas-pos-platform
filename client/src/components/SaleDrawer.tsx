@@ -31,7 +31,7 @@ export default function SaleDrawer({ saleId, onClose }: { saleId: number | null;
   const canRefund = ctx?.membership.role === "tenant_admin" && d?.sale.status === "completed";
   const receipt: ReceiptData | null = d ? {
     business: { name: settings?.name ?? "Karyano", footer: settings?.receiptFooter }, saleNumber: d.sale.saleNumber, date: d.sale.createdAt, cashier: d.cashier?.name, customer: d.customer?.name,
-    paymentMethod: d.sale.paymentMethod, status: d.sale.status, subtotal: d.sale.subtotal, discount: d.sale.discount, tax: d.sale.tax, total: d.sale.total, received: d.sale.amountReceived, change: d.sale.changeAmount,
+    paymentMethod: d.sale.paymentMethod === "credit" ? "udhaar" : d.sale.paymentMethod, status: d.sale.status, credit: Number(d.sale.creditAmount) > 0 ? { amount: d.sale.creditAmount } : undefined, subtotal: d.sale.subtotal, discount: d.sale.discount, tax: d.sale.tax, total: d.sale.total, received: d.sale.amountReceived, change: d.sale.changeAmount,
     items: d.items.map(i => ({ name: i.productName, quantity: i.quantity, unitPrice: i.unitPrice, lineTotal: i.lineTotal })),
   } : null;
 
@@ -71,7 +71,14 @@ export default function SaleDrawer({ saleId, onClose }: { saleId: number | null;
                 {Number(d.sale.discount) > 0 && <div className="flex justify-between text-slate-600"><dt>Discount</dt><dd className="tabular-nums text-rose-600">−{moneyWhole(d.sale.discount)}</dd></div>}
                 <div className="flex justify-between text-slate-600"><dt>Tax</dt><dd className="tabular-nums">{moneyWhole(d.sale.tax)}</dd></div>
                 <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-extrabold"><dt>Total</dt><dd className="tabular-nums">{moneyWhole(d.sale.total)}</dd></div>
-                <div className="flex justify-between pt-1 text-xs text-slate-500"><dt>Paid by <span className="font-semibold capitalize text-slate-700">{d.sale.paymentMethod}</span></dt>{Number(d.sale.amountReceived) > 0 && <dd>received {moneyWhole(d.sale.amountReceived)} · change {moneyWhole(d.sale.changeAmount)}</dd>}</div>
+                {Number(d.sale.creditAmount) > 0 ? (
+                  <div className="mt-1 space-y-1 rounded-xl bg-rose-50 px-3.5 py-3 text-xs">
+                    <div className="flex justify-between"><dt className="text-slate-600">Paid now</dt><dd className="font-semibold tabular-nums">{moneyWhole(Number(d.sale.total) - Number(d.sale.creditAmount))}</dd></div>
+                    <div className="flex justify-between"><dt className="font-semibold text-rose-700">On credit (udhaar)</dt><dd className="font-extrabold tabular-nums text-rose-700">{moneyWhole(d.sale.creditAmount)}</dd></div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between pt-1 text-xs text-slate-500"><dt>Paid by <span className="font-semibold capitalize text-slate-700">{d.sale.paymentMethod}</span></dt>{Number(d.sale.amountReceived) > 0 && <dd>received {moneyWhole(d.sale.amountReceived)} · change {moneyWhole(d.sale.changeAmount)}</dd>}</div>
+                )}
               </dl>
             </div>
           )}

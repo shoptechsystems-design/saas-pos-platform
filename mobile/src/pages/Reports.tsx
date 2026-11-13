@@ -60,6 +60,7 @@ export default function Reports() {
               <Line k="Revenue" v={money(o.revenue, cur)} /><Line k="Tax collected" v={`- ${money(o.tax, cur)}`} /><Line k="Cost of goods" v={`- ${money(o.cogs, cur)}`} />
               <Line k="Gross profit" v={money(o.grossProfit, cur)} bold /><Line k="Operating expenses" v={`- ${money(o.expenses, cur)}`} />
               <Line k="Net profit" v={money(o.netProfit, cur)} color={o.netProfit >= 0 ? GREEN : RED} bold /><Line k="Discounts given" v={money(o.discounts, cur)} />
+              <Line k="Credit given (udhaar)" v={money(o.creditGiven ?? 0, cur)} /><Line k="Repayments received" v={money(o.paymentsReceived ?? 0, cur)} /><Line k="Owed to you now" v={money(o.outstanding ?? 0, cur)} bold />
             </div></Card>
             {o.daily.length > 0 && <Card><div className="h2" style={{ marginBottom: 12 }}>Daily sales</div>
               <div className="bars">{(() => { const days = o.daily.slice(-14); const max = Math.max(...days.map(d => d.total), 1); return days.map(d => <div className="b" key={d.day} title={`${d.day}: ${money(d.total, cur)}`}><i style={{ height: `${Math.max((d.total / max) * 100, 3)}%` }} /><span>{d.day.slice(8, 10)}</span></div>); })()}</div>

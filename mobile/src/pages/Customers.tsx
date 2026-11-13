@@ -1,6 +1,8 @@
 import { IonIcon } from "@ionic/react";
 import { addOutline, callOutline, downloadOutline, mailOutline, peopleOutline, pricetagsOutline, trashOutline } from "ionicons/icons";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { UdhaarSection } from "~/components/Udhaar";
 import { Async, Empty, Field, Pill, Row, Screen, SearchBox, Seg, Sheet, Card, useNotify, Avatar } from "~/components/ui";
 import { dateOnly, initials, money } from "~/lib/format";
 import { savePdf, tap } from "~/lib/native";
@@ -37,7 +39,7 @@ function AddCustomer({ open, onClose, groups }: { open: boolean; onClose: () => 
   );
 }
 
-function CustomerDetail({ c, onClose, groups, currency }: { c: Customer | null; onClose: () => void; groups: CustomerGroup[]; currency?: string }) {
+function CustomerDetail({ c, onClose, groups, currency, isAdmin, business }: { c: Customer | null; onClose: () => void; groups: CustomerGroup[]; currency?: string; isAdmin: boolean; business?: string }) {
   const n = useNotify();
   const [from, setFrom] = useState(""); const [to, setTo] = useState(""); const [busy, setBusy] = useState(false);
   useEffect(() => { setFrom(""); setTo(""); }, [c?.id]);
@@ -57,6 +59,7 @@ function CustomerDetail({ c, onClose, groups, currency }: { c: Customer | null; 
           <div className="card kpi"><div className="l">Total spent</div><div className="v">{money(c.totalSpent, currency)}</div></div>
           <div className="card kpi"><div className="l">Orders</div><div className="v">{c.orderCount}</div></div>
         </div>
+        <UdhaarSection customer={c} currency={currency} isAdmin={isAdmin} business={business} />
         <Card pad={false} className="divide">
           <Row icon={callOutline} title={c.phone || "No phone"} sub="Phone" />
           <Row icon={mailOutline} tone="blue" title={c.email || "No email"} sub="Email" />
@@ -109,26 +112,30 @@ export default function Customers() {
   const s = useSession();
   const [tab, setTab] = useState<"customers" | "groups">("customers");
   const [search, setSearch] = useState(""); const [q, setQ] = useState("");
-  const [adding, setAdding] = useState(false); const [selected, setSelected] = useState<Customer | null>(null);
+  const [adding, setAdding] = useState(false); const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [params] = useSearchParams(); const [owesOnly, setOwesOnly] = useState(params.get("owes") === "1");
   useEffect(() => { const t = setTimeout(() => setQ(search.trim()), 300); return () => clearTimeout(t); }, [search]);
   const customers = useCustomers(q || undefined);
   const groups = useGroups();
   const canAdd = s.can.sell;
+  const selected = customers.data?.find(x => x.id === selectedId) ?? null;
+  const owingCount = customers.data?.filter(x => Number(x.balance) > 0).length ?? 0;
   return (
     <Screen title="Customers" subtitle="Contacts, groups and statements" back="/more" onRefresh={() => Promise.all([customers.refetch(), groups.refetch()])}
       right={canAdd && tab === "customers" ? <button className="icon-btn" aria-label="Add customer" onClick={() => { tap(); setAdding(true); }}><IonIcon icon={addOutline} /></button> : undefined}>
       <Seg value={tab} onChange={setTab} options={[{ value: "customers", label: "Customers" }, { value: "groups", label: "Groups" }]} />
       {tab === "groups" ? <Groups groups={groups} isAdmin={s.can.admin} /> : <>
         <SearchBox value={search} onChange={setSearch} placeholder="Search name, phone or email" />
+        <div className="chips"><button className={`chip ${!owesOnly ? "on" : ""}`} onClick={() => setOwesOnly(false)}>All</button><button className={`chip ${owesOnly ? "on" : ""}`} onClick={() => setOwesOnly(true)}>Owes money{owingCount ? ` (${owingCount})` : ""}</button></div>
         <Async q={customers} empty={d => d.length ? null : <Empty icon={peopleOutline} title={q ? "No matches" : "No customers yet"} hint={q ? "Try a different name or phone number." : "Add customers to track their purchases and print statements."} action={canAdd && !q ? <button className="btn btn-primary" onClick={() => setAdding(true)}>Add customer</button> : undefined} />}>
-          {d => <Card pad={false} className="divide">{d.map(c => (
-            <Row key={c.id} lead={<Avatar name={c.name} />} onClick={() => setSelected(c)} title={c.name} sub={`${c.phone || "No phone"} · ${c.orderCount} order${c.orderCount === 1 ? "" : "s"}`}
-              right={<div className="right"><div className="bold mono small">{money(c.totalSpent, s.tenant?.currency)}</div></div>} icon={undefined} />
-          ))}</Card>}
+          {all => { const d = owesOnly ? all.filter(x => Number(x.balance) > 0) : all; return d.length === 0 ? <Empty icon={peopleOutline} title="Nobody owes you" hint="Customers with an unpaid udhaar balance appear here." /> : <Card pad={false} className="divide">{d.map(c => (
+            <Row key={c.id} lead={<Avatar name={c.name} />} onClick={() => setSelectedId(c.id)} title={c.name} sub={`${c.phone || "No phone"} · ${c.orderCount} order${c.orderCount === 1 ? "" : "s"}`}
+              right={<div className="right">{Number(c.balance) > 0 ? <><div className="bold mono small" style={{ color: "var(--c-red)" }}>owes {money(c.balance, s.tenant?.currency)}</div><div className="tiny faint mono">{money(c.totalSpent, s.tenant?.currency)} spent</div></> : <div className="bold mono small">{money(c.totalSpent, s.tenant?.currency)}</div>}</div>} icon={undefined} />
+          ))}</Card>; }}
         </Async>
       </>}
       <AddCustomer open={adding} onClose={() => setAdding(false)} groups={groups.data ?? []} />
-      <CustomerDetail c={selected} onClose={() => setSelected(null)} groups={groups.data ?? []} currency={s.tenant?.currency} />
+      <CustomerDetail c={selected} onClose={() => setSelectedId(null)} groups={groups.data ?? []} currency={s.tenant?.currency} isAdmin={s.can.admin} business={s.tenant?.name} />
     </Screen>
   );
 }

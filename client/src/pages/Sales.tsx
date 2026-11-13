@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, CreditCard, Download, FileText, Landmark, Receipt, ShoppingBag, TrendingUp, Wallet, type LucideIcon } from "lucide-react";
+import { Banknote, BookOpen, CreditCard, Download, FileText, Landmark, Receipt, ShoppingBag, TrendingUp, Wallet, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { moneyWhole } from "@/lib/format";
@@ -12,13 +12,14 @@ import { DataTable, Initials, PageHeader, Pill, SearchBox, Segmented, StatTile, 
 
 type Row = RouterOutputs["salesHistory"]["list"]["rows"][number];
 type Range = "all" | "today" | "7d" | "30d" | "custom";
-type Method = "all" | "cash" | "card" | "transfer";
+type Method = "all" | "cash" | "card" | "transfer" | "credit";
 type Status = "completed" | "refunded" | "all";
 
-const METHOD: Record<string, { label: string; icon: LucideIcon; tone: "teal" | "indigo" | "amber" }> = {
+const METHOD: Record<string, { label: string; icon: LucideIcon; tone: "teal" | "indigo" | "amber" | "rose" }> = {
   cash: { label: "Cash", icon: Banknote, tone: "teal" },
   card: { label: "Card", icon: CreditCard, tone: "indigo" },
   transfer: { label: "Transfer", icon: Landmark, tone: "amber" },
+  credit: { label: "Udhaar", icon: BookOpen, tone: "rose" },
 };
 
 function useDebounced<T>(value: T, ms = 300) {
@@ -96,7 +97,7 @@ export default function SalesView() {
       : <div className="flex items-center gap-2.5"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-400"><ShoppingBag className="h-3.5 w-3.5" /></span><span className="text-slate-500">Walk-in</span></div> },
     { key: "items", header: "Items", align: "right", hideBelow: "md", cell: r => <span className="tabular-nums text-slate-600">{r.itemCount}</span> },
     { key: "payment", header: "Payment", cell: r => { const m = METHOD[r.sale.paymentMethod]; const I = m?.icon ?? CreditCard; return <Pill tone={m?.tone ?? "slate"}><I className="h-3 w-3" />{m?.label ?? r.sale.paymentMethod}</Pill>; } },
-    { key: "total", header: "Total", align: "right", cell: r => <div><p className={`font-bold tabular-nums ${r.sale.status === "refunded" ? "text-slate-400 line-through" : "text-slate-900"}`}>{moneyWhole(r.sale.total)}</p>{r.sale.status === "refunded" && <p className="text-[11px] font-semibold text-rose-600">Refunded</p>}{Number(r.sale.tax) > 0 && <p className="text-[11px] text-slate-400">incl. {moneyWhole(r.sale.tax)} tax</p>}</div> },
+    { key: "total", header: "Total", align: "right", cell: r => <div><p className={`font-bold tabular-nums ${r.sale.status === "refunded" ? "text-slate-400 line-through" : "text-slate-900"}`}>{moneyWhole(r.sale.total)}</p>{r.sale.status === "refunded" && <p className="text-[11px] font-semibold text-rose-600">Refunded</p>}{r.sale.status !== "refunded" && Number(r.sale.creditAmount) > 0 && <p className="text-[11px] font-semibold text-rose-600">{moneyWhole(r.sale.creditAmount)} on credit</p>}{Number(r.sale.tax) > 0 && <p className="text-[11px] text-slate-400">incl. {moneyWhole(r.sale.tax)} tax</p>}</div> },
     { key: "date", header: "Date", align: "right", hideBelow: "sm", cell: r => <div><p className="text-sm text-slate-700">{fmtDate(r.sale.createdAt)}</p><p className="text-[11px] text-slate-400">{fmtTime(r.sale.createdAt)}</p></div> },
   ];
 
@@ -124,7 +125,7 @@ export default function SalesView() {
             <SearchBox value={search} onChange={setSearch} placeholder="Search order # or customer…" />
             <Segmented value={range} onChange={setRange} options={[{ value: "today", label: "Today" }, { value: "7d", label: "7D" }, { value: "30d", label: "30D" }, { value: "all", label: "All" }, { value: "custom", label: "Custom" }]} />
             <Segmented value={status} onChange={setStatus} options={[{ value: "completed", label: "Completed" }, { value: "refunded", label: "Refunded" }, { value: "all", label: "All" }]} />
-            <Segmented value={method} onChange={setMethod} options={[{ value: "all", label: "Any payment" }, { value: "cash", label: "Cash" }, { value: "card", label: "Card" }, { value: "transfer", label: "Transfer" }]} />
+            <Segmented value={method} onChange={setMethod} options={[{ value: "all", label: "Any payment" }, { value: "cash", label: "Cash" }, { value: "card", label: "Card" }, { value: "transfer", label: "Transfer" }, { value: "credit", label: "Udhaar" }]} />
             <Select value={customer} onValueChange={setCustomer}>
               <SelectTrigger className={`${sel} w-full lg:w-56`}><SelectValue placeholder="All customers" /></SelectTrigger>
               <SelectContent className="border-slate-200 bg-white text-slate-900"><SelectItem value="all">All customers</SelectItem>{customers.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Download, Loader2, Mail, Phone, Plus, TrendingUp, UserPlus, Users, Wallet, Repeat } from "lucide-react";
+import { BookOpen, Download, Loader2, Mail, Phone, Plus, UserPlus, Users, Wallet, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { moneyWhole } from "@/lib/format";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import CustomerDrawer from "@/components/CustomerDrawer";
 import { DataTable, Initials, PageHeader, Pill, SearchBox, Segmented, StatTile, fmtDate, relativeTime, type Column } from "@/components/data/kit";
 
 type Row = RouterOutputs["customers"]["list"][number];
@@ -21,7 +22,8 @@ export default function CustomersView() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", groupId: null as number | null });
   const [search, setSearch] = useState("");
-  const [seg, setSeg] = useState<"all" | "active" | "inactive">("all");
+  const [seg, setSeg] = useState<"all" | "active" | "inactive" | "owes">("all");
+  const [openId, setOpenId] = useState<number | null>(null);
 
   const create = trpc.customers.create.useMutation({
     onSuccess: async () => {
@@ -39,7 +41,9 @@ export default function CustomersView() {
   const stats = useMemo(() => {
     const spend = customers.reduce((s, c) => s + Number(c.totalSpent), 0);
     const orders = customers.reduce((s, c) => s + (c.orderCount ?? 0), 0);
-    return { spend, avg: customers.length ? spend / customers.length : 0, active: customers.filter(isActive).length, repeat: customers.filter(c => (c.orderCount ?? 0) > 1).length, orders };
+    const owedTotal = customers.reduce((s, c) => s + Math.max(0, Number(c.balance)), 0);
+    const debtors = customers.filter(c => Number(c.balance) > 0).length;
+    return { spend, owedTotal, debtors, avg: customers.length ? spend / customers.length : 0, active: customers.filter(isActive).length, repeat: customers.filter(c => (c.orderCount ?? 0) > 1).length, orders };
   }, [customers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const maxSpend = Math.max(...customers.map(c => Number(c.totalSpent)), 1);
@@ -48,6 +52,7 @@ export default function CustomersView() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return customers.filter(c => {
+      if (seg === "owes" && Number(c.balance) <= 0) return false;
       if (seg === "active" && !isActive(c)) return false;
       if (seg === "inactive" && isActive(c)) return false;
       return !q || c.name.toLowerCase().includes(q) || (c.email ?? "").toLowerCase().includes(q) || (c.phone ?? "").includes(q);
@@ -68,6 +73,9 @@ export default function CustomersView() {
     { key: "orders", header: "Orders", align: "right", hideBelow: "sm", sortValue: c => c.orderCount ?? 0, cell: c => <span className="font-semibold tabular-nums text-slate-700">{c.orderCount ?? 0}</span> },
     { key: "last", header: "Last purchase", hideBelow: "lg", sortValue: c => (c.lastPurchaseAt ? new Date(c.lastPurchaseAt).getTime() : 0), cell: c => (
       c.lastPurchaseAt ? <div><p className="text-sm text-slate-700">{relativeTime(c.lastPurchaseAt)}</p><Pill tone={isActive(c) ? "emerald" : "slate"} dot>{isActive(c) ? "Active" : "Inactive"}</Pill></div> : <span className="text-xs text-slate-400">No purchases</span>) },
+    { key: "udhaar", header: "Udhaar", align: "right", sortValue: c => Number(c.balance), cell: c => Number(c.balance) > 0
+      ? <div className="text-right"><p className="font-bold tabular-nums text-rose-600">{moneyWhole(c.balance)}</p>{c.creditLimit != null && <p className="text-[11px] text-slate-400">limit {moneyWhole(c.creditLimit)}</p>}</div>
+      : <span className="text-xs text-slate-300">—</span> },
     { key: "spend", header: "Lifetime spend", align: "right", sortValue: c => Number(c.totalSpent), cell: c => (
       <div className="ml-auto w-36 text-right"><p className="font-bold tabular-nums text-slate-900">{moneyWhole(c.totalSpent)}</p>
         <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-teal-400 to-teal-600" style={{ width: `${(Number(c.totalSpent) / maxSpend) * 100}%` }} /></div></div>) },
@@ -78,7 +86,7 @@ export default function CustomersView() {
   return (
     <div className="space-y-6 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-6 lg:space-y-0">
       <PageHeader title="Customers" description="Your customer directory, lifetime value and buying activity." actions={<>
-        <Button variant="outline" onClick={() => downloadCsv("customers", ["Name", "Email", "Phone", "Orders", "Lifetime spend", "Last purchase", "Joined"], filtered.map(c => [c.name, c.email, c.phone, c.orderCount, c.totalSpent, c.lastPurchaseAt, c.createdAt]))} className="h-10 rounded-xl border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
+        <Button variant="outline" onClick={() => downloadCsv("customers", ["Name", "Email", "Phone", "Orders", "Lifetime spend", "Udhaar owed", "Credit limit", "Last purchase", "Joined"], filtered.map(c => [c.name, c.email, c.phone, c.orderCount, c.totalSpent, c.balance, c.creditLimit, c.lastPurchaseAt, c.createdAt]))} className="h-10 rounded-xl border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="h-10 rounded-xl bg-slate-900 px-4 font-semibold text-white hover:bg-slate-700"><Plus className="mr-2 h-4 w-4" /> Add customer</Button></DialogTrigger>
           <DialogContent className="rounded-2xl border-slate-200 bg-white p-6 text-slate-900 shadow-2xl">
@@ -104,16 +112,17 @@ export default function CustomersView() {
       <div className="stat-grid">
         <StatTile label="Total customers" value={customers.length.toLocaleString("en-PK")} hint={`${stats.active} bought in the last 30 days`} icon={Users} />
         <StatTile label="Lifetime revenue" value={moneyWhole(stats.spend)} hint={`${stats.orders.toLocaleString("en-PK")} orders from customers`} icon={Wallet} tone="bg-indigo-50 text-indigo-600" />
-        <StatTile label="Avg. lifetime value" value={moneyWhole(stats.avg)} hint="per customer" icon={TrendingUp} tone="bg-orange-50 text-orange-600" />
+        <StatTile label="Udhaar owed" value={moneyWhole(stats.owedTotal)} hint={stats.debtors ? `${stats.debtors} customer${stats.debtors === 1 ? "" : "s"} owe you` : "nobody owes you"} icon={BookOpen} tone="bg-rose-50 text-rose-600" />
         <StatTile label="Repeat customers" value={stats.repeat} hint={customers.length ? `${Math.round((stats.repeat / customers.length) * 100)}% of your directory` : "—"} icon={Repeat} tone="bg-sky-50 text-sky-600" />
       </div>
 
       <DataTable
-        columns={columns} rows={filtered} rowKey={c => c.id} loading={customersQ.isLoading} pageSize={10}
+        columns={columns} rows={filtered} rowKey={c => c.id} loading={customersQ.isLoading} pageSize={10} onRowClick={c => setOpenId(c.id)}
         toolbar={<><SearchBox value={search} onChange={setSearch} placeholder="Search name, email or phone…" />
-          <Segmented value={seg} onChange={setSeg} options={[{ value: "all", label: "All" }, { value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]} /></>}
+          <Segmented value={seg} onChange={setSeg} options={[{ value: "all", label: "All" }, { value: "owes", label: "Owes" }, { value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]} /></>}
         empty={{ icon: UserPlus, title: customers.length ? "No customers match your search" : "No customers yet", hint: customers.length ? "Try a different search or filter." : "Add your first customer to start tracking purchases and lifetime value.", action: !customers.length ? <Button onClick={() => setOpen(true)} className="rounded-xl bg-slate-900 text-white hover:bg-slate-700">Add customer</Button> : undefined }}
       />
+      <CustomerDrawer customerId={openId} onClose={() => setOpenId(null)} />
     </div>
   );
 }

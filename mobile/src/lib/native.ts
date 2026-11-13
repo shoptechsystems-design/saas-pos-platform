@@ -44,7 +44,7 @@ export async function savePdf(pdf: PdfResult) {
   await Share.share({ title: pdf.filename, url: file.uri, dialogTitle: "Share PDF" });
 }
 
-export function receiptText(input: { business: string; saleNumber: string; when: string; lines: { name: string; qty: number; total: string }[]; subtotal: string; discount: string; tax: string; total: string; change?: string; footer?: string | null }) {
+export function receiptText(input: { business: string; saleNumber: string; when: string; lines: { name: string; qty: number; total: string }[]; subtotal: string; discount: string; tax: string; total: string; change?: string; credit?: { paid: string; amount: string; balance?: string }; footer?: string | null }) {
   const rows = input.lines.map(l => `${l.qty} x ${l.name}  ${l.total}`).join("\n");
-  return [`${input.business}`, `Receipt ${input.saleNumber}`, input.when, "", rows, "", `Subtotal: ${input.subtotal}`, Number(input.discount.replace(/[^\d.-]/g, "")) ? `Discount: ${input.discount}` : "", `Tax: ${input.tax}`, `TOTAL: ${input.total}`, input.change ? `Change: ${input.change}` : "", "", input.footer ?? "Thank you for shopping with us."].filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
+  return [`${input.business}`, `Receipt ${input.saleNumber}`, input.when, "", rows, "", `Subtotal: ${input.subtotal}`, Number(input.discount.replace(/[^\d.-]/g, "")) ? `Discount: ${input.discount}` : "", `Tax: ${input.tax}`, `TOTAL: ${input.total}`, ...(input.credit ? [`Paid now: ${input.credit.paid}`, `ON CREDIT (UDHAAR): ${input.credit.amount}`, input.credit.balance ? `Total balance due: ${input.credit.balance}` : ""] : [input.change ? `Change: ${input.change}` : ""]), "", input.footer ?? "Thank you for shopping with us."].filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
 }
