@@ -95,8 +95,8 @@ export default function DashboardView({ setActiveTab }: { setActiveTab: (tab: st
   const [range, setRange] = useState<(typeof RANGES)[number]>(14);
 
   const settings = trpc.tenant.settings.useQuery();
-  const stats = trpc.dashboard.stats.useQuery();
-  const trend = trpc.dashboard.salesTrend.useQuery({ days: range });
+  const stats = trpc.dashboard.stats.useQuery({ tzOffset: new Date().getTimezoneOffset() });
+  const trend = trpc.dashboard.salesTrend.useQuery({ days: range, tzOffset: new Date().getTimezoneOffset() });
   const lowStock = trpc.dashboard.lowStock.useQuery();
   const recent = trpc.dashboard.recentSales.useQuery();
   const top = trpc.dashboard.topProducts.useQuery({ days: range });

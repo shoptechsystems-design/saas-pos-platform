@@ -85,10 +85,10 @@ export const routes: Route[] = [
   { method: "post", path: "/tenant/logo", tag: "Tenant", summary: "Body: {filename,base64Data,contentType}. Max 5MB.", roles: "tenant_admin", handler: ({ caller, b }) => caller.tenant.uploadLogo(b) },
 
   // Dashboard
-  { method: "get", path: "/dashboard/stats", tag: "Dashboard", summary: "Headline KPIs.", roles: "any member", handler: ({ caller }) => caller.dashboard.stats() },
+  { method: "get", path: "/dashboard/stats", tag: "Dashboard", summary: "Headline KPIs. ?tzOffset=minutes (Date#getTimezoneOffset) so \"today\" matches the client.", roles: "any member", handler: ({ caller, q }) => caller.dashboard.stats({ tzOffset: num(q.tzOffset) }) },
   { method: "get", path: "/dashboard/low-stock", tag: "Dashboard", summary: "Products at/below minimum stock.", roles: "any member", handler: ({ caller }) => caller.dashboard.lowStock() },
   { method: "get", path: "/dashboard/recent-sales", tag: "Dashboard", summary: "Latest sales.", roles: "any member", handler: ({ caller }) => caller.dashboard.recentSales() },
-  { method: "get", path: "/dashboard/sales-trend", tag: "Dashboard", summary: "?days=7..90 (default 14).", roles: "any member", handler: ({ caller, q }) => caller.dashboard.salesTrend({ days: num(q.days) ?? 14 }) },
+  { method: "get", path: "/dashboard/sales-trend", tag: "Dashboard", summary: "?days=7..90 (default 14).", roles: "any member", handler: ({ caller, q }) => caller.dashboard.salesTrend({ days: num(q.days) ?? 14, tzOffset: num(q.tzOffset) }) },
   { method: "get", path: "/dashboard/top-products", tag: "Dashboard", summary: "?days=1..90 (default 30).", roles: "any member", handler: ({ caller, q }) => caller.dashboard.topProducts({ days: num(q.days) ?? 30 }) },
   { method: "get", path: "/dashboard/payment-mix", tag: "Dashboard", summary: "?days=1..90 (default 30).", roles: "any member", handler: ({ caller, q }) => caller.dashboard.paymentMix({ days: num(q.days) ?? 30 }) },
 

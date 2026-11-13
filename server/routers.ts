@@ -46,6 +46,7 @@ import {
   getRecentSales,
   getSalesForTenant,
   getTenantStats,
+  localBoundaries,
   getMembershipForUser,
   writeAuditLog,
   createLocalOpenId,
@@ -298,17 +299,16 @@ export const appRouter = router({
   }),
 
   dashboard: router({
-    stats: tenantProcedure.query(({ ctx }) => getTenantStats(ctx.tenant.id)),
+    stats: tenantProcedure.input(z.object({ tzOffset: z.number().optional() }).optional()).query(({ ctx, input }) => getTenantStats(ctx.tenant.id, input?.tzOffset ?? 0)),
     lowStock: tenantProcedure.query(({ ctx }) => getLowStockProducts(ctx.tenant.id)),
     recentSales: tenantProcedure.query(({ ctx }) => getRecentSales(ctx.tenant.id)),
     salesTrend: tenantProcedure
-      .input(z.object({ days: z.number().int().min(7).max(90).default(14) }))
+      .input(z.object({ days: z.number().int().min(7).max(90).default(14), tzOffset: z.number().optional() }))
       .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return [];
-        const from = new Date();
-        from.setDate(from.getDate() - input.days + 1);
-        from.setHours(0, 0, 0, 0); // include the whole first day, not just its trailing hours
+        const { off, today } = localBoundaries(input.tzOffset ?? 0);
+        const from = new Date(today.getTime() - (input.days - 1) * 86_400_000); // whole first local day
         // Bucket by day in application code: `SELECT DATE(col) … GROUP BY DATE(tbl.col)` is rejected by TiDB/MySQL
         // under only_full_group_by (the same reason reports.overview does its time bucketing this way).
         const rows = await db.select({ createdAt: sales.createdAt, total: sales.total })
@@ -316,7 +316,7 @@ export const appRouter = router({
           .where(and(eq(sales.tenantId, ctx.tenant.id), eq(sales.status, "completed"), gte(sales.createdAt, from)));
         const byDay = new Map<string, { total: number; orders: number }>();
         for (const row of rows) {
-          const day = new Date(row.createdAt).toISOString().slice(0, 10);
+          const day = new Date(new Date(row.createdAt).getTime() - off * 60_000).toISOString().slice(0, 10); // local calendar day
           const bucket = byDay.get(day) ?? { total: 0, orders: 0 };
           bucket.total += Number(row.total);
           bucket.orders += 1;

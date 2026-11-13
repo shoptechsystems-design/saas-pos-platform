@@ -192,12 +192,18 @@ export async function getSalesForTenant(tenantId: number, from?: Date, to?: Date
     .orderBy(desc(sales.createdAt));
 }
 
-export async function getTenantStats(tenantId: number) {
+/** Start of the caller's local day/month as a UTC instant. `tzOffset` = Date#getTimezoneOffset() (minutes, UTC minus local). */
+export function localBoundaries(tzOffset = 0) {
+  const off = Math.max(-840, Math.min(840, Math.trunc(tzOffset)));
+  const local = new Date(Date.now() - off * 60_000); // wall-clock time encoded in UTC fields
+  const y = local.getUTCFullYear(), m = local.getUTCMonth(), d = local.getUTCDate();
+  return { off, today: new Date(Date.UTC(y, m, d) + off * 60_000), month: new Date(Date.UTC(y, m, 1) + off * 60_000), y, m, d };
+}
+
+export async function getTenantStats(tenantId: number, tzOffset = 0) {
   const db = await getDb();
   if (!db) return { todaySales: "0", todayOrders: 0, monthSales: "0", products: 0, lowStock: 0, customers: 0, outstandingCredit: "0", debtors: 0 };
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const { today: todayStart, month: monthStart } = localBoundaries(tzOffset);
   const [today, month, productCount, lowStock, customerCount, owed] = await Promise.all([
     db.select({ total: sql<string>`COALESCE(SUM(${sales.total}), 0)`, orders: sql<number>`COUNT(*)` }).from(sales).where(and(eq(sales.tenantId, tenantId), eq(sales.status, "completed"), gte(sales.createdAt, todayStart))),
     db.select({ total: sql<string>`COALESCE(SUM(${sales.total}), 0)` }).from(sales).where(and(eq(sales.tenantId, tenantId), eq(sales.status, "completed"), gte(sales.createdAt, monthStart))),

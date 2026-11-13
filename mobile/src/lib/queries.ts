@@ -33,10 +33,10 @@ export const useContext_ = () => { const on = useEnabled(); return useQuery({ qu
 export const useSettings = () => { const on = useEnabled(); return useQuery({ queryKey: keys.settings, queryFn: () => api.get<T.TenantSettings>("/tenant/settings"), enabled: on }); };
 
 // ---- dashboard ----
-export const useStats = () => { const on = useEnabled(); return useQuery({ queryKey: keys.stats, queryFn: () => cached("stats", () => api.get<T.Stats>("/dashboard/stats")), enabled: on }); };
+export const useStats = () => { const on = useEnabled(); return useQuery({ queryKey: keys.stats, queryFn: () => cached("stats", () => api.get<T.Stats>(`/dashboard/stats?tzOffset=${new Date().getTimezoneOffset()}`)), enabled: on }); };
 export const useLowStock = () => { const on = useEnabled(); return useQuery({ queryKey: keys.lowStock, queryFn: () => api.get<T.Product[]>("/dashboard/low-stock"), enabled: on }); };
 export const useRecentSales = () => { const on = useEnabled(); return useQuery({ queryKey: keys.recent, queryFn: () => api.get<{ sale: T.Sale; customer: { name: string } | null }[]>("/dashboard/recent-sales"), enabled: on }); };
-export const useTrend = (days = 14) => { const on = useEnabled(); return useQuery({ queryKey: keys.trend(days), queryFn: () => api.get<T.TrendPoint[]>(`/dashboard/sales-trend?days=${days}`), enabled: on }); };
+export const useTrend = (days = 14) => { const on = useEnabled(); return useQuery({ queryKey: keys.trend(days), queryFn: () => api.get<T.TrendPoint[]>(`/dashboard/sales-trend?days=${days}&tzOffset=${new Date().getTimezoneOffset()}`), enabled: on }); };
 export const useTopProducts = (days = 30) => { const on = useEnabled(); return useQuery({ queryKey: keys.top(days), queryFn: () => api.get<T.TopProduct[]>(`/dashboard/top-products?days=${days}`), enabled: on }); };
 export const usePaymentMix = (days = 30) => { const on = useEnabled(); return useQuery({ queryKey: keys.mix(days), queryFn: () => api.get<T.PaymentMix[]>(`/dashboard/payment-mix?days=${days}`), enabled: on }); };
 
